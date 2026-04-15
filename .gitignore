@@ -1,1 +1,12 @@
+/node_modules
+/frontend/node_modules
+/backend/bin
+/.env
+.env.local
+/dist
+/.DS_Store
+/tmp
+build/
+*.log
 tech_task.md
+/.github

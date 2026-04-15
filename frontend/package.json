@@ -1,0 +1,11 @@
+{
+  "name": "qmanga-frontend",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "svelte-kit dev",
+    "build": "svelte-kit build",
+    "preview": "svelte-kit preview"
+  },
+  "devDependencies": {}
+}
