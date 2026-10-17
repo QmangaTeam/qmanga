@@ -23,3 +23,5 @@ Decision: infrastructure sizing remains out of scope, but Alpine Docker executio
 Decision: every image and upload goes through Go; see MEDIA-GATEWAY.md. MinIO remains private. Reader Original is a sanitized full-resolution published copy, not the private raw upload.
 
 Initial review: reject nil dependencies reported healthy; reject swallowed advisory-lock errors; do not expose raw database/storage errors publicly; do not silently accept invalid APP_ENV/S3_USE_SSL or default database passwords. No runtime is deployed from the WIP checkpoint.
+
+Owner amendment: Clean Architecture + DDD on frontend and backend. Two pending AGY runs were cancelled before either changed files, with worktrees preserved. See ARCHITECTURE.md. Restarted assignments must separate domain, application ports/use cases, adapters and composition; do not integrate a flat DB-coupled identity service.

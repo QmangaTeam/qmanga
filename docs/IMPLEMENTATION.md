@@ -8,6 +8,8 @@
 
 **Tech Stack:** Bun, SvelteKit, TypeScript, Tailwind, Go, pgx, PostgreSQL, MinIO S3 SDK, Docker Compose. Image transformations use a bounded Alpine-compatible image tool in the worker.
 
+**Mandatory architecture amendment:** [Clean Architecture + DDD](ARCHITECTURE.md) applies to frontend and backend. It supersedes flat package paths and concrete database/storage parameters in business modules below. Use context-local domain/application/adapters and explicit composition roots. Preserve functional requirements and media gateway constraints.
+
 **Spec:** [Product](../QMANGA-PLAN.md), [Reader](../QMANGA-READER.md), [Roadmap](../QMANGA-ROADMAP.md), [Go media gateway](MEDIA-GATEWAY.md).
 
 ## Global Constraints
@@ -23,6 +25,7 @@
 - Preserve source files and browser privacy. Demo content must be original and clearly marked as fictional.
 - The user authorizes implementation, delegation, frequent commits and saving to the private GitHub repository. No public deployment is requested.
 - Only AGY Gemini 3.8 Flash High implements product code. Codex coordinates, reviews, runs checks, and integrates.
+- Enforce dependency direction with architectural tests; business logic cannot directly import database, HTTP, browser or Svelte APIs.
 - Do not spawn nested agents. Do not add inline code comments or one-letter identifiers.
 - Never silently replace a working feature with a placeholder or claim an untested feature works.
 
