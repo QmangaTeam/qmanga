@@ -4,6 +4,8 @@
 
 ## Current development state
 
+Latest checkpoint and exact resume point: [current state, 18 October 2026](docs/CURRENT-STATE-2026-10-18.md). The T07–T10 frontend checkpoint is WIP, with one failing browser regression and two known filter-state defects; it is not completed beta acceptance.
+
 The local functional alpha runs on seven Alpine services. Accounts, approved teams, catalogue/admin editing, mobile publishing, private media processing, moderation and the reader are connected to real persistence. The reader has page/strip modes, eco/standard/high, controlled requests and decoded memory, local/cloud progress with explicit conflicts, library choices, selected offline copies, ratings, comments, reports and notifications. Domain/application ports remain separate from Gin, PostgreSQL, Svelte and browser adapters. This is not public-release acceptance. The current baseline, limitations and next acceptance gates are the [18 October audit](docs/AUDIT-2026-10-18.md) and [development plan](docs/DEVELOPMENT-PLAN-2026-10-18.md).
 
 Fresh installations have an empty catalogue until a team uploads and a moderator publishes content. Automated fixtures use isolated schemas. The owner's sample images are used only in local development storage and never committed. Keep the approved compact layout and green palette; the next work repairs connected user journeys rather than starting another redesign. See docs/ui/DESIGN-REVIEW.md.
