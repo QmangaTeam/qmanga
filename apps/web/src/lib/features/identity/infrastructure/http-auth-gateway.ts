@@ -20,9 +20,9 @@ export class HttpAuthGateway implements AuthGateway {
    if (response.status === 204) return { ok: true, message: 'Сәтті шықтыңыз' };
    const payload: unknown = await response.json();
    if (!object(payload)) throw new Error('Invalid response');
-   if (!response.ok) return { ok: false, message: object(payload.error) && typeof payload.error.message === 'string' ? payload.error.message : 'Сұрауды орындау мүмкін болмады' };
+   if (!response.ok) return { ok: false, code: object(payload.error) && typeof payload.error.code==='string' ? payload.error.code : 'unavailable', message: object(payload.error) && typeof payload.error.message === 'string' ? payload.error.message : 'Сұрауды орындау мүмкін болмады' };
    return { ok: true, message: typeof payload.message === 'string' ? payload.message : '', account: accountView(payload.user) };
-  } catch { return { ok: false, message: 'Қосылым үзілді. Қайталап көріңіз.' }; }
+  } catch { return { ok: false, code:'network', message: 'Қосылым үзілді. Қайталап көріңіз.' }; }
  }
  async login(input: Credentials) {const result=await this.call('login', { email: input.email, password: input.password });if(result.ok)await this.accountChanged();return result;}
  register(input: Credentials) { return this.call('register', { email: input.email, password: input.password }); }
@@ -35,8 +35,8 @@ export class HttpAuthGateway implements AuthGateway {
   try {
    const response = await this.request(this.base + '/api/v1/auth/csrf', { credentials: 'same-origin', signal: AbortSignal.timeout(10000) });
    const payload: unknown = await response.json();
-   if (!response.ok || !object(payload) || typeof payload.csrf_token !== 'string') return { ok: false, message: 'Қайта кіріңіз' };
+   if (!response.ok || !object(payload) || typeof payload.csrf_token !== 'string') return { ok: false, code:'unauthorized', message: 'Қайта кіріңіз' };
    const result=await this.call('logout', {}, payload.csrf_token);if(result.ok)await this.accountChanged();return result;
-  } catch { return { ok: false, message: 'Қосылым үзілді' }; }
+  } catch { return { ok: false, code:'network', message: 'Қосылым үзілді' }; }
  }
 }

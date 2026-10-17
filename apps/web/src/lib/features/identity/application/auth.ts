@@ -1,6 +1,6 @@
 import type { Account, Credentials } from '../domain/account';
 import { credentialError } from '../domain/account';
-export interface AuthResult { ok: boolean; message: string; account?: Account }
+export interface AuthResult { ok: boolean; message: string; code?: string; account?: Account }
 export interface AuthGateway {
  login(input: Credentials): Promise<AuthResult>;
  register(input: Credentials): Promise<AuthResult>;
@@ -13,6 +13,6 @@ export interface AuthGateway {
 }
 export async function authenticate(gateway: AuthGateway, mode: 'login' | 'register', input: Credentials): Promise<AuthResult> {
  const invalid = credentialError(input, mode === 'register');
- if (invalid) return { ok: false, message: invalid === 'email' ? 'Пошта мекенжайын тексеріңіз' : 'Құпиясөзді тексеріңіз. 10–128 таңба қолданыңыз.' };
+ if (invalid) return { ok: false, code: invalid, message: invalid === 'email' ? 'Пошта мекенжайын тексеріңіз' : 'Құпиясөзді тексеріңіз. 10–128 таңба қолданыңыз.' };
  return gateway[mode]({ email: input.email.trim().toLowerCase(), password: input.password });
 }

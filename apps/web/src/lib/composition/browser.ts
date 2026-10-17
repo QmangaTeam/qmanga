@@ -1,4 +1,6 @@
 import { HttpAuthGateway } from '$lib/features/identity/infrastructure/http-auth-gateway';
+import { BrowserLocaleStore } from '$lib/features/preferences/infrastructure/browser-locale-store';
+export function createLocalePreferences() { return new BrowserLocaleStore(); }
 import { HttpReaderGateway } from '$lib/features/reading/infrastructure/http-reader-gateway';
 import { Downloads } from '$lib/features/offline/application/downloads';
 import { BrowserDownloadStorage } from '$lib/features/offline/infrastructure/browser-download-storage';

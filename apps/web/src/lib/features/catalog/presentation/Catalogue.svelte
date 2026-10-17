@@ -1,34 +1,33 @@
 <script lang="ts">
- import type { CatalogFilter, Genre, ResultPage, Summary } from '../application/catalog';
- import { kindNames, originalStatusNames, translationStatusNames } from '../domain/catalog';
- let { view }: { view: { available: boolean; message: string; filter: CatalogFilter; genres: Genre[]; page: ResultPage<Summary>; nextURL: string | null } } = $props();
+ import type {CatalogFilter,Genre,ResultPage,Summary} from '../application/catalog';
+ import {useLocale,text} from '$lib/shared/presentation/locale';
+ import {catalogNames} from './messages';
+ import CoverCard from './CoverCard.svelte';
+ import SectionHeading from '$lib/shared/presentation/ui/SectionHeading.svelte';
+ import StateMessage from '$lib/shared/presentation/ui/StateMessage.svelte';
+ import Button from '$lib/shared/presentation/ui/Button.svelte';
+ import ActionLink from '$lib/shared/presentation/ui/ActionLink.svelte';
+ import Pager from '$lib/shared/presentation/ui/Pager.svelte';
+ let {view}:{view:{available:boolean;message:string;filter:CatalogFilter;genres:Genre[];page:ResultPage<Summary>;nextURL:string|null}}=$props();
+ const {locale}=useLocale();
+ const names=$derived(catalogNames($locale));
 </script>
-<svelte:head><title>Каталог — Qmanga</title><meta name="description" content="Қазақ тіліндегі манга, манхва және маньхуа каталогы."/></svelte:head>
-<h1>Каталог</h1>
-<form action="/catalog" method="GET" class="catalogue-search">
- <label for="catalogue-query">Тайтл немесе басқа атауы</label>
- <div class="search-row"><input id="catalogue-query" type="search" name="q" value={view.filter.query} maxlength="80" placeholder="Атауын іздеу"/><button type="submit" class="button primary">Іздеу</button></div>
- <details><summary>Сүзгілер мен реттеу</summary><div class="filter-fields">
-  <label>Түрі<select name="kind" value={view.filter.kind}><option value="">Барлығы</option>{#each Object.entries(kindNames) as [value, name]}<option {value}>{name}</option>{/each}</select></label>
-  <label>Жанр<select name="genre" value={view.filter.genre}><option value="">Барлығы</option>{#each view.genres as genre}<option value={genre.slug}>{genre.name}</option>{/each}</select></label>
-  <label>Түпнұсқа күйі<select name="original_status" value={view.filter.originalStatus}><option value="">Барлығы</option>{#each Object.entries(originalStatusNames) as [value, name]}<option {value}>{name}</option>{/each}</select></label>
-  <label>Аударма күйі<select name="translation_status" value={view.filter.translationStatus}><option value="">Барлығы</option>{#each Object.entries(translationStatusNames) as [value, name]}<option {value}>{name}</option>{/each}</select></label>
-  <label>Реттеу<select name="sort" value={view.filter.sort}><option value="updated">Соңғы жаңартулар</option><option value="name">Атауы бойынша</option></select></label>
-  <button type="submit" class="button primary">Қолдану</button><a class="button subtle" href="/catalog">Тазарту</a>
+<svelte:head><title>Каталог — Qmanga</title><meta name="description" content={text($locale,'Қазақ тіліндегі манга, манхва және маньхуа.','Манга, манхва и маньхуа на казахском языке.')}/></svelte:head>
+<SectionHeading level={1} title="Каталог"/>
+<form action="/catalog" method="GET" class="catalogue-search" role="search">
+ <label class="sr-only" for="catalogue-query">{text($locale,'Тайтл немесе басқа атауы','Тайтл или альтернативное название')}</label>
+ <div class="search-row"><input id="catalogue-query" type="search" name="q" value={view.filter.query} maxlength="80" placeholder={text($locale,'Атауын іздеу','Поиск по названию')}/><Button type="submit" variant="primary">{text($locale,'Іздеу','Найти')}</Button></div>
+ <details open={!!(view.filter.kind||view.filter.genre||view.filter.originalStatus||view.filter.translationStatus)}><summary>{text($locale,'Сүзгілер мен реттеу','Фильтры и сортировка')}</summary><div class="filter-fields">
+ <label>{text($locale,'Түрі','Тип')}<select name="kind" value={view.filter.kind}><option value="">{text($locale,'Барлығы','Все')}</option>{#each Object.entries(names.kind) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
+ <label>Жанр<select name="genre" value={view.filter.genre}><option value="">{text($locale,'Барлығы','Все')}</option>{#each view.genres as genre}<option value={genre.slug}>{genre.name}</option>{/each}</select></label>
+ <label>{text($locale,'Түпнұсқа','Статус оригинала')}<select name="original_status" value={view.filter.originalStatus}><option value="">{text($locale,'Барлығы','Все')}</option>{#each Object.entries(names.original) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
+ <label>{text($locale,'Аударма','Статус перевода')}<select name="translation_status" value={view.filter.translationStatus}><option value="">{text($locale,'Барлығы','Все')}</option>{#each Object.entries(names.translation) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
+ <label>{text($locale,'Реттеу','Сортировка')}<select name="sort" value={view.filter.sort}><option value="updated">{text($locale,'Соңғы жаңартулар','Недавно обновлённые')}</option><option value="name">{text($locale,'Атауы бойынша','По названию')}</option></select></label>
+ <div class="filter-actions"><Button type="submit" variant="primary">{text($locale,'Қолдану','Применить')}</Button><ActionLink href="/catalog">{text($locale,'Тазарту','Сбросить')}</ActionLink></div>
  </div></details>
 </form>
-{#if !view.available}<div class="form-message" role="alert"><p>{view.message}</p><a class="auth-link" href="/catalog">Қайта жүктеу</a></div>
-{:else if view.page.items.length === 0}<div class="empty-state"><h2>Тайтл табылмады</h2><p>Басқа атаумен іздеп көріңіз немесе сүзгілерді тазалаңыз. Жарияланған аудармалар осында көрінеді.</p></div>
-{:else}<div class="catalogue-grid">{#each view.page.items as title (title.id)}<a class="catalogue-card" href={'/titles/' + encodeURIComponent(title.slug)}>
- <div class="cover">{#if title.coverURL}<img src={title.coverURL} alt="" width="280" height="400" loading="lazy" decoding="async"/>{:else}<span>Мұқаба жоқ</span>{/if}</div>
- <h2>{title.name}</h2><p>{kindNames[title.kind]}{#if title.demo} / Үлгі{/if}</p><p>{title.chapterCount} тарау{#if title.ratingCount > 0} / {title.score.toFixed(1)} ★{/if}</p>
-</a>{/each}</div>{/if}
-{#if view.nextURL}<a class="button subtle" href={view.nextURL}>Келесі бет</a>{/if}
-<style>
- .catalogue-search { margin:24px 0; display:grid; gap:10px; } .search-row { display:flex; gap:10px; } .search-row input { flex:1; }
- summary { min-height:44px; padding:10px 0; cursor:pointer; } .filter-fields { display:grid; gap:16px; margin-top:12px; } .filter-fields label { display:grid; gap:6px; }
- .catalogue-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:22px 14px; margin:24px 0; }
- .catalogue-card { min-width:0; } .cover { aspect-ratio:7/10; background:var(--panel); display:grid; place-items:center; color:var(--muted); font-size:13px; overflow:hidden; border-radius:8px; } .cover img { width:100%; height:100%; object-fit:cover; }
- .catalogue-card h2 { font-size:15px; line-height:1.4; margin-top:8px; overflow-wrap:anywhere; } .catalogue-card p { font-size:13px; color:var(--muted); margin-top:4px; }
- @media(min-width:400px) { .catalogue-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } } @media(min-width:768px) { .filter-fields { grid-template-columns:repeat(3,minmax(0,1fr)); } .catalogue-grid { grid-template-columns:repeat(5,minmax(0,1fr)); } }
-</style>
+{#if !view.available}<StateMessage kind="error" title={text($locale,'Каталог жүктелмеді','Каталог не загрузился')}>{#snippet actions()}<ActionLink href="/catalog">{text($locale,'Қайталау','Повторить')}</ActionLink>{/snippet}</StateMessage>
+{:else if !view.page.items.length}<StateMessage kind="empty" title={text($locale,'Тайтл табылмады','Тайтлы не найдены')} description={text($locale,'Басқа атаумен ізде немесе сүзгілерді тазарт.','Попробуй другое название или сбрось фильтры.')}/>
+{:else}<div class="cover-grid">{#each view.page.items as title,index}<CoverCard href={'/titles/'+encodeURIComponent(title.slug)} name={title.name} coverURL={title.coverURL} metadata={names.kind[title.kind]+(title.demo?text($locale,' · Үлгі',' · Пример'):'')} detail={title.chapterCount+text($locale,' тарау',' глав')+(title.ratingCount?' · '+title.score.toFixed(1)+' ★':'')} fallback={text($locale,'Мұқаба жоқ','Нет обложки')} priority={index<2}/>{/each}</div>{/if}
+{#if view.nextURL}<Pager label={text($locale,'Каталог беттері','Страницы каталога')} next={{label:text($locale,'Келесі бет','Следующая страница'),href:view.nextURL}}/>{/if}
+<style>.catalogue-search { margin-bottom:24px; } .search-row { display:flex; gap:8px; } .search-row input { flex:1; } summary { cursor:pointer; min-height:44px; padding:12px 0; font-size:14px; color:var(--muted); } .filter-fields { display:grid; gap:16px; margin:12px 0 24px; } .filter-fields label { display:grid; gap:8px; font-size:14px; } .filter-actions { display:flex; flex-wrap:wrap; align-items:end; gap:8px; } @media(min-width:640px) { .filter-fields { grid-template-columns:repeat(2,minmax(0,1fr)); } } @media(min-width:1024px) { .filter-fields { grid-template-columns:repeat(3,minmax(0,1fr)); } }</style>

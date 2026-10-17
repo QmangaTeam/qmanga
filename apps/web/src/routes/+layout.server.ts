@@ -1,2 +1,4 @@
 import { loadAccount } from '$lib/server/composition';
-export const load = async ({ fetch, request, url }: { fetch: typeof globalThis.fetch; request: Request; url: URL }) => ({ user: url.pathname.startsWith('/read/')||url.pathname==='/offline-reader'?null:await loadAccount(fetch, request.headers.get('cookie') || '') });
+import {localeFrom,localeCookie} from '$lib/features/preferences/domain/locale';
+import type {LayoutServerLoad} from './$types';
+export const load:LayoutServerLoad = async ({ fetch, request, url, cookies }) => ({ locale:url.pathname==='/offline-reader'?'kk' as const:localeFrom(cookies.get(localeCookie)), user: url.pathname.startsWith('/read/')||url.pathname==='/offline-reader'?null:await loadAccount(fetch, request.headers.get('cookie') || '') });
