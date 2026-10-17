@@ -59,7 +59,7 @@ export class HttpCatalogGateway implements CatalogGateway {
   catch (failure) { if (failure instanceof ApiFailure && failure.status === 404) return null; throw failure; }
  }
  async updates(after='',team=''):Promise<ResultPage<ReleaseUpdate>> {
-  return page(await this.api.call('/api/v1/updates?'+new URLSearchParams({after,team})),value=>{const item=object(value);return {releaseId:text(item.release_id),titleId:text(item.title_id),titleName:text(item.title_name),titleSlug:text(item.title_slug),chapterLabel:text(item.chapter_label),teamName:text(item.team_name),teamSlug:text(item.team_slug),demo:boolean(item.demo),publishedAt:date(item.published_at)};});
+  return page(await this.api.call('/api/v1/updates?'+new URLSearchParams({after,team})),value=>{const item=object(value);return {releaseId:text(item.release_id),titleId:text(item.title_id),titleName:text(item.title_name),titleSlug:text(item.title_slug),chapterLabel:text(item.chapter_label),teamName:text(item.team_name),teamSlug:text(item.team_slug),demo:boolean(item.demo),publishedAt:date(item.published_at),coverURL:item.cover_url===undefined?'':media(item.cover_url)};});
  }
  async chapters(slug: string, cursor?: string, filter:ChapterFilter={}) {
   const query=new URLSearchParams();

@@ -112,9 +112,13 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		}
 		execute("INSERT INTO revisions(id,release_id,status) VALUES($1,$2,$3)", revisionID, releaseID, state)
 	}
+	execute("UPDATE titles SET cover_asset_id='cover-test' WHERE id=$1", title.ID)
 	updates, failure := service.Updates(ctx, "", "", 2)
 	if failure != nil || len(updates.Items) != 2 || updates.Next == "" {
 		testingTarget.Fatal("release feed missing", updates, failure)
+	}
+	if updates.Items[0].CoverID != "cover-test" {
+		testingTarget.Fatal("update thumbnail did not follow the title cover", updates.Items[0])
 	}
 	remaining, failure := service.Updates(ctx, updates.Next, "", 2)
 	if failure != nil || len(remaining.Items) != 2 || remaining.Next != "" || remaining.Items[0].ReleaseID == updates.Items[0].ReleaseID {

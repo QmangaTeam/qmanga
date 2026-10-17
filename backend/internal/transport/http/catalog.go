@@ -397,7 +397,7 @@ func (handler *CatalogHandler) updates(request *gin.Context) {
 	}
 	items := []gin.H{}
 	for _, item := range result.Items {
-		items = append(items, gin.H{"release_id": item.ReleaseID, "title_id": item.TitleID, "title_name": item.TitleName, "title_slug": item.TitleSlug, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "team_slug": item.TeamSlug, "demo": item.Demo, "published_at": item.PublishedAt})
+		items = append(items, gin.H{"release_id": item.ReleaseID, "title_id": item.TitleID, "title_name": item.TitleName, "title_slug": item.TitleSlug, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "team_slug": item.TeamSlug, "demo": item.Demo, "published_at": item.PublishedAt, "cover_url": coverURL(item.CoverID)})
 	}
 	var next *string
 	if result.Next != "" {

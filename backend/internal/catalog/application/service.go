@@ -64,9 +64,9 @@ type Team struct {
 	Projects                    []Project
 }
 type Update struct {
-	ReleaseID, TitleID, TitleName, TitleSlug, ChapterLabel, TeamName, TeamSlug string
-	Demo                                                                       bool
-	PublishedAt                                                                time.Time
+	ReleaseID, TitleID, TitleName, TitleSlug, ChapterLabel, TeamName, TeamSlug, CoverID string
+	Demo                                                                                bool
+	PublishedAt                                                                         time.Time
 }
 type UpdatePage struct {
 	Items []Update
