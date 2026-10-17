@@ -40,6 +40,15 @@ type Detail struct {
 	Projects    []Project
 }
 type Project struct{ ID, TitleID, TeamID, TitleName, TitleSlug, TeamName, TeamSlug, Status string }
+type ProjectFilter struct {
+	Query, TeamID string
+	Offset        int
+}
+type ProjectPage struct {
+	Items []Project
+	Total int
+	Next  string
+}
 type Release struct {
 	ID, ProjectID, TeamID, TeamName, TeamSlug string
 	PublishedAt                               time.Time
@@ -93,6 +102,7 @@ type Repository interface {
 	CreateChapter(context.Context, string, string, string, string, string, int) (string, error)
 	CreateProject(context.Context, string, string, string, string) error
 	StudioProjects(context.Context, string, ...int) ([]Project, error)
+	StudioProjectPage(context.Context, string, ProjectFilter) (ProjectPage, error)
 	AdminTitles(context.Context, string, ...int) ([]Summary, error)
 	AdminDetail(context.Context, string, string) (Detail, error)
 	UpdateTitle(context.Context, string, domain.Title) error
@@ -224,6 +234,13 @@ func (service *Service) CreateProject(ctx context.Context, actorID, titleID, tea
 }
 func (service *Service) StudioProjects(ctx context.Context, actorID string, offset ...int) ([]Project, error) {
 	return service.repository.StudioProjects(ctx, actorID, offset...)
+}
+func (service *Service) StudioProjectPage(ctx context.Context, actor string, filter ProjectFilter) (ProjectPage, error) {
+	filter.Query = strings.ToLower(strings.TrimSpace(filter.Query))
+	if utf8.RuneCountInString(filter.Query) > 80 || len(filter.TeamID) > 36 || filter.Offset < 0 || filter.Offset > 100000 {
+		return ProjectPage{}, domain.ErrInvalid
+	}
+	return service.repository.StudioProjectPage(ctx, actor, filter)
 }
 func (service *Service) AdminTitles(ctx context.Context, actorID string, offset ...int) ([]Summary, error) {
 	if failure := service.admin(ctx, actorID); failure != nil {

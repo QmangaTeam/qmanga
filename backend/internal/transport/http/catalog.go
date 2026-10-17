@@ -280,12 +280,21 @@ func (handler *CatalogHandler) team(request *gin.Context) {
 }
 func (handler *CatalogHandler) studioProjects(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.StudioProjects(request.Request.Context(), account.ID, requestOffset(request))
+	offset := requestOffset(request)
+	if cursor := request.Query("cursor"); cursor != "" {
+		value, failure := strconv.Atoi(cursor)
+		if failure != nil {
+			Error(request, 400, "validation", "Invalid project cursor")
+			return
+		}
+		offset = value
+	}
+	page, failure := handler.service.StudioProjectPage(request.Request.Context(), account.ID, application.ProjectFilter{Offset: offset, Query: request.Query("q"), TeamID: request.Query("team")})
 	if failure != nil {
 		catalogError(request, failure)
 		return
 	}
-	request.JSON(200, gin.H{"items": projectViews(items), "next_cursor": nil})
+	request.JSON(200, gin.H{"items": projectViews(page.Items), "next_cursor": page.Next, "total": page.Total})
 }
 func (handler *CatalogHandler) adminTitles(request *gin.Context) {
 	account, _ := CurrentAccount(request)

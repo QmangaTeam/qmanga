@@ -6,19 +6,70 @@ import (
 	"log"
 	"qmanga/internal/reading/application"
 	"qmanga/internal/reading/domain"
+	"strconv"
+	"strings"
 )
 
 type ReadingHandler struct{ service *application.Service }
 
 func NewReadingHandler(service *application.Service) *ReadingHandler { return &ReadingHandler{service} }
 func (handler *ReadingHandler) Register(api *gin.RouterGroup, identity *IdentityHandler) {
+	api.GET("/reading/references", handler.references)
 	group := api.Group("", identity.RequireUser(), expectedAccount())
+	group.GET("/reading/recent", handler.recent)
 	group.GET("/library", handler.list)
 	group.GET("/library/:id", handler.selection)
 	group.PUT("/library/:id", handler.save)
 	group.DELETE("/library/:id", handler.remove)
 	group.GET("/progress/:id", handler.progress)
 	group.POST("/progress/:id", handler.advance)
+}
+func referenceView(item application.Reference) gin.H {
+	return gin.H{"title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "cover_url": coverURL(item.CoverID), "release_id": item.ReleaseID, "revision_id": item.RevisionID, "chapter_label": item.ChapterLabel}
+}
+func (handler *ReadingHandler) references(request *gin.Context) {
+	request.Header("Cache-Control", "private, no-store")
+	ids := []string{}
+	if value := request.Query("ids"); value != "" {
+		ids = strings.Split(value, ",")
+	}
+	items, failure := handler.service.References(request.Request.Context(), ids)
+	if failure != nil {
+		readingError(request, failure)
+		return
+	}
+	result := []gin.H{}
+	for _, item := range items {
+		result = append(result, referenceView(item))
+	}
+	request.JSON(200, gin.H{"items": result})
+}
+func (handler *ReadingHandler) recent(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	limit := 4
+	if value := request.Query("limit"); value != "" {
+		var failure error
+		limit, failure = strconv.Atoi(value)
+		if failure != nil {
+			Error(request, 400, "validation", "Invalid recent limit")
+			return
+		}
+	}
+	items, failure := handler.service.Recent(request.Request.Context(), account.ID, limit)
+	if failure != nil {
+		readingError(request, failure)
+		return
+	}
+	result := []gin.H{}
+	for _, item := range items {
+		view := referenceView(item.Reference)
+		view["progress"] = progressView(item.Progress)
+		view["updated_at"] = item.UpdatedAt
+		view["page_position"] = item.PagePosition
+		view["availability"] = item.Availability
+		result = append(result, view)
+	}
+	request.JSON(200, gin.H{"items": result})
 }
 func expectedAccount() gin.HandlerFunc {
 	return func(request *gin.Context) {
@@ -52,16 +103,25 @@ func (handler *ReadingHandler) selection(request *gin.Context) {
 }
 func (handler *ReadingHandler) list(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.List(request.Request.Context(), account.ID, request.Query("after"))
+	favorite := false
+	if value := request.Query("favorite"); value != "" {
+		var failure error
+		favorite, failure = strconv.ParseBool(value)
+		if failure != nil {
+			Error(request, 400, "validation", "Invalid favorite filter")
+			return
+		}
+	}
+	page, failure := handler.service.Library(request.Request.Context(), account.ID, application.LibraryFilter{After: request.Query("after"), Query: request.Query("q"), Status: request.Query("status"), Favorite: favorite})
 	if failure != nil {
 		readingError(request, failure)
 		return
 	}
 	result := []gin.H{}
-	for _, item := range items {
+	for _, item := range page.Items {
 		result = append(result, gin.H{"version": item.Version, "removed": item.Removed, "title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "status": item.Status, "favorite": item.Favorite, "preferred_team_id": item.PreferredTeamID, "notify": item.Notify, "unseen": item.Unseen, "progress": progressView(item.Progress)})
 	}
-	request.JSON(200, gin.H{"items": result, "has_more": len(items) == 100})
+	request.JSON(200, gin.H{"items": result, "has_more": page.Next != "", "next_cursor": page.Next, "total": page.Total})
 }
 func (handler *ReadingHandler) save(request *gin.Context) {
 	var input struct {

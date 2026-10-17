@@ -49,6 +49,7 @@ type ManifestPage struct {
 	Variants                map[string][]Variant
 }
 type Manifest struct {
+	CoverID                                                                                                                              string
 	Source, Credits                                                                                                                      string
 	ReleaseID, RevisionID, TitleID, TitleSlug, TitleName, ChapterLabel, ProjectID, TeamID, TeamName, Kind, Direction, PreviousID, NextID string
 	ChapterOrder                                                                                                                         int

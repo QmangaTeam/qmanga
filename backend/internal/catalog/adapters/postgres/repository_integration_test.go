@@ -367,4 +367,56 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 			testingTarget.Fatal("cannot cancel own request", failure)
 		}
 	})
+	testingTarget.Run("project filtering precedes paging and counts the complete membership scope", func(testingTarget *testing.T) {
+		execute(`INSERT INTO teams(id,slug,name,is_approved) VALUES('page-team','page-team','Басқа команда',true);
+		 INSERT INTO team_memberships(id,team_id,user_id,role) VALUES('page-member','page-team','reader','editor');
+		 INSERT INTO titles(id,slug,name_kk) SELECT 'project-title-'||number,'project-title-'||number,'Paging '||lpad(number::text,3,'0') FROM generate_series(1,110) number;
+		 INSERT INTO projects(id,title_id,team_id) SELECT 'page-project-'||number,'project-title-'||number,CASE WHEN number=110 THEN 'page-team' ELSE 'team' END FROM generate_series(1,110) number`)
+		page, failure := service.StudioProjectPage(ctx, "reader", application.ProjectFilter{Query: "Paging"})
+		if failure != nil || page.Total != 110 || len(page.Items) != 100 || page.Next == "" {
+			testingTarget.Fatalf("complete projects: %+v %v", page, failure)
+		}
+		filtered, failure := service.StudioProjectPage(ctx, "reader", application.ProjectFilter{Query: "Paging", TeamID: "page-team"})
+		if failure != nil || filtered.Total != 1 || len(filtered.Items) != 1 || filtered.Items[0].ID != "page-project-110" || filtered.Next != "" {
+			testingTarget.Fatalf("filtered project beyond page: %+v %v", filtered, failure)
+		}
+		hidden, failure := service.StudioProjectPage(ctx, "foreign", application.ProjectFilter{TeamID: "page-team"})
+		if failure != nil || hidden.Total != 0 || len(hidden.Items) != 0 {
+			testingTarget.Fatal("projects leaked through team filter", failure)
+		}
+	})
+	testingTarget.Run("305 published chapters are searched before pagination and ordered without duplicates", func(testingTarget *testing.T) {
+		execute(`INSERT INTO chapters(id,title_id,label,title_kk,order_num) SELECT 'long-chapter-'||number,$1,'Long '||number,'Ұзақ '||number,1000+number FROM generate_series(1,305) number`, title.ID)
+		execute(`INSERT INTO releases(id,chapter_id,project_id,team_id,status,current_revision_id) SELECT 'long-release-'||number,'long-chapter-'||number,$1,'team','published','long-revision-'||number FROM generate_series(1,305) number`, projectID)
+		execute(`INSERT INTO revisions(id,release_id,status) SELECT 'long-revision-'||number,'long-release-'||number,'published' FROM generate_series(1,305) number`)
+		found, failure := service.Chapters(ctx, title.Slug, 0, 50, application.ChapterFilter{Query: "Long 305", Sort: "desc"})
+		if failure != nil || len(found.Items) != 1 || found.Items[0].Order != 1305 {
+			testingTarget.Fatalf("far chapter: %+v %v", found, failure)
+		}
+		for _, sort := range []string{"asc", "desc"} {
+			seen := map[string]bool{}
+			after := 0
+			previous := 0
+			for {
+				page, failure := service.Chapters(ctx, title.Slug, after, 100, application.ChapterFilter{Query: "Long", Sort: sort})
+				if failure != nil {
+					testingTarget.Fatal(failure)
+				}
+				for _, chapter := range page.Items {
+					if seen[chapter.ID] || previous != 0 && (sort == "asc" && chapter.Order <= previous || sort == "desc" && chapter.Order >= previous) {
+						testingTarget.Fatal("duplicate or wrong chapter order")
+					}
+					seen[chapter.ID] = true
+					previous = chapter.Order
+				}
+				if page.NextOrder == nil {
+					break
+				}
+				after = *page.NextOrder
+			}
+			if len(seen) != 305 {
+				testingTarget.Fatalf("%s lost chapters: %d", sort, len(seen))
+			}
+		}
+	})
 }

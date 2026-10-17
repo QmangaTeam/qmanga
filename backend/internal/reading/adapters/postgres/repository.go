@@ -19,6 +19,18 @@ func New(pool *pgxpool.Pool) *Repository { return &Repository{pool} }
 
 const progressColumns = `title_id,release_id,COALESCE(revision_id,''),COALESCE(page_id,''),fraction,furthest_chapter_order,version,device_id,sequence`
 
+const libraryColumns = `library.title_id,title.name_kk,title.slug,library.status,COALESCE(library.preferred_team_id,''),library.is_favorite,library.notify_new_releases,library.updated_at,library.selection_version,library.is_removed,
+ (SELECT COUNT(DISTINCT chapter.id) FROM chapters chapter JOIN releases release ON release.chapter_id=chapter.id JOIN revisions revision ON revision.id=release.current_revision_id AND revision.status='published' WHERE chapter.title_id=title.id AND release.status='published' AND chapter.order_num>COALESCE(progress.furthest_chapter_order,0) AND (library.preferred_team_id IS NULL OR release.team_id=library.preferred_team_id)),
+ COALESCE(progress.title_id,''),COALESCE(progress.release_id,''),COALESCE(progress.revision_id,''),COALESCE(progress.page_id,''),COALESCE(progress.fraction,0),COALESCE(progress.furthest_chapter_order,0),COALESCE(progress.version,0),COALESCE(progress.device_id,''),COALESCE(progress.sequence,0)`
+const libraryJoins = ` FROM library_entries library JOIN titles title ON title.id=library.title_id LEFT JOIN reading_progress progress ON progress.user_id=library.user_id AND progress.title_id=library.title_id `
+
+func scanEntry(row pgx.Row) (application.Entry, error) {
+	var item application.Entry
+	failure := row.Scan(&item.TitleID, &item.Name, &item.Slug, &item.Status, &item.PreferredTeamID, &item.Favorite, &item.Notify, &item.UpdatedAt, &item.Version, &item.Removed, &item.Unseen,
+		&item.Progress.TitleID, &item.Progress.ReleaseID, &item.Progress.RevisionID, &item.Progress.PageID, &item.Progress.Fraction, &item.Progress.FurthestOrder, &item.Progress.Version, &item.Progress.DeviceID, &item.Progress.Sequence)
+	return item, failure
+}
+
 func scan(row pgx.Row) (domain.Progress, error) {
 	var item domain.Progress
 	failure := row.Scan(&item.TitleID, &item.ReleaseID, &item.RevisionID, &item.PageID, &item.Fraction, &item.FurthestOrder, &item.Version, &item.DeviceID, &item.Sequence)
@@ -41,28 +53,21 @@ func (repository *Repository) Selection(ctx context.Context, actor, title string
 	return &items[0], nil
 }
 func (repository *Repository) list(ctx context.Context, actor, after, title string) ([]application.Entry, error) {
-	rows, failure := repository.pool.Query(ctx, `SELECT library.title_id,title.name_kk,title.slug,library.status,COALESCE(library.preferred_team_id,''),library.is_favorite,library.notify_new_releases,library.updated_at,library.selection_version,library.is_removed,(SELECT COUNT(DISTINCT chapter.id) FROM chapters chapter JOIN releases release ON release.chapter_id=chapter.id JOIN revisions revision ON revision.id=release.current_revision_id AND revision.status='published' WHERE chapter.title_id=title.id AND release.status='published' AND chapter.order_num>COALESCE(progress.furthest_chapter_order,0) AND (library.preferred_team_id IS NULL OR release.team_id=library.preferred_team_id)) FROM library_entries library JOIN titles title ON title.id=library.title_id LEFT JOIN reading_progress progress ON progress.user_id=library.user_id AND progress.title_id=library.title_id WHERE library.user_id=$1 AND (NOT library.is_removed OR $3<>'') AND ($2='' OR library.title_id<$2) AND ($3='' OR library.title_id=$3) ORDER BY library.title_id DESC LIMIT 100`, actor, after, title)
+	rows, failure := repository.pool.Query(ctx, `SELECT `+libraryColumns+libraryJoins+` WHERE library.user_id=$1 AND (NOT library.is_removed OR $3<>'') AND ($2='' OR library.title_id<$2) AND ($3='' OR library.title_id=$3) ORDER BY library.title_id DESC LIMIT 100`, actor, after, title)
 	if failure != nil {
 		return nil, failure
 	}
 	defer rows.Close()
 	items := []application.Entry{}
 	for rows.Next() {
-		var item application.Entry
-		if failure = rows.Scan(&item.TitleID, &item.Name, &item.Slug, &item.Status, &item.PreferredTeamID, &item.Favorite, &item.Notify, &item.UpdatedAt, &item.Version, &item.Removed, &item.Unseen); failure != nil {
+		item, failure := scanEntry(rows)
+		if failure != nil {
 			return nil, failure
 		}
 		items = append(items, item)
 	}
 	if failure = rows.Err(); failure != nil {
 		return nil, failure
-	}
-	rows.Close()
-	for index := range items {
-		items[index].Progress, failure = repository.Progress(ctx, actor, items[index].TitleID)
-		if failure != nil {
-			return nil, failure
-		}
 	}
 	return items, nil
 }

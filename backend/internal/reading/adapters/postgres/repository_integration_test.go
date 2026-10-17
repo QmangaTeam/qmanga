@@ -4,6 +4,8 @@ import (
 	"context"
 	"errors"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"net/url"
 	"os"
 	communityPostgres "qmanga/internal/community/adapters/postgres"
@@ -14,9 +16,18 @@ import (
 	"qmanga/internal/reading/application"
 	"qmanga/internal/reading/domain"
 	"strings"
+	"sync/atomic"
 	"testing"
 	"time"
 )
+
+type queryCounter struct{ count atomic.Int64 }
+
+func (counter *queryCounter) TraceQueryStart(ctx context.Context, _ *pgx.Conn, _ pgx.TraceQueryStartData) context.Context {
+	counter.count.Add(1)
+	return ctx
+}
+func (counter *queryCounter) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryEndData) {}
 
 func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 	databaseURL := os.Getenv("TEST_DATABASE_URL")
@@ -259,4 +270,69 @@ func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 			testingTarget.Fatal("anonymous report leaked into account history")
 		}
 	}
+	testingTarget.Run("library page does not issue a progress query per title", func(testingTarget *testing.T) {
+		execute(`INSERT INTO users(id,email,password_hash) VALUES('paging','paging@example.test','test');
+		 INSERT INTO titles(id,slug,name_kk) SELECT 'lib-'||lpad(number::text,3,'0'),'lib-'||number,'Кітап '||number FROM generate_series(1,110) number;
+		 INSERT INTO library_entries(id,user_id,title_id,status) SELECT 'entry-'||id,'paging',id,'reading' FROM titles WHERE id LIKE 'lib-%'`)
+		counter := &queryCounter{}
+		config := database.Pool().Config().Copy()
+		config.ConnConfig.Tracer = counter
+		pool, failure := pgxpool.NewWithConfig(ctx, config)
+		if failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		defer pool.Close()
+		items, failure := New(pool).List(ctx, "paging", "")
+		if failure != nil || len(items) != 100 {
+			testingTarget.Fatalf("library page: %d %v", len(items), failure)
+		}
+		if count := counter.count.Load(); count != 1 {
+			testingTarget.Fatalf("100 rows required %d queries, want one joined query", count)
+		}
+		execute(`UPDATE library_entries SET status='planned',is_favorite=true WHERE user_id='paging' AND title_id='lib-001'; UPDATE titles SET name_kk='Қашықтағы алмас' WHERE id='lib-001'; UPDATE titles SET name_kk='100% ready' WHERE id='lib-002'`)
+		service := application.New(New(pool))
+		filtered, failure := service.Library(ctx, "paging", application.LibraryFilter{Query: "ҚАШЫҚТАҒЫ", Status: "planned", Favorite: true})
+		if failure != nil || filtered.Total != 1 || len(filtered.Items) != 1 || filtered.Items[0].TitleID != "lib-001" || filtered.Next != "" {
+			testingTarget.Fatalf("complete filtered library: %+v %v", filtered, failure)
+		}
+		firstPage, failure := service.Library(ctx, "paging", application.LibraryFilter{})
+		if failure != nil || firstPage.Total != 110 || len(firstPage.Items) != 100 || firstPage.Next == "" {
+			testingTarget.Fatalf("first page: %+v %v", firstPage, failure)
+		}
+		lastPage, failure := service.Library(ctx, "paging", application.LibraryFilter{After: firstPage.Next})
+		if failure != nil || lastPage.Total != 110 || len(lastPage.Items) != 10 || lastPage.Next != "" {
+			testingTarget.Fatalf("last page/count: %+v %v", lastPage, failure)
+		}
+		literal, failure := service.Library(ctx, "paging", application.LibraryFilter{Query: "%"})
+		if failure != nil || literal.Total != 1 {
+			testingTarget.Fatalf("literal search: %+v %v", literal, failure)
+		}
+		missing, failure := service.Library(ctx, "first", application.LibraryFilter{Query: "Қашықтағы"})
+		if failure != nil || missing.Total != 0 || len(missing.Items) != 0 {
+			testingTarget.Fatal("filtered library leaked across accounts", failure)
+		}
+		if _, failure := service.Library(ctx, "paging", application.LibraryFilter{Status: "invalid"}); !errors.Is(failure, domain.ErrInvalid) {
+			testingTarget.Fatal("invalid status accepted", failure)
+		}
+		execute(`INSERT INTO titles(id,slug,name_kk,cover_asset_id) SELECT 'recent-'||number,'recent-'||number,'Жақында '||number,'cover-'||number FROM generate_series(1,3) number;
+		 INSERT INTO projects(id,title_id,team_id) SELECT 'recent-project-'||number,'recent-'||number,'team' FROM generate_series(1,3) number;
+		 INSERT INTO chapters(id,title_id,label,order_num) SELECT 'recent-chapter-'||number,'recent-'||number,'1',1 FROM generate_series(1,3) number;
+		 INSERT INTO releases(id,chapter_id,project_id,team_id,status,current_revision_id) SELECT 'recent-release-'||number,'recent-chapter-'||number,'recent-project-'||number,'team','published','recent-revision-'||number FROM generate_series(1,3) number;
+		 INSERT INTO revisions(id,release_id,status) SELECT 'recent-revision-'||number,'recent-release-'||number,'published' FROM generate_series(1,3) number;
+		 INSERT INTO pages(id,revision_id,position) SELECT 'recent-page-'||number,'recent-revision-'||number,1 FROM generate_series(1,3) number;
+		 INSERT INTO reading_progress(id,user_id,title_id,release_id,revision_id,page_id,page_position,fraction,version,updated_at) SELECT 'recent-progress-'||number,'paging','recent-'||number,'recent-release-'||number,'recent-revision-'||number,'recent-page-'||number,1,0.5,1,'2026-10-18 00:00:00+00'::timestamptz + number*interval '1 minute' FROM generate_series(1,3) number`)
+		recent, failure := service.Recent(ctx, "paging", 2)
+		if failure != nil || len(recent) != 2 || recent[0].TitleID != "recent-3" || recent[1].TitleID != "recent-2" || recent[0].CoverID != "cover-3" || recent[0].Availability != "available" || recent[0].PagePosition != 1 || recent[0].Progress.Fraction != 0.5 {
+			testingTarget.Fatalf("activity projection independent of library: %+v %v", recent, failure)
+		}
+		execute(`UPDATE releases SET status='withdrawn' WHERE id='recent-release-3'; INSERT INTO revisions(id,release_id,status)VALUES('updated-revision','recent-release-2','published'); UPDATE releases SET current_revision_id='updated-revision' WHERE id='recent-release-2'`)
+		recent, failure = service.Recent(ctx, "paging", 4)
+		if failure != nil || recent[0].Availability != "withdrawn" || recent[1].Availability != "updated" {
+			testingTarget.Fatalf("availability: %+v %v", recent, failure)
+		}
+		references, failure := service.References(ctx, []string{"recent-release-1", "recent-release-3"})
+		if failure != nil || len(references) != 1 || references[0].TitleID != "recent-1" {
+			testingTarget.Fatal("public metadata exposed withdrawn reference", references, failure)
+		}
+	})
 }
