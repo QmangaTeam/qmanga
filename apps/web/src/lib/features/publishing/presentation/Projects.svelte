@@ -1,5 +1,5 @@
 <script lang="ts">
- import {onMount} from 'svelte';
+ import {onMount,untrack} from 'svelte';
  import {page} from '$app/stores';
  import type {Account} from '$lib/features/identity/domain/account';
  import type {PublishingGateway} from '../application/publishing';
@@ -9,26 +9,49 @@
  import SectionHeading from '$lib/shared/presentation/ui/SectionHeading.svelte';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {failureCode,noticeText} from '$lib/shared/presentation/copy';
+ import {ProjectDirectory} from '../application/project-directory';
+
  let {user,gateway,teamsGateway,requestsGateway}:{user:Account|null;gateway:PublishingGateway;teamsGateway:TeamsGateway;requestsGateway:ProjectRequestsGateway}=$props();
  const {locale}=useLocale();
- let items=$state<{id:string;titleName:string;teamName:string;teamId?:string}[]>([]),teams=$state<Team[]>([]),team=$state(''),loading=$state(true),more=$state(false),error=$state(''),query=$state(''),cursor=$state(''),total=$state<number|undefined>(),generation=0;
- async function load(append=false){const ticket=++generation;loading=true;error='';const after=append?cursor:'';if(!append){items=[];cursor='';more=false;total=undefined;}const criteria={query:query.trim(),teamId:team};try{const batch=await gateway.projectPage(criteria,after);if(ticket!==generation)return;items=append?[...new Map([...items,...batch.items].map(item=>[item.id,item])).values()]:batch.items;cursor=batch.nextCursor;more=!!cursor;total=batch.total;if(!teams.length){const available=await teamsGateway.list();if(ticket===generation)teams=available;}}catch(failure){if(ticket===generation)error=failureCode(failure);}finally{if(ticket===generation)loading=false;}}
- onMount(()=>{team=$page.url.searchParams.get('team')||'';if(user)void load();else loading=false;});
+ let teams=$state<Team[]>([]),team=$state(''),error=$state(''),query=$state('');
+ let directoryVersion=$state(0);
+ const directory=new ProjectDirectory(untrack(()=>gateway),()=>directoryVersion++);
+ const items=$derived.by(()=>{directoryVersion;return directory.items;});
+ const cursor=$derived.by(()=>{directoryVersion;return directory.cursor;});
+ const hasMore=$derived.by(()=>{directoryVersion;return directory.hasMore;});
+ const total=$derived.by(()=>{directoryVersion;return directory.total;});
+ const loading=$derived.by(()=>{directoryVersion;return directory.loading;});
+ const appliedCriteria=$derived.by(()=>{directoryVersion;return directory.appliedCriteria;});
+
+ async function search(){
+  error='';
+  try{
+   await directory.search(query,team);
+   if(!teams.length){teams=await teamsGateway.list();}
+  }catch(failure){
+   error=failureCode(failure);
+  }
+ }
+
+ onMount(()=>{
+  team=$page.url.searchParams.get('team')||'';
+  if(user)void search();
+ });
 </script>
 <svelte:head><title>{text($locale,'Аударма жобалары','Проекты переводов')} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>
 <SectionHeading level={1} title={text($locale,'Жобалар','Проекты')} description={text($locale,'Тайтлды аш, тарау қос және аудармаңды жариялауға дайында.','Открой тайтл, добавь главу и подготовь перевод к публикации.')}>{#snippet actions()}{#if user}<a class="button primary" href="/studio/requests?new=1">{text($locale,'Жоба сұрау','Запросить проект')}</a>{/if}{/snippet}</SectionHeading>
 {#if !user}<div class="empty-state"><h2>{text($locale,'Аудармашы кабинеті','Кабинет переводчика')}</h2><p>{text($locale,'Аккаунтқа кіріп, командаңа қосыл немесе жаңа командаға өтінім бер.','Войди и присоединись к команде или подай заявку на создание новой.')}</p><a class="button primary" href="/login?returnTo=%2Fstudio%2Fprojects">{text($locale,'Кіру','Войти')}</a></div>
 {:else}
  {#if !user.verified}<div class="next-step"><h2>{text($locale,'Поштаңды раста','Подтверди почту')}</h2><p>{text($locale,'Командаға өтінім беру және файл жүктеу үшін пошта расталуы керек.','Для заявки команды и загрузки файлов нужна подтверждённая почта.')}</p><a class="button subtle" href="/settings">{text($locale,'Аккаунт баптаулары','Настройки аккаунта')}</a></div>{/if}
- {#if error}<p role="alert" class="form-message">{noticeText($locale,error)}</p><button class="button subtle" onclick={()=>load()}>{text($locale,'Қайталау','Повторить')}</button>{/if}
+ {#if error}<p role="alert" class="form-message">{noticeText($locale,error)}</p><button class="button subtle" onclick={()=>search()}>{text($locale,'Қайталау','Повторить')}</button>{/if}
  <a class="pending" href="/studio/requests">{text($locale,'Өтінімдерім','Мои заявки')} <span>→</span></a>
- <form class="project-search" onsubmit={event=>{event.preventDefault();void load();}}><label>{text($locale,'Жобадан іздеу','Поиск проектов')}<input type="search" bind:value={query} maxlength="80"/></label>{#if teams.length>1}<label>{text($locale,'Команда','Команда')}<select bind:value={team} onchange={()=>load()}><option value="">{text($locale,'Барлық командалар','Все команды')}</option>{#each teams as item}<option value={item.id}>{item.name}</option>{/each}</select></label>{/if}<button class="button subtle" type="submit">{text($locale,'Іздеу','Найти')}</button></form>
+ <form class="project-search" onsubmit={event=>{event.preventDefault();void search();}}><label>{text($locale,'Жобадан іздеу','Поиск проектов')}<input type="search" bind:value={query} maxlength="80"/></label>{#if teams.length>1}<label>{text($locale,'Команда','Команда')}<select aria-label={text($locale,'Команда','Команда')} bind:value={team} onchange={()=>search()}><option value="">{text($locale,'Барлық командалар','Все команды')}</option>{#each teams as item}<option value={item.id}>{item.name}</option>{/each}</select></label>{/if}<button class="button subtle" type="submit">{text($locale,'Іздеу','Найти')}</button></form>
  {#if total!==undefined}<p class="muted">{text($locale,'Табылды: ','Найдено: ')}{total}</p>{/if}
  {#if loading&&!items.length}<p role="status">{text($locale,'Жобалар жүктелуде…','Загружаем проекты…')}</p>
- {:else if !items.length&&!error&&(team||query.trim())}<p class="empty-state">{text($locale,'Жоба табылмады. Сұрау не команданы өзгерт.','Проекты не найдены. Измени запрос или команду.')}</p>
+ {:else if !items.length&&!error&&(appliedCriteria.teamId||appliedCriteria.query)}<p class="empty-state">{text($locale,'Жоба табылмады. Сұрау не команданы өзгерт.','Проекты не найдены. Измени запрос или команду.')}</p>
  {:else if !items.length&&!error}<div class="next-step"><h2>{teams.some(team=>team.approved)?text($locale,'Бірінші жобаңды сұра','Запроси первый проект'):text($locale,'Командадан баста','Начни с команды')}</h2><p>{teams.some(team=>team.approved)?text($locale,'Каталогтан тайтл таңда немесе жаңа шығарма ұсын. Мақұлданған жоба осында пайда болады.','Выбери тайтл из каталога или предложи новый. Одобренный проект появится здесь.'):text($locale,'Команда құруға өтінім бер. Мақұлдағаннан кейін тайтл сұрап, тараулар жүктей аласың.','Подай заявку на команду. После одобрения можно запросить тайтл и загружать главы.')}</p><div class="actions"><a class="button primary" href={teams.some(team=>team.approved)?'/studio/requests?new=1':'/studio/teams?new=1'}>{teams.some(team=>team.approved)?text($locale,'Өтінім жіберу','Подать заявку'):text($locale,'Командаларға өту','Перейти к командам')}</a><a class="button subtle" href="/studio/requests">{text($locale,'Өтінімдерім','Мои заявки')}</a></div></div>
  {:else}<div class="projects">{#each items as item}<article><div><h2><a href={'/studio/projects/'+item.id}>{item.titleName}</a></h2><p>{item.teamName}</p></div><a class="button subtle" href={'/studio/projects/'+item.id}>{text($locale,'Тарауларды басқару','Управлять главами')}</a></article>{/each}</div>{/if}
- {#if more}<button class="button subtle" disabled={loading} onclick={()=>load(true)}>{text($locale,'Тағы жобалар','Ещё проекты')}</button>{/if}
+ {#if hasMore}<button class="button subtle" disabled={loading} onclick={()=>directory.more()}>{text($locale,'Тағы жобалар','Ещё проекты')}</button>{/if}
 {/if}
 <style>
  .project-search{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:20px 0}.project-search label{display:grid;gap:8px;flex:1 1 220px;min-width:0}

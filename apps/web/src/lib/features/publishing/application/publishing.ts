@@ -7,8 +7,9 @@ export interface UploadSource { name: string; size: number; key: string; content
 export interface UploadTask { done: Promise<void>; cancel(): void }
 export interface StudioProject {id:string;titleId:string;titleName:string;teamId:string;teamName:string;role:string;approved:boolean;status:string}
 export interface ProjectPage {items:{id:string;titleName:string;teamName:string;teamId?:string}[];nextCursor:string;total:number}
+export interface ProjectFilter {query?:string;teamId?:string}
 export interface PublishingGateway {
- projectPage(filter:{query?:string;teamId?:string},cursor?:string):Promise<ProjectPage>;
+ projectPage(filter:ProjectFilter,cursor?:string):Promise<ProjectPage>;
  project(id:string):Promise<StudioProject>;
  createChapter(projectId:string,input:{label:string;volume:string;name:string;order:number}):Promise<string>;
  projects(offset?:number): Promise<{id: string; titleName: string; teamName: string;teamId?:string}[]>;
