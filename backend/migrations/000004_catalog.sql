@@ -1,0 +1,10 @@
+CREATE EXTENSION IF NOT EXISTS pg_trgm WITH SCHEMA public;
+ALTER TABLE titles RENAME COLUMN cover_url TO cover_asset_id;
+ALTER TABLE titles ADD COLUMN direction VARCHAR(8) NOT NULL DEFAULT 'ltr' CHECK(direction IN ('ltr','rtl'));
+ALTER TABLE titles ADD COLUMN is_demo BOOLEAN NOT NULL DEFAULT false;
+ALTER TABLE titles ADD COLUMN search_text TEXT NOT NULL DEFAULT '';
+UPDATE titles SET search_text=lower(name_kk||' '||name_original||' '||array_to_string(aliases,' '));
+CREATE INDEX titles_search_idx ON titles USING gin(search_text public.gin_trgm_ops);
+CREATE INDEX titles_updated_idx ON titles(updated_at DESC,id DESC);
+CREATE INDEX ratings_title_idx ON ratings(title_id);
+CREATE UNIQUE INDEX chapters_label_idx ON chapters(title_id,volume,label);
