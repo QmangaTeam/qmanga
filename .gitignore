@@ -1,0 +1,15 @@
+.env
+.env.*
+!.env.example
+node_modules/
+.svelte-kit/
+build/
+dist/
+.worktrees/
+.superpowers/
+.agent-delegator/
+coverage/
+test-results/
+playwright-report/
+*.log
+tmp/
