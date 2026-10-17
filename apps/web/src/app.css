@@ -1,0 +1,21 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+	color-scheme: dark;
+}
+
+/* Touch targets must be at least 44px */
+.touch-target {
+	min-width: 44px;
+	min-height: 44px;
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+}
+
+/* Safe area insets for mobile devices */
+.pb-safe {
+	padding-bottom: env(safe-area-inset-bottom, 0px);
+}

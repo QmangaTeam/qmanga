@@ -1,0 +1,273 @@
+-- Migration: 000001_initial_schema.sql
+-- Description: Core tables for Qmanga MVP (Kazakh manga platform)
+
+CREATE TABLE IF NOT EXISTS users (
+    id VARCHAR(36) PRIMARY KEY,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    password_hash VARCHAR(255) NOT NULL,
+    role VARCHAR(32) NOT NULL DEFAULT 'reader',
+    is_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS sessions (
+    id VARCHAR(64) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS tokens (
+    id VARCHAR(64) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    token_type VARCHAR(32) NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS genres (
+    id VARCHAR(64) PRIMARY KEY,
+    name_kk VARCHAR(128) NOT NULL,
+    slug VARCHAR(128) UNIQUE NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS titles (
+    id VARCHAR(36) PRIMARY KEY,
+    slug VARCHAR(128) UNIQUE NOT NULL,
+    name_kk VARCHAR(255) NOT NULL,
+    name_original VARCHAR(255) NOT NULL DEFAULT '',
+    aliases TEXT[] NOT NULL DEFAULT '{}',
+    type VARCHAR(32) NOT NULL DEFAULT 'manga',
+    status_original VARCHAR(32) NOT NULL DEFAULT 'ongoing',
+    status_translation VARCHAR(32) NOT NULL DEFAULT 'ongoing',
+    description_kk TEXT NOT NULL DEFAULT '',
+    cover_url VARCHAR(512) NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS title_genres (
+    title_id VARCHAR(36) NOT NULL REFERENCES titles(id) ON DELETE CASCADE,
+    genre_id VARCHAR(64) NOT NULL REFERENCES genres(id) ON DELETE CASCADE,
+    PRIMARY KEY (title_id, genre_id)
+);
+
+CREATE TABLE IF NOT EXISTS teams (
+    id VARCHAR(36) PRIMARY KEY,
+    slug VARCHAR(128) UNIQUE NOT NULL,
+    name VARCHAR(255) NOT NULL,
+    description TEXT NOT NULL DEFAULT '',
+    avatar_url VARCHAR(512) NOT NULL DEFAULT '',
+    is_approved BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS team_memberships (
+    id VARCHAR(36) PRIMARY KEY,
+    team_id VARCHAR(36) NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    role VARCHAR(32) NOT NULL DEFAULT 'member',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (team_id, user_id)
+);
+
+CREATE TABLE IF NOT EXISTS team_invitations (
+    id VARCHAR(36) PRIMARY KEY,
+    team_id VARCHAR(36) NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    email VARCHAR(255) NOT NULL,
+    role VARCHAR(32) NOT NULL DEFAULT 'member',
+    token VARCHAR(64) UNIQUE NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS projects (
+    id VARCHAR(36) PRIMARY KEY,
+    title_id VARCHAR(36) NOT NULL REFERENCES titles(id) ON DELETE CASCADE,
+    team_id VARCHAR(36) NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    status VARCHAR(32) NOT NULL DEFAULT 'active',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (title_id, team_id)
+);
+
+CREATE TABLE IF NOT EXISTS chapters (
+    id VARCHAR(36) PRIMARY KEY,
+    title_id VARCHAR(36) NOT NULL REFERENCES titles(id) ON DELETE CASCADE,
+    label VARCHAR(64) NOT NULL,
+    order_num INT NOT NULL,
+    volume VARCHAR(32) NOT NULL DEFAULT '',
+    title_kk VARCHAR(255) NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (title_id, order_num)
+);
+
+CREATE TABLE IF NOT EXISTS releases (
+    id VARCHAR(36) PRIMARY KEY,
+    chapter_id VARCHAR(36) NOT NULL REFERENCES chapters(id) ON DELETE CASCADE,
+    project_id VARCHAR(36) NOT NULL REFERENCES projects(id) ON DELETE CASCADE,
+    team_id VARCHAR(36) NOT NULL REFERENCES teams(id) ON DELETE CASCADE,
+    language VARCHAR(8) NOT NULL DEFAULT 'kk',
+    status VARCHAR(32) NOT NULL DEFAULT 'draft',
+    current_revision_id VARCHAR(36),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (chapter_id, team_id)
+);
+
+CREATE TABLE IF NOT EXISTS revisions (
+    id VARCHAR(36) PRIMARY KEY,
+    release_id VARCHAR(36) NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+    revision_num INT NOT NULL DEFAULT 1,
+    status VARCHAR(32) NOT NULL DEFAULT 'draft',
+    moderation_note TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS pages (
+    id VARCHAR(36) PRIMARY KEY,
+    revision_id VARCHAR(36) NOT NULL REFERENCES revisions(id) ON DELETE CASCADE,
+    position INT NOT NULL,
+    width INT NOT NULL DEFAULT 0,
+    height INT NOT NULL DEFAULT 0,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (revision_id, position)
+);
+
+CREATE TABLE IF NOT EXISTS page_variants (
+    id VARCHAR(36) PRIMARY KEY,
+    page_id VARCHAR(36) NOT NULL REFERENCES pages(id) ON DELETE CASCADE,
+    tier VARCHAR(16) NOT NULL,
+    url VARCHAR(512) NOT NULL,
+    width INT NOT NULL,
+    height INT NOT NULL,
+    byte_size BIGINT NOT NULL,
+    offset_y INT NOT NULL DEFAULT 0
+);
+
+CREATE TABLE IF NOT EXISTS upload_sessions (
+    id VARCHAR(36) PRIMARY KEY,
+    revision_id VARCHAR(36) NOT NULL REFERENCES revisions(id) ON DELETE CASCADE,
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    total_files INT NOT NULL DEFAULT 0,
+    uploaded_files INT NOT NULL DEFAULT 0,
+    status VARCHAR(32) NOT NULL DEFAULT 'active',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS jobs (
+    id VARCHAR(36) PRIMARY KEY,
+    type VARCHAR(64) NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    attempts INT NOT NULL DEFAULT 0,
+    max_attempts INT NOT NULL DEFAULT 5,
+    leased_until TIMESTAMPTZ,
+    last_error TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS outbox_events (
+    id VARCHAR(36) PRIMARY KEY,
+    event_type VARCHAR(64) NOT NULL,
+    payload JSONB NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    sent_at TIMESTAMPTZ
+);
+
+CREATE TABLE IF NOT EXISTS library_entries (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title_id VARCHAR(36) NOT NULL REFERENCES titles(id) ON DELETE CASCADE,
+    status VARCHAR(32) NOT NULL DEFAULT 'planned',
+    is_favorite BOOLEAN NOT NULL DEFAULT FALSE,
+    preferred_team_id VARCHAR(36) REFERENCES teams(id) ON DELETE SET NULL,
+    notify_new_releases BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, title_id)
+);
+
+CREATE TABLE IF NOT EXISTS reading_progress (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title_id VARCHAR(36) NOT NULL REFERENCES titles(id) ON DELETE CASCADE,
+    release_id VARCHAR(36) NOT NULL REFERENCES releases(id) ON DELETE CASCADE,
+    page_position INT NOT NULL DEFAULT 1,
+    scroll_offset INT NOT NULL DEFAULT 0,
+    furthest_chapter_order INT NOT NULL DEFAULT 0,
+    version BIGINT NOT NULL DEFAULT 1,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, title_id)
+);
+
+CREATE TABLE IF NOT EXISTS ratings (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title_id VARCHAR(36) NOT NULL REFERENCES titles(id) ON DELETE CASCADE,
+    score INT NOT NULL CHECK (score >= 1 AND score <= 10),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE (user_id, title_id)
+);
+
+CREATE TABLE IF NOT EXISTS comments (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    title_id VARCHAR(36) NOT NULL REFERENCES titles(id) ON DELETE CASCADE,
+    release_id VARCHAR(36) REFERENCES releases(id) ON DELETE SET NULL,
+    parent_id VARCHAR(36) REFERENCES comments(id) ON DELETE CASCADE,
+    body TEXT NOT NULL,
+    is_spoiler BOOLEAN NOT NULL DEFAULT FALSE,
+    is_hidden BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS reports (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+    category VARCHAR(64) NOT NULL,
+    reason TEXT NOT NULL,
+    target_type VARCHAR(32) NOT NULL,
+    target_id VARCHAR(36) NOT NULL,
+    status VARCHAR(32) NOT NULL DEFAULT 'pending',
+    resolution_note TEXT NOT NULL DEFAULT '',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS notifications (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    type VARCHAR(64) NOT NULL,
+    title_kk VARCHAR(255) NOT NULL,
+    body_kk TEXT NOT NULL,
+    data JSONB NOT NULL DEFAULT '{}',
+    is_read BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE TABLE IF NOT EXISTS audit_logs (
+    id VARCHAR(36) PRIMARY KEY,
+    user_id VARCHAR(36) REFERENCES users(id) ON DELETE SET NULL,
+    action VARCHAR(64) NOT NULL,
+    entity_type VARCHAR(64) NOT NULL,
+    entity_id VARCHAR(36) NOT NULL,
+    metadata JSONB NOT NULL DEFAULT '{}',
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Indices for performance and filtering
+CREATE INDEX IF NOT EXISTS idx_titles_slug ON titles(slug);
+CREATE INDEX IF NOT EXISTS idx_titles_type ON titles(type);
+CREATE INDEX IF NOT EXISTS idx_chapters_title_order ON chapters(title_id, order_num);
+CREATE INDEX IF NOT EXISTS idx_releases_chapter ON releases(chapter_id);
+CREATE INDEX IF NOT EXISTS idx_releases_team ON releases(team_id);
+CREATE INDEX IF NOT EXISTS idx_pages_revision_pos ON pages(revision_id, position);
+CREATE INDEX IF NOT EXISTS idx_jobs_status_leased ON jobs(status, leased_until);
+CREATE INDEX IF NOT EXISTS idx_library_user_status ON library_entries(user_id, status);
+CREATE INDEX IF NOT EXISTS idx_comments_title ON comments(title_id);
+CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, is_read);
