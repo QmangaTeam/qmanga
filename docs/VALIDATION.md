@@ -39,6 +39,14 @@ A fresh-context review found and fixed: a duplicate retry rebasing over another 
 
 The local five-page JPEG chapter opens through the Go manifest/media gateway. At320px and360px, the reader and drawers have no horizontal overflow; inspected buttons are44px and selects48px. Light/dark panels, page turns, immediate page-turn persistence across reload, strip mode, eco/high switching, source-page counter and Back closing a drawer were exercised. At1280px the centered stage measures1024px and only a small image window is rendered. A saved eco copy opened, turned to another decoded page and reloaded with the tab's network disabled through browser developer controls; the network was restored afterwards. This is desktop browser emulation, not a physical Android test. Local screenshot proofs are kept outside the Git repository, so sample artwork is not distributed with the code.
 
+## Reader navigation and codec regression follow-up
+
+The owner reported right-edge taps, buttons and arrow keys not advancing. Reproduced missing image tap targets, arrow suppression after button focus, strip mode inheriting title RTL, and a fractional CSS-pixel boundary that left the first visible page/counter on the previous source page. Navigation now has a shared application cursor with latest-request fencing; rounding within1px is accepted at boundaries. Disabled edge controls identify chapter limits. Page-mode RTL remains explicit/title-driven and consistent across all inputs.
+
+Fresh checks:22 Bun tests/113 assertions; frontend boundaries, Svelte0 errors/warnings and production build; full Go/PostgreSQL/real-codec suite. Real JPEG/PNG/WebP inputs produce decodable WebP in all reading profiles and PNG originals; MIME, dimensions, actual byte counts and hashes are checked. A PNG masquerading as WebP is rejected. A fresh one-page upload from the owner's local test folder passed upload → worker → publication → actual RIFF/WEBP bytes, image/webp HTTP headers and SHA-256 for every eco/standard/high fragment through Go.
+
+Browser: the original five-page chapter was exercised at320/360px in both themes, in pages and strip modes. Tested a physical right-edge coordinate click, toolbar previous/next, ArrowLeft/ArrowRight after button focus, two rapid turns from1/5 to3/5, end-of-chapter disabled controls and RTL's consistent reversed sides. No horizontal overflow at320/360px; mobile toolbar targets remain44px. These are desktop-browser checks, not physical Android acceptance.
+
 ## Before a public launch
 
 - Test a physical weak Android, real network interruptions, long webtoons, app backgrounding, quota/eviction and service-worker updates across browser restarts. Emulation does not establish device performance.

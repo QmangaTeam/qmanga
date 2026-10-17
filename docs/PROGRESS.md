@@ -2,6 +2,8 @@
 
 Plan: docs/IMPLEMENTATION.md
 
+Reader follow-up: reproduced and fixed missing edge taps, keyboard suppression after button focus, strip RTL inversion, rapid-input races and fractional-pixel boundary/counter rollback. Shared application navigation policy/cursor, consistent RTL page controls and disabled chapter boundaries. Automatic WebP processing was already present; strengthened actual-format validation and JPEG/PNG/WebP decode/hash/MIME coverage, added studio explanation and checked a fresh real upload through all three profiles and the Go gateway. Fresh22 Bun tests/113 assertions, Svelte0 errors/warnings, architecture/build and full Go/PostgreSQL/codec suite pass. See docs/VALIDATION.md for browser evidence and remaining device acceptance.
+
 Executor and reviewer: Codex, directly, per owner's latest instruction. AGY is stopped; its work is preserved.
 
 Base: 5cafa1d5a1e5b2e33252c4d86f98ce49c47d583d.

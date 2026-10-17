@@ -92,10 +92,21 @@ try {
     $null = Send-Api $admin POST "moderation/revisions/$($draft.id)/review" @{decision='publish';reason='Local test'} $adminCsrf 204
     $manifest = Send-Api $anonymous GET "releases/$($draft.release_id)/manifest"
     if (@($manifest.pages).Count -ne $files.Count) { throw 'Incomplete manifest.' }
-    foreach ($page in $manifest.pages) { foreach ($tier in @('eco','standard','high')) { if (-not @($page.variants.$tier).Count) { throw 'Missing quality tier.' }; foreach ($variant in $page.variants.$tier) { if ($variant.url -notmatch '^/api/v1/media/[a-zA-Z0-9_-]+$') { throw 'Non-Go image URL.' } } } }
-    $media = $manifest.pages[0].variants.eco[0]
-    $response = $anonymous.GetAsync("$AppUrl$($media.url)").GetAwaiter().GetResult()
-    try { $bytes=$response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult(); if ([int]$response.StatusCode -ne 200 -or $bytes.Length -ne $media.bytes) { throw 'Media proxy byte mismatch.' } } finally { $response.Dispose() }
-    Write-Output "Publishing smoke passed: $($files.Count) local pages, private source, worker, moderation and Go media."
+    foreach ($page in $manifest.pages) {
+        foreach ($tier in @('eco','standard','high')) {
+            $variants = @($page.variants.$tier)
+            if (-not $variants.Count) { throw "Missing $tier variants." }
+            foreach ($media in $variants) {
+                if ($media.mime -ne 'image/webp' -or $media.url -notmatch '^/api/v1/media/[a-zA-Z0-9-]+$') { throw 'Unexpected reader format or direct storage URL.' }
+                $response = $anonymous.GetAsync("$AppUrl$($media.url)").GetAwaiter().GetResult()
+                try {
+                    $bytes = $response.Content.ReadAsByteArrayAsync().GetAwaiter().GetResult()
+                    $checksum = [Convert]::ToHexString([Security.Cryptography.SHA256]::HashData($bytes)).ToLowerInvariant()
+                    if ([int]$response.StatusCode -ne 200 -or $response.Content.Headers.ContentType.MediaType -ne 'image/webp' -or $bytes.Length -ne $media.bytes -or $checksum -ne $media.checksum -or $bytes.Length -lt 12 -or [Text.Encoding]::ASCII.GetString($bytes,0,4) -ne 'RIFF' -or [Text.Encoding]::ASCII.GetString($bytes,8,4) -ne 'WEBP') { throw 'Go media WebP bytes, MIME or checksum mismatch.' }
+                } finally { $response.Dispose() }
+            }
+        }
+    }
+    Write-Output "Publishing smoke passed: $($files.Count) local pages, private source, actual WebP in all three profiles, worker, moderation and Go media."
     Write-Output "Reader: $AppUrl/read/$($draft.release_id)"
 } finally { foreach ($client in $clients) { $client.Dispose() } }

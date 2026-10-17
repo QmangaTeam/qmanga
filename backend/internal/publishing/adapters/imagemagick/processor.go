@@ -73,9 +73,8 @@ func (processor *Processor) Process(ctx context.Context, reader io.Reader, page 
 			return failure
 		}
 		files = append(files, file)
-		configuration, _, failure := image.DecodeConfig(file)
-		if failure != nil || configuration.Width != fragment.Width || configuration.Height != fragment.Height {
-			return domain.ErrInvalidImage
+		if failure = validateGenerated(file, mime, fragment); failure != nil {
+			return failure
 		}
 		if _, failure = file.Seek(0, io.SeekStart); failure != nil {
 			return failure
@@ -125,6 +124,13 @@ func (processor *Processor) Process(ctx context.Context, reader io.Reader, page 
 	}
 	success = true
 	return batch, nil
+}
+func validateGenerated(reader io.Reader, mime string, fragment domain.Fragment) error {
+	configuration, format, failure := image.DecodeConfig(reader)
+	if failure != nil || configuration.Width != fragment.Width || configuration.Height != fragment.Height || "image/"+format != mime {
+		return domain.ErrInvalidImage
+	}
+	return nil
 }
 func run(ctx context.Context, arguments []string) error {
 	command := exec.CommandContext(ctx, "magick", arguments...)
