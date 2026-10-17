@@ -12,6 +12,16 @@ Owner direction, 18 October 2026: copy Senkuro's placement and interaction patte
 
 ## Scope
 
+### Menu and choice controls follow-up
+
+The owner's next correction explicitly includes the menu and selectors. Menu destinations now use icon-backed tiles/compact row buttons without explanatory paragraphs. Guest return paths and staff-only links remain intact. Language and theme use reusable native button groups with selected state in menu, settings and reader; other lists retain accessible native select behavior with consistent padding, themed arrow and44px targets. This deliberately avoids a JavaScript-heavy custom combobox for low-end Android.
+
+The first phone review found an unwanted line break in Қазақша. Fixed the language group's width and chip label wrapping; Kazakh and Russian now fit at320px. Menu links/choices measure at least44px; there is no document-width overflow. Russian/light, Kazakh/dark and the reader's independent theme/select styling were checked. Language/theme switching persists after reload; catalogue type selection still submits its actual GET filter and returns the expected two manga titles.
+
+Final frontend build passes all40 application/infrastructure tests,21 UI contracts, architecture/contrast gates, application and preview checks with zero diagnostics, and production compilation. Menu-specific tests preserve actual destinations, selected language, private-email omission, guest login return and reader/moderator/admin link visibility. Runtime backend contracts were not changed. Screenshots are saved outside Git as menu-controls-kk-360.png and menu-controls-desktop.png in the parent outputs/ui-review directory.
+
+During this pass the owner reported WSL memory usage. Container measurements were about382MiB including the unused component-preview server; stopping only that tools-profile service reduced the running stack to about281MiB. The main site remains healthy. Windows still reported about3.4GiB for the WSL VM, while Linux reported about4.3GiB of reclaimable file cache after repeated builds; these different accounting figures must not be added or equated. No leak conclusion or load-test guarantee follows from an idle snapshot. No volumes, global WSL limits or other applications were modified. Avoid repeated full builds during small UI iterations, stop optional tools after use, and group final verification into one build.
+
 This pass covers home, shared navigation, catalogue cover density and update presentation. It does not claim to reproduce every title/account/studio/reader screen from Senkuro. The small local catalogue remains real; artwork and additional titles are not copied or fabricated to fill eight desktop slots.
 
 ## Verification

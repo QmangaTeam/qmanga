@@ -12,6 +12,8 @@
  import CoverCard from '../src/lib/features/catalog/presentation/CoverCard.svelte';
  import ChapterRow from '../src/lib/features/catalog/presentation/ChapterRow.svelte';
  import LibraryRow from '../src/lib/features/reading/presentation/LibraryRow.svelte';
+ import ChoiceChips from '../src/lib/shared/presentation/ui/ChoiceChips.svelte';
+ import MenuTile from '../src/lib/shared/presentation/ui/MenuTile.svelte';
 
  let language = $state<'kk' | 'ru'>('kk');
  let theme = $state<'dark' | 'light'>('dark');
@@ -46,8 +48,8 @@
 <main id="top">
  <div class="preview-heading"><h1>{copy.title}</h1><p>{copy.note}</p></div>
  <div class="preview-switches">
-  <div role="group" aria-label="Қазақша / Русский"><Button variant="ghost" aria-pressed={language === 'kk'} onclick={() => changeLanguage('kk')}>Қазақша</Button><Button variant="ghost" aria-pressed={language === 'ru'} onclick={() => changeLanguage('ru')}>Русский</Button></div>
-  <div role="group" aria-label={language === 'kk' ? 'Тақырып' : 'Тема'}><Button variant="ghost" aria-pressed={theme === 'dark'} onclick={() => changeTheme('dark')}>{copy.dark}</Button><Button variant="ghost" aria-pressed={theme === 'light'} onclick={() => changeTheme('light')}>{copy.light}</Button></div>
+  <ChoiceChips label="Қазақша / Русский" value={language} options={[{value:'kk',label:'Қазақша'},{value:'ru',label:'Русский'}]} onchoose={value=>changeLanguage(value==='ru'?'ru':'kk')}/>
+  <ChoiceChips label={language==='kk'?'Тақырып':'Тема'} value={theme} options={[{value:'dark',label:copy.dark,icon:'moon'},{value:'light',label:copy.light,icon:'sun'}]} onchoose={value=>changeTheme(value==='light'?'light':'dark')}/>
  </div>
  <section aria-labelledby="actions-heading">
   <h2 id="actions-heading">{copy.actions}</h2>
@@ -74,6 +76,7 @@
  <section>
   <SectionHeading title={language==='kk'?'Контент үлгілері':'Примеры контента'} description={language==='kk'?'Төмендегі атаулар — тек үлгі.':'Названия ниже — демонстрационные.'}/>
   <Badge label={language==='kk'?'Оқып жүрмін':'Читаю'} tone="accent"/>
+  <div class="preview-menu"><MenuTile href="#top" label={language==='kk'?'Кітапхана':'Библиотека'} icon="bookmark"/><MenuTile href="#fields" label={language==='kk'?'Жобалар':'Проекты'} icon="folder"/></div>
   <div class="sample-covers"><CoverCard href="#top" name={language==='kk'?'Ұзақ атауы бар демонстрациялық тайтл':'Демонстрационный тайтл с длинным названием'} metadata="Манхва" detail="12" fallback={language==='kk'?'Мұқаба жоқ':'Нет обложки'}/><CoverCard href="#top" name={language==='kk'?'Тағы бір үлгі':'Ещё один пример'} metadata="Манга" fallback={language==='kk'?'Мұқаба жоқ':'Нет обложки'}/></div>
   <ChapterRow title={language==='kk'?'1-тарау · Үлгі':'Глава 1 · Пример'} releases={[]} readLabel={language==='kk'?'Оқу':'Читать'}/>
   <LibraryRow name={language==='kk'?'Кітапханадағы үлгі':'Пример в библиотеке'} href="#top" detail={language==='kk'?'Оқу әлі басталмаған':'Чтение ещё не начато'} continueLabel={language==='kk'?'Жалғастыру':'Продолжить'}/>
@@ -85,6 +88,7 @@
 </main>
 
 <style>
+ .preview-menu{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;max-width:420px;margin:16px 0}
  :global(body) { margin: 0; background: var(--bg); color: var(--text); font-size: 16px; line-height: 1.5; }
  :global(*) { box-sizing: border-box; }
  :global(:focus-visible) { outline: 2px solid var(--accent); outline-offset: 3px; }

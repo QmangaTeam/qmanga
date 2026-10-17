@@ -9,7 +9,7 @@
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {errorText} from '$lib/shared/presentation/messages';
  import SectionHeading from '$lib/shared/presentation/ui/SectionHeading.svelte';
- import SettingsRow from '$lib/shared/presentation/ui/SettingsRow.svelte';
+ import ChoiceChips from '$lib/shared/presentation/ui/ChoiceChips.svelte';
  import Button from '$lib/shared/presentation/ui/Button.svelte';
  import ActionLink from '$lib/shared/presentation/ui/ActionLink.svelte';
  import StateMessage from '$lib/shared/presentation/ui/StateMessage.svelte';
@@ -26,8 +26,8 @@
 <SectionHeading level={1} title={text($locale,'Баптаулар','Настройки')}/>
 <div class="settings">
  <section><h2>{text($locale,'Сыртқы көрініс','Внешний вид')}</h2>
- <SettingsRow controlId="ui-language" label={text($locale,'Интерфейс тілі','Язык интерфейса')} description={text($locale,'Манга мен пікірлердің тілі өзгермейді.','Язык манги и комментариев не меняется.')}><select id="ui-language" value={$locale} onchange={event=>change(event.currentTarget.value==='ru'?'ru':'kk')}><option value="kk">Қазақша</option><option value="ru">Русский</option></select></SettingsRow>
- <SettingsRow controlId="ui-theme" label={text($locale,'Тақырып','Тема')}><select id="ui-theme" value={theme} onchange={event=>theme=changeTheme(preferences,event.currentTarget.value)}><option value="system">{text($locale,'Құрылғыдағыдай','Как на устройстве')}</option><option value="dark">{text($locale,'Қараңғы','Тёмная')}</option><option value="light">{text($locale,'Жарық','Светлая')}</option></select></SettingsRow>
+ <div class="appearance-setting" id="ui-language"><h3>{text($locale,'Интерфейс тілі','Язык интерфейса')}</h3><ChoiceChips label={text($locale,'Интерфейс тілі','Язык интерфейса')} value={$locale} options={[{value:'kk',label:'Қазақша'},{value:'ru',label:'Русский'}]} onchoose={value=>change(value==='ru'?'ru':'kk')}/></div>
+ <div class="appearance-setting" id="ui-theme"><h3>{text($locale,'Тақырып','Тема')}</h3><ChoiceChips label={text($locale,'Тақырып','Тема')} value={theme} options={[{value:'system',label:text($locale,'Авто','Авто'),icon:'monitor'},{value:'dark',label:text($locale,'Қараңғы','Тёмная'),icon:'moon'},{value:'light',label:text($locale,'Жарық','Светлая'),icon:'sun'}]} onchoose={value=>theme=changeTheme(preferences,value)}/></div>
  </section>
  <section><h2>Аккаунт</h2>{#if user}<p class="account-email">{user.email}</p><p class="muted">{user.verified?text($locale,'Пошта расталған','Почта подтверждена'):text($locale,'Пошта расталмаған','Почта не подтверждена')}</p>
  <form class="profile-form" onsubmit={event=>{event.preventDefault();void saveProfile();}}><label for="profile-name">{text($locale,'Көрінетін атың','Публичное имя')}</label><input id="profile-name" bind:value={displayName} maxlength="40" autocomplete="nickname" aria-describedby="profile-hint"/><p id="profile-hint" class="muted">{text($locale,'Пікірлерде және команда құрамында көрінеді. Поштаңды жазба.','Видно в комментариях и составе команды. Не указывай почту.')}</p><Button type="submit" {busy}>{text($locale,'Профильді сақтау','Сохранить профиль')}</Button></form>
@@ -37,4 +37,4 @@
  {#if result}<StateMessage kind={result.ok?'success':'error'} title={result.ok?text($locale,'Дайын. Поштаңды тексер.','Готово. Проверь почту.'):errorText($locale,result.code)}/>{/if}</section>
  <section><h2>{text($locale,'Оқу','Чтение')}</h2><div class="settings-links"><ActionLink href="/saved">{text($locale,'Сақталған тараулар','Скачанные главы')}</ActionLink><ActionLink href="/library">{text($locale,'Кітапхана','Библиотека')}</ActionLink></div></section>
 </div>
-<style>.profile-form{display:grid;gap:12px;margin-top:20px}.profile-form :global(button){justify-self:start}.settings { max-width:720px; } section { margin-bottom:32px; } h2 { margin-bottom:16px; } .settings-links { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; } .account-email { overflow-wrap:anywhere; margin-bottom:4px; }</style>
+<style>.appearance-setting{display:grid;gap:10px;padding:16px 0;border-bottom:1px solid var(--line)}.appearance-setting h3{font-size:14px;font-weight:550}.profile-form{display:grid;gap:12px;margin-top:20px}.profile-form :global(button){justify-self:start}.settings { max-width:720px; } section { margin-bottom:32px; } h2 { margin-bottom:16px; } .settings-links { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; } .account-email { overflow-wrap:anywhere; margin-bottom:4px; }</style>

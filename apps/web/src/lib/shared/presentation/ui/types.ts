@@ -14,7 +14,7 @@ export interface ActionLinkProps extends Omit<HTMLAnchorAttributes, 'children' |
  variant?: ActionVariant;
  children?: Snippet;
 }
-export type IconName = 'home' | 'catalog' | 'bookmark' | 'bell' | 'menu' | 'search' | 'close' | 'left' | 'right' | 'down' | 'up' | 'settings' | 'check' | 'download' | 'upload' | 'plus' | 'star' | 'trash' | 'user';
+export type IconName = 'home' | 'catalog' | 'bookmark' | 'bell' | 'menu' | 'search' | 'close' | 'left' | 'right' | 'down' | 'up' | 'settings' | 'check' | 'download' | 'upload' | 'plus' | 'star' | 'trash' | 'user' | 'users' | 'folder' | 'file' | 'shield' | 'help' | 'flag' | 'moon' | 'sun' | 'monitor';
 export interface FieldControl {
  id: string;
  required: boolean;
