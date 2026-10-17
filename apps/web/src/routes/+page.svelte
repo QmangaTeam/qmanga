@@ -9,6 +9,6 @@
  const {locale}=useLocale();
 </script>
 <svelte:head><title>{text($locale,'Qmanga — қазақша манга','Qmanga — манга на казахском')}</title></svelte:head>
-<HomeDiscovery catalogue={data.catalogue} updates={data.updates} picks={data.picks} shelf={data.shelf}>
- {#snippet continuation()}<ContinueReading {...reading} covers={data.catalogue.page.items}/>{/snippet}
+<HomeDiscovery mostRead={data.mostRead} updates={data.updates} top={data.top} topKind={data.topKind}>
+ {#snippet continuation()}<ContinueReading {...reading} covers={data.mostRead.page.items}/>{/snippet}
 </HomeDiscovery>

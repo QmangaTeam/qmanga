@@ -27,8 +27,8 @@ const hasChapters = `EXISTS(SELECT 1` + publicationJoins + `WHERE chapter.title_
 const titleVisible = "(title.is_listed OR " + hasChapters + ")"
 const summaryColumns = `title.id,title.slug,title.name_kk,title.type,title.status_original,title.status_translation,title.cover_asset_id,title.is_demo,title.created_at,title.updated_at,
  (SELECT count(DISTINCT chapter.id)` + publicationJoins + `WHERE chapter.title_id=title.id AND ` + publicationVisible + `),
- (SELECT count(*) FROM ratings rating JOIN users rating_user ON rating_user.id=rating.user_id AND NOT rating_user.is_blocked WHERE rating.title_id=title.id),
- coalesce((SELECT avg(rating.score)::float8 FROM ratings rating JOIN users rating_user ON rating_user.id=rating.user_id AND NOT rating_user.is_blocked WHERE rating.title_id=title.id),0)`
+ (SELECT count(*) FROM ratings rating JOIN users rating_user ON rating_user.id=rating.user_id AND NOT rating_user.is_blocked WHERE rating.title_id=title.id) AS rating_count,
+ coalesce((SELECT avg(rating.score)::float8 FROM ratings rating JOIN users rating_user ON rating_user.id=rating.user_id AND NOT rating_user.is_blocked WHERE rating.title_id=title.id),0) AS score`
 
 func translate(failure error) error {
 	if errors.Is(failure, pgx.ErrNoRows) {

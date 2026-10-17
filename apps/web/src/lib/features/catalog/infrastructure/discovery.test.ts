@@ -19,3 +19,13 @@ test('release thumbnails reject storage and external URLs rather than bypassing 
   await expect(gateway.updates()).rejects.toThrow();
  }
 });
+
+test('ranked shelves request the actual type endpoint and preserve score and cover',async()=>{
+ let requested='';
+ const request=(async(url:RequestInfo|URL)=>{requested=String(url);return new Response(JSON.stringify({items:[{id:'ranked',slug:'ranked',name:'Тайтл',kind:'manhwa',original_status:'ongoing',translation_status:'ongoing',cover_url:'/api/v1/media/cover',demo:false,chapter_count:1,rating_count:2,score:8.5,updated_at:'2026-10-17T00:00:00Z'}],next_cursor:null}));}) as typeof fetch;
+ const gateway=new HttpCatalogGateway(new ApiClient(request));
+ const result=await gateway.rankings('manhwa');
+ expect(requested).toBe('/api/v1/rankings?kind=manhwa');
+ expect(result.items[0]).toMatchObject({kind:'manhwa',score:8.5,ratingCount:2,coverURL:'/api/v1/media/cover'});
+ expect(result.nextCursor).toBeNull();
+});

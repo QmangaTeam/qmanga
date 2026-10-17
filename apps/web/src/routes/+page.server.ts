@@ -1,11 +1,10 @@
 import {createPublicCatalogue} from '$lib/server/composition';
-import {loadCatalogue} from '$lib/features/catalog/application/catalog';
-import {loadUpdates,loadPicks} from '$lib/features/catalog/application/discovery';
+import {loadUpdates,loadRankings} from '$lib/features/catalog/application/discovery';
 import type {PageServerLoad} from './$types';
 export const load:PageServerLoad=async({fetch,url})=>{
- const requested=url.searchParams.get('shelf');
- const shelf=requested==='new'||requested==='completed'?requested:'updated';
+ const requested=url.searchParams.get('top');
+ const topKind=requested==='manga'||requested==='manhua'?requested:'manhwa';
  const gateway=createPublicCatalogue(fetch);
- const [catalogue,updates,picks]=await Promise.all([loadCatalogue(gateway,{sort:shelf==='new'?'new':'updated',translationStatus:shelf==='completed'?'completed':undefined}),loadUpdates(gateway),loadPicks(gateway)]);
- return {catalogue,updates,picks,shelf};
+ const [mostRead,updates,top]=await Promise.all([loadRankings(gateway),loadUpdates(gateway),loadRankings(gateway,topKind)]);
+ return {mostRead,updates,top,topKind};
 };

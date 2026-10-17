@@ -23,6 +23,7 @@ func NewCatalogHandler(service *application.Service) *CatalogHandler {
 func (handler *CatalogHandler) Register(api *gin.RouterGroup, identity *IdentityHandler) {
 	api.GET("/titles", handler.list)
 	api.GET("/updates", handler.updates)
+	api.GET("/rankings", handler.rankings)
 	api.GET("/titles/:slug", handler.detail)
 	api.GET("/titles/:slug/chapters", handler.chapters)
 	api.GET("/genres", handler.genres)
@@ -129,6 +130,24 @@ type genreDTO struct {
 	Name string `json:"name"`
 	Slug string `json:"slug"`
 }
+
+func (handler *CatalogHandler) rankings(request *gin.Context) {
+	limit, valid := queryInteger(request, "limit", 16, 16)
+	if !valid {
+		return
+	}
+	ranked, failure := handler.service.Rankings(request.Request.Context(), request.Query("kind"), limit)
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	items := []titleSummaryDTO{}
+	for _, item := range ranked {
+		items = append(items, summaryView(item))
+	}
+	request.JSON(200, gin.H{"items": items, "next_cursor": nil})
+}
+
 type projectDTO struct {
 	ID        string `json:"id"`
 	TitleID   string `json:"title_id"`

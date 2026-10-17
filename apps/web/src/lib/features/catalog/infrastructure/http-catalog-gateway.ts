@@ -48,6 +48,9 @@ function release(value: unknown): Release { const item = object(value); return {
 function chapter(value: unknown): Chapter { const item = object(value); return { id: text(item.id), label: text(item.label), volume: text(item.volume), name: text(item.name), order: integer(item.order), releases: array(item.releases, release) }; }
 export class HttpCatalogGateway implements CatalogGateway {
  constructor(private api: ApiClient) {}
+ async rankings(kind='') {
+  return page(await this.api.call('/api/v1/rankings?'+new URLSearchParams({kind})),summary);
+ }
  async list(filter: CatalogFilter, cursor?: string) {
   const query = new URLSearchParams();
   for (const [key, value] of Object.entries({ q: filter.query, kind: filter.kind, genre: filter.genre, original_status: filter.originalStatus, translation_status: filter.translationStatus, sort: filter.sort, has_chapters:filter.hasChapters?'true':undefined,featured:filter.featured?'true':undefined,cursor })) if (value) query.set(key, value);

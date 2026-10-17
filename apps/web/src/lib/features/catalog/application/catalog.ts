@@ -18,6 +18,7 @@ export interface PublicTeam {members?:{name:string;role:string}[]; id: string; n
 export interface ResultPage<Item> { items: Item[]; nextCursor: string | null }
 export interface ReleaseUpdate {releaseId:string;titleId:string;titleName:string;titleSlug:string;chapterLabel:string;teamName:string;teamSlug:string;demo:boolean;publishedAt:string;coverURL?:string}
 export interface CatalogGateway {
+ rankings(kind?:string):Promise<ResultPage<Summary>>;
  updates(after?:string,team?:string):Promise<ResultPage<ReleaseUpdate>>;
  list(filter: CatalogFilter, cursor?: string): Promise<ResultPage<Summary>>;
  genres(): Promise<Genre[]>;

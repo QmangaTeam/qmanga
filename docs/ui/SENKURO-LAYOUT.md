@@ -4,6 +4,20 @@ Owner direction, 18 October 2026: copy Senkuro's placement and interaction patte
 
 ## Visual contract
 
+### Home section order — owner's latest correction
+
+The main page now follows exactly: Most read → Continue reading → Latest updates → type-top tabs (manhwa / manga / manhua). This replaces the earlier updated/new/completed home navigation and editorial shelf; it does not remove catalogue filters or editorial metadata from the product.
+
+Most read is an all-time ranking of distinct non-blocked accounts with persisted reading progress. Anonymous/offline-only local progress is not silently counted as server statistics. Type tops rank published titles by actual non-blocked-user average rating, then vote count and stable title ID. Unrated titles sort after rated titles; no score badge appears without votes. Rankings exclude unpublished announcements, and each response is bounded to16 titles. The backend read model reuses catalogue summaries and Go media URLs; no new tracking events, image provider or database table was introduced.
+
+Only the selected type-top shelf is requested; tab links preserve the selected kind in the URL and target the lower section. Only the first three most-read covers have eager/high priority. Type-top covers below the fold are lazy. Continuation has a permanent section heading and separate loading, empty and failed-network states instead of disappearing without explanation.
+
+Tests exercise real PostgreSQL counts/order, exclusion of blocked readers and ratings, private announcements, kind filtering and limits; frontend tests assert section order, actual type endpoint, working type links and below-fold image priority. Local checks/build/deployment are performed serially for this pass to avoid running simultaneous full image builds after the owner's memory report.
+
+Validated on the running stack: all four headings in order in Russian and Kazakh, type switching with two real manga covers and an honest empty manhua category, lazy type-top images, zero horizontal overflow at320px, and home actions at least44px tall. Desktop was checked at1280px; Kazakh mobile at360px. The public ranking API returns three overall titles, one manhwa, two manga and zero manhua for this local dataset; invalid kinds receive422 and limits above16 receive400.
+
+Final full Go suite passes, including real PostgreSQL ranking tests. Serial Alpine API/web builds pass41 frontend application/infrastructure tests and23 UI contracts, architecture/contrast gates, application and preview checks with zero errors/warnings. The obsolete preview selector warning was removed and rechecked, without leaving the preview server running. API/web containers are healthy, Kazakh/dark preferences and default viewport restored. Proof outside Git: home-order-ru-desktop.png (full page), home-order-ru-320.png and home-order-kk-360.png in the parent outputs/ui-review directory.
+
 - Desktop: 1280px reading-site container, logo left, search/catalogue/translator destinations centrally, personal icons right. Mobile: compact search at the top and five inset bottom destinations.
 - First content: heading, compact navigation chips, horizontal cover shelf. Approximately 146px covers on desktop and 116px on phones; full cards are native title links. Type/actual rating are placed over artwork; two-line names below. No slogans or metadata paragraphs.
 - Catalogue navigation uses real updated/new/completed filters. No invented most-read ranking, time-period ranking, ratings, advertising blocks, messages or unrelated premium controls.

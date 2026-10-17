@@ -3,6 +3,25 @@ import Discovery from './Discovery.fixture.svelte';
 import HomeDiscovery from './HomeDiscovery.fixture.svelte';
 import {render,elements} from './markup';
 
+test('home follows most-read, continuation, updates and type-top order',()=>{
+ const html=render(HomeDiscovery,{props:{language:'ru'}}).body;
+ expect(html).toContain('Самое читаемое');
+ const mostRead=html.indexOf('id="browse-heading"');
+ const continuation=html.indexOf('id="continue-heading"');
+ const updates=html.indexOf('id="updates-heading"');
+ const tops=html.indexOf('id="tops-heading"');
+ expect(mostRead).toBeGreaterThan(-1);
+ expect(continuation).toBeGreaterThan(mostRead);
+ expect(updates).toBeGreaterThan(continuation);
+ expect(tops).toBeGreaterThan(updates);
+});
+
+test('below-fold type tops do not eagerly load images on weak connections',async()=>{
+ const html=render(HomeDiscovery,{props:{topFilled:true}}).body;
+ expect((await elements(html,'section[aria-labelledby="browse-heading"] img'))[0]).toMatchObject({loading:'eager',fetchpriority:'high'});
+ expect((await elements(html,'#tops img'))[0]).toMatchObject({loading:'lazy',fetchpriority:'auto'});
+});
+
 test('update thumbnail opens its title while chapter opens the real release',async()=>{
  const html=render(Discovery).body;
  expect(await elements(html,'.updates a[href="/titles/example"] img')).toHaveLength(1);
@@ -11,18 +30,18 @@ test('update thumbnail opens its title while chapter opens the real release',asy
  expect(await elements(html,'a a, a button')).toHaveLength(0);
 });
 
-test('home retains a working release feed when catalogue fails and keeps the selected retry',async()=>{
- const html=render(HomeDiscovery,{props:{available:false,shelf:'new',language:'ru'}}).body;
- expect(html).toContain('Каталог не загрузился');
- expect(await elements(html,'a.retry-link[href="/?shelf=new"]')).toHaveLength(1);
+test('home retains a working release feed when most-read ranking fails',async()=>{
+ const html=render(HomeDiscovery,{props:{available:false,language:'ru'}}).body;
+ expect(html).toContain('Рейтинг не загрузился');
+ expect(await elements(html,'a.retry-link[href="/"]')).toHaveLength(1);
  expect(await elements(html,'.updates a[href="/read/release"]')).toHaveLength(1);
  expect(await elements(html,'.cover-score')).toHaveLength(0);
 });
 
 test('home shows image links first and real navigation rather than inert filter tabs',async()=>{
- const html=render(HomeDiscovery,{props:{shelf:'completed',language:'ru'}}).body;
+ const html=render(HomeDiscovery,{props:{topKind:'manhua',language:'ru'}}).body;
  expect(html.indexOf('class="cover-shelf')).toBeLessThan(html.indexOf('class="updates'));
- expect((await elements(html,'.shelf-tabs a[aria-current]'))[0]).toMatchObject({href:'/?shelf=completed','aria-current':'page'});
+ expect((await elements(html,'.shelf-tabs a[aria-current]'))[0]).toMatchObject({href:'/?top=manhua#tops','aria-current':'page'});
  expect(await elements(html,'.cover-shelf a[href="/titles/example"] img')).toHaveLength(1);
  expect(await elements(html,'a a, a button')).toHaveLength(0);
  expect(await elements(render(HomeDiscovery,{props:{empty:true}}).body,'.cover-shelf')).toHaveLength(0);

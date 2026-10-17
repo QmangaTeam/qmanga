@@ -73,6 +73,7 @@ type UpdatePage struct {
 	Next  string
 }
 type Repository interface {
+	Rankings(context.Context, string, int) ([]Summary, error)
 	CreateProjectRequest(context.Context, string, domain.ProjectRequest) error
 	ProjectRequests(context.Context, string, bool, string) ([]domain.ProjectRequest, error)
 	ReviewProjectRequest(context.Context, string, string, string, string, string) (domain.ProjectRequest, error)
@@ -132,6 +133,16 @@ func (service *Service) List(ctx context.Context, filter Filter) (Page, error) {
 		return Page{}, domain.ErrInvalid
 	}
 	return service.repository.List(ctx, filter)
+}
+
+func (service *Service) Rankings(ctx context.Context, kind string, limit int) ([]Summary, error) {
+	if kind != "" && kind != "manga" && kind != "manhwa" && kind != "manhua" {
+		return nil, domain.ErrInvalid
+	}
+	if limit == 0 {
+		limit = 16
+	}
+	return service.repository.Rankings(ctx, kind, min(max(limit, 1), 16))
 }
 func (service *Service) Detail(ctx context.Context, slug string) (Detail, error) {
 	return service.repository.Detail(ctx, slug)

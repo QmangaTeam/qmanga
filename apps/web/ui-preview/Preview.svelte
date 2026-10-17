@@ -103,7 +103,7 @@
  h1 { font-size: 24px; line-height: 1.3; font-weight: 650; }
  h2 { font-size: 18px; line-height: 1.4; font-weight: 650; margin-bottom: 16px; }
  .preview-heading p { max-width: 620px; color: var(--muted); margin-top: 8px; font-size: 14px; }
- .preview-switches, .preview-switches>div, .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+ .preview-switches, .actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
  .preview-switches { justify-content: space-between; margin-top: 24px; padding-bottom: 16px; }
  section { padding: 24px 0; border-top: 1px solid var(--line); }
  .counter { color: var(--muted); font-size: 14px; margin: 12px 0 16px; }
