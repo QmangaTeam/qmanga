@@ -4,11 +4,11 @@
 
 **Goal:** Deliver the Kazakh mobile-first manga platform specified in QMANGA-PLAN.md, runnable through Docker Compose with Alpine-based application images.
 
-**Architecture:** SvelteKit SSR on Bun calls one Go REST API. PostgreSQL is authoritative for business data and processing jobs; S3-compatible MinIO stores private source files and processed media. A Go worker prepares images and publication manifests; all externally accessible routes use one origin.
+**Architecture:** SvelteKit SSR on Bun calls one Go REST API. PostgreSQL is authoritative for business data and processing jobs; S3-compatible MinIO stores private source files and processed media. A Go worker prepares images and publication manifests; all externally accessible routes use one origin. Go is the only media gateway: browsers never contact MinIO, including for covers, previews, chapter images, originals or uploads.
 
 **Tech Stack:** Bun, SvelteKit, TypeScript, Tailwind, Go, pgx, PostgreSQL, MinIO S3 SDK, Docker Compose. Image transformations use a bounded Alpine-compatible image tool in the worker.
 
-**Spec:** ../../QMANGA-PLAN.md, ../../QMANGA-READER.md, ../../QMANGA-ROADMAP.md. Paths in this paragraph are repository-root names; read the root files.
+**Spec:** [Product](../QMANGA-PLAN.md), [Reader](../QMANGA-READER.md), [Roadmap](../QMANGA-ROADMAP.md), [Go media gateway](MEDIA-GATEWAY.md).
 
 ## Global Constraints
 
@@ -16,6 +16,7 @@
 - Mobile first at 360px, functional from 320px, controls at least 44px.
 - Anonymous reading, private originals and drafts, multiple approved teams per title.
 - Go owns validation and authorization. SvelteKit never reads PostgreSQL directly.
+- All browser image URLs and uploads go through Go. MinIO buckets remain private, have no public host port in the default Compose stack, and never return client-facing presigned URLs or redirects.
 - Use real PostgreSQL and S3 persistence, not an in-memory demo implementation.
 - Docker application runtimes are Alpine; PostgreSQL uses its Alpine image. Build the MinIO runtime on Alpine if the upstream image is not Alpine.
 - No real passwords or storage keys in git. Runtime secrets are generated locally or supplied through environment variables.
