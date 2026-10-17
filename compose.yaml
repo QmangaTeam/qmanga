@@ -1,4 +1,10 @@
 name: qmanga
+x-api-image: &api-image
+  image: ${COMPOSE_PROJECT_NAME:-qmanga}-api:local
+  pull_policy: build
+  build:
+    context: .
+    dockerfile: infra/api.Dockerfile
 services:
   postgres:
     image: postgres@sha256:b0f9560a2de083e2cc7382e75f808c7381a32852a7ec49117deedb300e552b24
@@ -28,9 +34,7 @@ services:
       retries: 20
     restart: unless-stopped
   api:
-    build:
-      context: .
-      dockerfile: infra/api.Dockerfile
+    <<: *api-image
     environment: &api-environment
       APP_ENV: ${APP_ENV:-development}
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
@@ -74,7 +78,7 @@ services:
       retries: 10
     restart: unless-stopped
   worker:
-    image: qmanga-api:latest
+    <<: *api-image
     environment: *api-environment
     entrypoint: ["/usr/local/bin/qmanga-worker"]
     depends_on:
@@ -103,7 +107,7 @@ services:
   mailpit:
     image: axllent/mailpit@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
     user: "1000:1000"
-    ports: ["127.0.0.1:8025:8025"]
+    ports: ["127.0.0.1:${MAILPIT_PORT:-8025}:8025"]
     restart: unless-stopped
   go-tests:
     profiles: ["tools"]

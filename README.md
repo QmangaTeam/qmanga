@@ -4,27 +4,27 @@
 
 ## Current development state
 
-The local functional alpha runs on seven Alpine services. Accounts, approved teams, catalogue/admin editing, mobile publishing, private media processing, moderation and the reader are connected to real persistence. The reader has page/strip modes, eco/standard/high, controlled requests and decoded memory, local/cloud progress with explicit conflicts, library choices, selected offline copies, ratings, comments, reports and notifications. Domain/application ports remain separate from Gin, PostgreSQL, Svelte and browser adapters. This is not a claim of public-release acceptance: physical low-end Android and editorial/content review remain outstanding.
+The local functional alpha runs on seven Alpine services. Accounts, approved teams, catalogue/admin editing, mobile publishing, private media processing, moderation and the reader are connected to real persistence. The reader has page/strip modes, eco/standard/high, controlled requests and decoded memory, local/cloud progress with explicit conflicts, library choices, selected offline copies, ratings, comments, reports and notifications. Domain/application ports remain separate from Gin, PostgreSQL, Svelte and browser adapters. This is not public-release acceptance. The current baseline, limitations and next acceptance gates are the [18 October audit](docs/AUDIT-2026-10-18.md) and [development plan](docs/DEVELOPMENT-PLAN-2026-10-18.md).
 
-Fresh installations have an empty catalogue until a team uploads and a moderator publishes content. Automated fixtures use isolated schemas. The owner's sample images are used only in local development storage and never committed. The reader follows the Senkuro workflow; the site's general visual redesign remains deferred and green stays. See docs/ui/DESIGN-REVIEW.md and docs/VALIDATION.md.
+Fresh installations have an empty catalogue until a team uploads and a moderator publishes content. Automated fixtures use isolated schemas. The owner's sample images are used only in local development storage and never committed. Keep the approved compact layout and green palette; the next work repairs connected user journeys rather than starting another redesign. See docs/ui/DESIGN-REVIEW.md.
 
 ## Local start
 
-Windows PowerShell, from this repository:
+Use Docker Desktop/Engine with Compose v2. Windows PowerShell 7, from this repository:
 
 ```powershell
 ./scripts/setup.ps1
-docker compose up -d --build --wait
+docker compose --parallel 1 up -d --build --wait --wait-timeout 180
 ```
 
 Linux/macOS:
 
 ```sh
 sh scripts/setup.sh
-docker compose up -d --build --wait
+docker compose --parallel 1 up -d --build --wait --wait-timeout 180
 ```
 
-Open http://localhost:8080. The setup scripts preserve existing configuration and generate random local credentials. Never commit .env. APP_PORT and APP_ORIGIN must match when changing the local port.
+Open http://localhost:8080. Setup preserves an existing env and generates credentials only for a new environment. **If old volumes exist but the env is missing, restore its original credentials; do not regenerate them or delete data.** Follow the single [local development/recovery guide](docs/LOCAL-DEVELOPMENT.md) for a separate sandbox, synthetic publication, browser checks and the staff access policy. Never commit .env. APP_PORT and APP_ORIGIN must match when changing the local port.
 
 MinIO and PostgreSQL have no host ports. Only the same-origin gateway is exposed, on loopback by default. Application runtimes and MinIO run as non-root Alpine containers. Image manifests are pinned by digest; review pins periodically.
 
@@ -65,4 +65,4 @@ The original MinIO upload sources remain private. Reader original quality is an 
 
 ## Product specification
 
-QMANGA-PLAN.md, QMANGA-READER.md and QMANGA-ROADMAP.md define the remaining MVP acceptance criteria. docs/PROGRESS.md records tested milestones.
+The [development plan](docs/DEVELOPMENT-PLAN-2026-10-18.md) is the active post-audit backlog. QMANGA-PLAN.md, QMANGA-READER.md, QMANGA-ROADMAP.md and docs/PROGRESS.md preserve the original specifications and historical milestones, not a claim that the current beta/public-launch gates passed.

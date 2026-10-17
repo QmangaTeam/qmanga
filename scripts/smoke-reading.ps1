@@ -1,5 +1,7 @@
-param([Parameter(Mandatory=$true)][string]$ReleaseId,[string]$AppUrl='http://localhost:8080',[string]$MailboxUrl='http://localhost:8025')
+param([Parameter(Mandatory=$true)][string]$ReleaseId,[string]$AppUrl='http://localhost:8080',[string]$MailboxUrl='http://localhost:8025',[string]$ProjectName='',[string]$EnvFile='.env')
 $ErrorActionPreference='Stop'
+$compose=@('compose','--env-file',$EnvFile)
+if($ProjectName){$compose+=@('-p',$ProjectName)}
 if (-not ([uri]$AppUrl).IsLoopback -or -not ([uri]$MailboxUrl).IsLoopback) { throw 'Local test only.' }
 $clients=[Collections.Generic.List[System.Net.Http.HttpClient]]::new()
 function New-Client {
@@ -15,7 +17,7 @@ function Token([string]$Email){
 }
 function Account([bool]$Admin=$false){
  $client=New-Client;$email="reading-$([guid]::NewGuid().ToString('N'))@example.test";$password=[guid]::NewGuid().ToString('N')+'-Aa1'
- if($Admin){$password|docker compose exec -T -e "ADMIN_EMAIL=$email" api qmanga-admin|Out-Null;if($LASTEXITCODE -ne 0){throw 'Admin setup failed.'}}else{$null=Send $client POST auth/register @{email=$email;password=$password} -Expected 202;$null=Send $client POST auth/verify-email @{token=(Token $email)}}
+ if($Admin){$password|docker @compose exec -T -e "ADMIN_EMAIL=$email" api qmanga-admin|Out-Null;if($LASTEXITCODE -ne 0){throw 'Admin setup failed.'}}else{$null=Send $client POST auth/register @{email=$email;password=$password} -Expected 202;$null=Send $client POST auth/verify-email @{token=(Token $email)}}
  $null=Send $client POST auth/login @{email=$email;password=$password};$user=(Send $client GET auth/me).user;$csrf=(Send $client GET auth/csrf).csrf_token;$client.DefaultRequestHeaders.Add('X-Qmanga-Account',$user.id);return @{Client=$client;Id=$user.id;Csrf=$csrf;Email=$email}
 }
 try{

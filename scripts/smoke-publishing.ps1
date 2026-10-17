@@ -1,6 +1,13 @@
-param([Parameter(Mandatory=$true)][string]$SourceDirectory, [int]$PageLimit = 5, [string]$AppUrl = 'http://localhost:8080', [string]$MailboxUrl = 'http://localhost:8025')
+param([Parameter(Mandatory=$true)][string]$SourceDirectory, [int]$PageLimit = 5, [string]$AppUrl = 'http://localhost:8080', [string]$MailboxUrl = 'http://localhost:8025', [string]$ProjectName = '', [string]$EnvFile = '.env', [string]$ResultFile = '', [switch]$ConfirmRights, [string]$SourceNote = 'Local development fixture; publication permission confirmed by the test operator.', [string]$Credits = 'Qmanga test operator')
 $ErrorActionPreference = 'Stop'
+$compose = @('compose', '--env-file', $EnvFile)
+if ($ProjectName) { $compose += @('-p', $ProjectName) }
+if ($ResultFile) {
+    git check-ignore -q -- $ResultFile
+    if ($LASTEXITCODE -ne 0) { throw 'ResultFile contains test credentials and must be inside a Git-ignored directory (for example tmp/stage1/fixture.json).' }
+}
 if (-not ([uri]$AppUrl).IsLoopback -or -not ([uri]$MailboxUrl).IsLoopback) { throw 'Local development only.' }
+if (-not $ConfirmRights -or $SourceNote.Trim().Length -lt 8 -or $Credits.Trim().Length -lt 2) { throw 'Use permitted test images and explicitly pass -ConfirmRights with their -SourceNote and -Credits.' }
 if ($PageLimit -lt 1 -or $PageLimit -gt 300) { throw 'PageLimit must be 1..300.' }
 $files = @(Get-ChildItem -LiteralPath (Resolve-Path -LiteralPath $SourceDirectory).Path -File | Where-Object { $_.Extension -in @('.jpg','.jpeg','.png','.webp') } | Sort-Object Name | Select-Object -First $PageLimit)
 if (-not $files.Count) { throw 'No supported images found.' }
@@ -49,7 +56,7 @@ try {
     $adminPassword = [guid]::NewGuid().ToString('N') + '-Aa1'
     $ownerEmail = "publishing-owner-$suffix@example.test"
     $ownerPassword = [guid]::NewGuid().ToString('N') + '-Bb2'
-    $adminPassword | docker compose exec -T -e "ADMIN_EMAIL=$adminEmail" api qmanga-admin | Out-Null
+    $adminPassword | docker @compose exec -T -e "ADMIN_EMAIL=$adminEmail" api qmanga-admin | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Bootstrap administrator failed.' }
     $null = Send-Api $admin POST 'auth/login' @{email=$adminEmail; password=$adminPassword}
     $adminCsrf = (Send-Api $admin GET 'auth/csrf').csrf_token
@@ -88,6 +95,10 @@ try {
         Start-Sleep -Seconds 1
     }
     if (-not $ready) { throw 'Processing deadline exceeded.' }
+    $null = Send-Api $owner POST "studio/revisions/$($draft.id)/submit" @{version=$draft.version} $ownerCsrf 409
+    $null = Send-Api $owner PUT "studio/revisions/$($draft.id)/attribution" @{version=$draft.version; source_note=$SourceNote; credits=$Credits; rights_confirmed=$true} $ownerCsrf 204
+    $draft = Send-Api $owner GET "studio/revisions/$($draft.id)"
+    if (-not $draft.rights_confirmed -or -not $draft.source_note -or -not $draft.credits) { throw 'Attribution was not persisted.' }
     $null = Send-Api $owner POST "studio/revisions/$($draft.id)/submit" @{version=$draft.version} $ownerCsrf 204
     $null = Send-Api $admin POST "moderation/revisions/$($draft.id)/review" @{decision='publish';reason='Local test'} $adminCsrf 204
     $manifest = Send-Api $anonymous GET "releases/$($draft.release_id)/manifest"
@@ -109,4 +120,8 @@ try {
     }
     Write-Output "Publishing smoke passed: $($files.Count) local pages, private source, actual WebP in all three profiles, worker, moderation and Go media."
     Write-Output "Reader: $AppUrl/read/$($draft.release_id)"
+    if ($ResultFile) {
+        $result = @{ app_url=$AppUrl; admin_email=$adminEmail; admin_password=$adminPassword; owner_email=$ownerEmail; owner_password=$ownerPassword; title_id=$title.id; project_id=$project.id; release_id=$draft.release_id }
+        [IO.File]::WriteAllText([IO.Path]::GetFullPath($ResultFile), ($result | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
+    }
 } finally { foreach ($client in $clients) { $client.Dispose() } }
