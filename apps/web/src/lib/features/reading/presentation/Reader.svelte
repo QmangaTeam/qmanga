@@ -2,6 +2,7 @@
  import { onMount, tick, untrack } from 'svelte';
  import { anchorOffset, layout, visible, type ImageLoader, type Manifest, type ReaderGateway, type ReaderPlatform, type ReaderPreferences, type Tier, type Timer, type Viewport } from '../application/reader';
  import { ImageQueue } from '../application/scheduler';
+ import {PageNavigation,readingDirection,pageStep,type PageRequest} from '../application/navigation';
  import { chooseQuality } from '../domain/policies';
  import type { CatalogGateway, Chapter } from '../../catalog/application/catalog';
  import type {Download,Downloads} from '../../offline/application/downloads';
@@ -20,13 +21,16 @@
  let chapters=$state<Chapter[]>([]),cursor=$state<string|null>(null),chapterBusy=$state(false),query=$state(''),reverse=$state(false),original=$state<{url:string;bytes:number}|null>(null);
  let download=$state<Download|null>(null),downloadBusy=$state(false),downloadController:AbortController|undefined;
  let session:ReadingSession|undefined,progressVersion=$state(0);
+ const navigation=new PageNavigation(untrack(()=>manifest.pages.length));
  const progressMessage=$derived.by(()=>{progressVersion;return session?.message||'';});
  const conflict=$derived.by(()=>{progressVersion;return session?.row?.conflict;});
  const sheet=$derived(layout(manifest,tier,preferences.mode,pageIndex));
  const current=$derived(visible(sheet.items,viewport));
  const start=$derived(Math.max(0,current.start-1)),end=$derived(Math.min(sheet.items.length,current.end+2));
  const painted=$derived.by(()=>{version;return sheet.items.slice(start,end+1).map(item=>({item,state:queue?.entries.get(item.id)}));});
- const direction=$derived(preferences.direction==='auto'?manifest.direction:preferences.direction);
+ const direction=$derived(readingDirection(preferences.mode,preferences.direction,manifest.direction));
+ const leftStep=$derived(pageStep('left',direction)),rightStep=$derived(pageStep('right',direction));
+ const canStep=(delta:number)=>pageIndex+delta>=0&&pageIndex+delta<manifest.pages.length;
  const shownChapters=$derived(chapters.filter(chapter=>(chapter.label+' '+chapter.name).toLocaleLowerCase('kk').includes(query.toLocaleLowerCase('kk'))).sort((left,right)=>reverse?left.order-right.order:right.order-left.order));
  const qualityNames={auto:'Автоматты',eco:'Үнемді',standard:'Қалыпты',high:'Жоғары'};
  $effect(()=>{if(!mounted||!queue||switching)return;const items=sheet.items;const wanted=[...items.slice(current.start,current.end+1),...items.slice(current.end+1,current.end+3),...items.slice(Math.max(0,current.start-1),current.start)];untrack(()=>queue?.want(wanted));});
@@ -35,12 +39,12 @@
  onMount(()=>{
   queue=new ImageQueue(images(firstImage),timer,()=>version++);
   saver=new ThrottledSave(timer,async value=>{if(session)await session.record(value.manifest,value.position,value.completed);else if(!readingGateway)platform.savePosition(value.manifest.releaseId,value.position);});mounted=true;
-  let observed=false;const stopObserve=platform.observe(stage,value=>{const position=current.position,resized=observed&&Math.abs(value.width-viewport.width)>.5;observed=true;viewport=value;if(resized&&position.pageId)void tick().then(()=>platform.scroll(stage,anchorOffset(sheet.items,position,value.width)));}),stopVisibility=platform.visibility(hidden=>{queue?.pause(hidden);if(hidden)void saver?.flush().then(()=>session?.flush());}),stopKeyboard=platform.keyboard(action=>{if(panel)return;if(action==='menu')void openPanel('settings');else step(action==='next'?1:-1,true);});
+  let observed=false;const stopObserve=platform.observe(stage,value=>{const position=current.position,resized=observed&&Math.abs(value.width-viewport.width)>.5;observed=true;viewport=value;if(preferences.mode==='strip'){navigation.observe(visible(sheet.items,value).pageIndex);pageIndex=navigation.index;}if(resized&&position.pageId)void tick().then(()=>platform.scroll(stage,anchorOffset(sheet.items,position,value.width)));}),stopVisibility=platform.visibility(hidden=>{queue?.pause(hidden);if(hidden)void saver?.flush().then(()=>session?.flush());}),stopKeyboard=platform.keyboard(action=>{if(panel)return;if(action==='menu')void openPanel('settings');else step(pageStep(action,direction));});
   preferences=platform.preferences(manifest.kind);
   if(offlineTier){preferences={...preferences,quality:offlineTier};tier=offlineTier;}
   const saved=preview||readingGateway?null:platform.loadPosition(manifest.releaseId);
-  if(!preview&&readingGateway&&progressStorage){session=new ReadingSession(readingGateway,progressStorage,timer,()=>progressVersion++);void session.start(manifest,!!offlineTier).then(async position=>{if(position?.releaseId===manifest.releaseId&&manifest.pages.some(page=>page.id===position.pageId)){pageIndex=manifest.pages.findIndex(page=>page.id===position.pageId);await tick();platform.scroll(stage,anchorOffset(sheet.items,position,viewport.width));}await tick();saver?.offer({manifest,position:current.position,completed:false});});}
-  void (async()=>{await changeQuality(preferences.quality);if(saved){const index=manifest.pages.findIndex(page=>page.id===saved.pageId);if(index>=0){pageIndex=index;await tick();platform.scroll(stage,anchorOffset(sheet.items,saved,viewport.width));}}})();
+  if(!preview&&readingGateway&&progressStorage){session=new ReadingSession(readingGateway,progressStorage,timer,()=>progressVersion++);void session.start(manifest,!!offlineTier).then(async position=>{if(position?.releaseId===manifest.releaseId&&manifest.pages.some(page=>page.id===position.pageId))await goPage(manifest.pages.findIndex(page=>page.id===position.pageId),position.fraction,false);await tick();saver?.offer({manifest,position:current.position,completed:false});});}
+  void (async()=>{await changeQuality(preferences.quality);if(saved){const index=manifest.pages.findIndex(page=>page.id===saved.pageId);if(index>=0)await goPage(index,saved.fraction,false);}})();
   return ()=>{mounted=false;void saver?.flush().finally(()=>session?.close());downloadController?.abort();closePanel?.();stopObserve();stopVisibility();stopKeyboard();queue?.close();};
  });
  async function changeQuality(quality:ReaderPreferences['quality']) {
@@ -49,16 +53,17 @@
   switching=true;message='';queue.want([target,...sheet.items.slice(current.start,current.end+1)]);
   try{await queue.ready(target.id);tier=next;await tick();platform.scroll(stage,offset);}catch(failure){message=failure instanceof Error?failure.message:'Сапаны ауыстыру мүмкін болмады';}finally{switching=false;}
  }
- async function mode(value:'pages'|'strip') {const position=current.position;pageIndex=current.pageIndex;preferences={...preferences,mode:value};await tick();platform.scroll(stage,anchorOffset(sheet.items,position,viewport.width));}
- function step(delta:number,keyboard=false) {if(keyboard&&direction==='rtl')delta=-delta;const index=(preferences.mode==='strip'?current.pageIndex:pageIndex)+delta;if(index>=0&&index<manifest.pages.length)void goPage(index);else message=delta>0?'Тараудың соңы. Келесі тарауды төменнен таңдаңыз.':'Тараудың басы';}
- async function goPage(index:number){pageIndex=index;const position={pageId:manifest.pages[index].id,fraction:0};if(!preview){saver?.offer({manifest,position,completed:false});void saver?.flush();}await tick();platform.scroll(stage,anchorOffset(sheet.items,position,viewport.width));}
+ async function mode(value:'pages'|'strip') {const position=current.position,index=current.pageIndex;preferences={...preferences,mode:value};await goPage(index,position.fraction,false);}
+ function step(delta:number) {const request=navigation.move(delta);if(request)void navigate(request);else message=delta>0?'Тараудың соңы. Келесі тарауды төменнен таңдаңыз.':'Тараудың басы';}
+ async function goPage(index:number,fraction=0,persist=true){const request=navigation.select(index);if(request)await navigate(request,fraction,persist);}
+ async function navigate(request:PageRequest,fraction=0,persist=true){pageIndex=request.index;message='';const position={pageId:manifest.pages[request.index].id,fraction};await tick();if(!mounted||!navigation.current(request))return;platform.scroll(stage,anchorOffset(sheet.items,position,viewport.width));navigation.finish(request);if(persist&&!preview){saver?.offer({manifest,position,completed:false});void saver?.flush();}}
  async function openPanel(value:'settings'|'chapters') {panel=value;await tick();closePanel=platform.panel(dialog,()=>{panel='';closePanel=undefined;});if(value==='chapters'&&!chapters.length&&!preview)await loadChapters();}
  function dismiss() {const stop=closePanel;closePanel=undefined;panel='';stop?.();}
  async function loadChapters() {chapterBusy=true;try{const result=await catalogue.chapters(manifest.titleSlug,cursor||undefined);chapters=[...chapters,...result.items];cursor=result.nextCursor;}catch{message='Тараулар тізімін жүктеу мүмкін болмады';}finally{chapterBusy=false;}}
  async function getOriginal() {original=null;message='';try{original=await gateway.original(manifest.releaseId,manifest.pages[current.pageIndex].id);}catch{message='Түпнұсқа қолжетімсіз';}}
  const releaseFor=(chapter:Chapter)=>chapter.releases.find(release=>release.projectId===manifest.projectId);
  async function saveOffline(){if(!downloads)return;downloadBusy=true;downloadController=new AbortController();try{await downloads.save(manifest,tier,downloadController.signal,value=>download=value);}catch(failure){message=failure instanceof Error?failure.message:'Сақтау мүмкін болмады';}finally{downloadBusy=false;}}
- async function resolveProgress(local:boolean){const position=await session?.resolve(local);if(!local&&position?.releaseId===manifest.releaseId){const index=manifest.pages.findIndex(page=>page.id===position.pageId);if(index>=0){pageIndex=index;await tick();platform.scroll(stage,anchorOffset(sheet.items,position,viewport.width));}}}
+ async function resolveProgress(local:boolean){const position=await session?.resolve(local);if(!local&&position?.releaseId===manifest.releaseId){const index=manifest.pages.findIndex(page=>page.id===position.pageId);if(index>=0)await goPage(index,position.fraction,false);}}
 </script>
 
 <svelte:head><title>{manifest.chapterLabel}-тарау · {manifest.titleName} — Qmanga</title><meta name="robots" content={preview?'noindex,nofollow':'index,follow'}/></svelte:head>
@@ -81,9 +86,11 @@
     {:else}<div class="image-status"><span>{item.pageIndex+1}-бет</span><small>Жүктелуде…</small></div>{/if}
    </div>
   {/each}
+  <button class="page-zone left-zone" aria-label={leftStep>0?'Келесі бет · сол жақ':'Алдыңғы бет · сол жақ'} disabled={!canStep(leftStep)} onclick={()=>step(leftStep)}></button>
+  <button class="page-zone right-zone" aria-label={rightStep>0?'Келесі бет · оң жақ':'Алдыңғы бет · оң жақ'} disabled={!canStep(rightStep)} onclick={()=>step(rightStep)}></button>
  </div>
  {#if preferences.mode==='pages'&&pageIndex<manifest.pages.length-1}<section class="chapter-end"><button onclick={()=>step(1)}>Келесі бет →</button></section>{:else}<section class="chapter-end" aria-label="Тарауды аяқтау"><p>{manifest.chapterLabel}-тараудың соңы</p><span>{manifest.team.name}</span><div>{#if manifest.previousId}<a href={`/read/${manifest.previousId}`}>← Алдыңғы тарау</a>{/if}{#if manifest.nextId}<a class="next-chapter" href={`/read/${manifest.nextId}`}>Келесі тарау →</a>{:else}<a href={`/titles/${manifest.titleSlug}`}>Тайтлға оралу</a>{/if}</div></section>{#if community&&!preview&&!offlineTier}<div class="reader-discussion"><Discussion titleId={manifest.titleId} releaseId={manifest.releaseId} gateway={community}/></div>{/if}{/if}
- <nav class="reader-controls" aria-label="Оқу навигациясы"><button class="icon" onclick={()=>step(-1)} aria-label="Алдыңғы бет">{direction==='rtl'?'›':'‹'}</button><button onclick={()=>openPanel('chapters')} aria-label="Тараулар тізімі"><span aria-hidden="true">☷</span><small>Тараулар</small></button><button onclick={()=>openPanel('settings')} aria-label="Оқу баптаулары"><span aria-hidden="true">⚙</span><small>Баптаулар</small></button><button class="icon" onclick={()=>step(1)} aria-label="Келесі бет">{direction==='rtl'?'‹':'›'}</button></nav>
+ <nav class="reader-controls" aria-label="Оқу навигациясы"><button class="icon" onclick={()=>step(leftStep)} disabled={!canStep(leftStep)} aria-label={leftStep>0?'Келесі бет':'Алдыңғы бет'}>‹</button><button onclick={()=>openPanel('chapters')} aria-label="Тараулар тізімі"><span aria-hidden="true">☷</span><small>Тараулар</small></button><button onclick={()=>openPanel('settings')} aria-label="Оқу баптаулары"><span aria-hidden="true">⚙</span><small>Баптаулар</small></button><button class="icon" onclick={()=>step(rightStep)} disabled={!canStep(rightStep)} aria-label={rightStep>0?'Келесі бет':'Алдыңғы бет'}>›</button></nav>
  {#if preferences.numbers}<button class="page-counter" onclick={()=>openPanel('chapters')} aria-label="Ағымдағы бет">{current.pageIndex+1} / {manifest.pages.length}</button>{/if}
  <dialog bind:this={dialog} class="reader-drawer" onclose={()=>{if(panel)dismiss();}}>
   <header><h2>{panel==='settings'?'Оқу баптаулары':'Тараулар'}</h2><button class="icon" onclick={dismiss} aria-label="Панельді жабу">×</button></header>
@@ -98,6 +105,7 @@
     <label>Тақырып<select bind:value={preferences.theme}><option value="dark">Қараңғы</option><option value="light">Ашық</option><option value="system">Жүйедегідей</option></select></label>
     <label>Суретті сыйдыру<select bind:value={preferences.fit}><option value="width">Ені бойынша</option><option value="height">Биіктігі бойынша</option></select></label>
     <label>Оқу бағыты<select bind:value={preferences.direction}><option value="auto">Тайтлға сәйкес</option><option value="ltr">Солдан оңға</option><option value="rtl">Оңнан солға</option></select></label>
+    <p class="hint">Лентада: оң жақ — келесі бет, сол жақ — алдыңғы бет. Беттер режимінде бағыт жоғарыдағы таңдауға сәйкес.</p>
     <label class="range">Ең үлкен ені · {preferences.maxWidth}px<input type="range" min="320" max="1600" step="20" bind:value={preferences.maxWidth}/></label>
     <label class="range">Жарықтық · {preferences.brightness}%<input type="range" min="40" max="100" step="5" bind:value={preferences.brightness}/></label>
     <label class="check"><input type="checkbox" bind:checked={preferences.numbers}/>Бет нөмірін көрсету</label>
@@ -122,6 +130,7 @@
  .reader button,.reader a{min-height:44px}.reader button{border:1px solid var(--reader-line);background:var(--reader-panel);color:var(--reader-text);border-radius:5px;padding:8px 12px}.reader .icon{display:grid;place-items:center;font-size:28px;width:44px;min-width:44px;padding:0;border:0;background:none}
  .reader-bar{height:52px;position:fixed;inset:0 0 auto;display:flex;align-items:center;gap:4px;padding:0 8px;background:var(--reader-panel);border-bottom:1px solid var(--reader-line);z-index:40}.reader-title{display:flex;flex-direction:column;justify-content:center;min-width:0;flex:1}.reader-title strong{font-size:14px;font-weight:550;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.reader-title span{font-size:11px;color:var(--reader-muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.desktop-chapters,.desktop-settings{display:none!important}
  .reading-stage{position:relative;width:100%;margin:auto;min-height:200px;background:#181818;filter:brightness(var(--brightness))}.fragment{position:absolute;left:0;width:100%;overflow:hidden}.fragment img{display:block;width:100%;height:100%;object-fit:contain}.image-status{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;height:100%;min-height:150px;color:#bbb;background:#202020;font-size:14px;padding:20px}.image-status small{font-size:12px}.image-status button{border-color:#666}
+ .reader .page-zone{position:absolute;top:0;bottom:0;width:30%;min-width:44px;border:0;border-radius:0;padding:0;background:transparent;touch-action:pan-y pinch-zoom;z-index:1}.left-zone{left:0}.right-zone{right:0}.page-zone:focus-visible{outline:2px solid #a2d560;outline-offset:-3px}.image-status button{position:relative;z-index:2}.reader-controls button:disabled{opacity:.35;cursor:default}
  .reader-controls{position:fixed;bottom:0;left:0;right:0;display:grid;grid-template-columns:44px 1fr 1fr 44px;align-items:center;padding:4px 12px calc(4px + env(safe-area-inset-bottom));border-top:1px solid var(--reader-line);background:var(--reader-panel);z-index:35}.reader-controls button{border:0;display:flex;flex-direction:column;align-items:center;gap:0;padding:0;line-height:1.1}.reader-controls button>span{font-size:24px;line-height:25px}.reader-controls small{font-size:10px}.page-counter{position:fixed;right:12px;bottom:72px;z-index:30;font-size:12px;font-variant-numeric:tabular-nums;min-width:64px;box-shadow:0 2px 6px #0003}
  .preview-note{text-align:center;padding:10px;background:#68551c;color:#fff;font-size:13px}.reader-message{position:sticky;top:52px;z-index:32;background:var(--reader-panel);border-bottom:1px solid var(--reader-line);display:flex;align-items:center;justify-content:center;padding:6px 12px;gap:10px;font-size:13px}.reader-message button{border:0;margin-left:auto}
  .chapter-end{padding:44px 16px;text-align:center}.chapter-end p{font-size:18px}.chapter-end>span{display:block;color:var(--reader-muted);font-size:13px;margin:8px 0 24px}.chapter-end>div{display:flex;flex-wrap:wrap;gap:12px;justify-content:center}.chapter-end a{display:flex;align-items:center;justify-content:center;border:1px solid var(--reader-line);padding:10px 18px;border-radius:5px}.chapter-end .next-chapter{background:#b4ee69;color:#17220d;border-color:#b4ee69}

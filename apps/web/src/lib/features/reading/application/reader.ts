@@ -22,7 +22,7 @@ export interface ReaderPlatform {
  visibility(callback: (hidden: boolean) => void): () => void;
  loadPosition(releaseId: string): Position | null;
  savePosition(releaseId: string,position: Position): void;
- keyboard(callback: (action:'next'|'previous'|'menu')=>void): () => void;
+ keyboard(callback: (action:'right'|'left'|'menu')=>void): () => void;
 }
 export interface LayoutItem extends Fragment { pageId: string; pageIndex: number; top: number; ratio: number }
 export function layout(manifest: Manifest, tier: Tier, mode: 'pages' | 'strip', pageIndex: number): {items: LayoutItem[]; total: number} {
@@ -32,7 +32,7 @@ export function layout(manifest: Manifest, tier: Tier, mode: 'pages' | 'strip', 
 }
 export function visible(layoutItems: LayoutItem[], viewport: Viewport): {start: number; end: number; position: Position; pageIndex: number} {
  const units = viewport.top / Math.max(1,viewport.width); let start = 0;
- while (start < layoutItems.length-1 && layoutItems[start].top + layoutItems[start].ratio <= units) start++;
+ while (start < layoutItems.length-1 && layoutItems[start].top + layoutItems[start].ratio <= units + 1 / Math.max(1,viewport.width)) start++;
  let end = start; const bottom = units + viewport.height / Math.max(1,viewport.width);
  while (end < layoutItems.length-1 && layoutItems[end].top + layoutItems[end].ratio < bottom) end++;
  const current = layoutItems[start]; if (!current) return {start:0,end:0,position:{pageId:'',fraction:0},pageIndex:0};
