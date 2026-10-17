@@ -1,6 +1,6 @@
 # Qmanga UI direction and review
 
-Updated: 17 October 2026. Status: the owner approved the compact reading-library direction, the written [component-first specification](../superpowers/specs/2026-10-17-component-first-redesign-design.md), and the order components first, screen assembly second, new product functionality after the redesign. The [implementation plan](../superpowers/plans/2026-10-17-component-first-redesign.md) awaits owner review through Superpowers; no general redesign or localization has been implemented yet.
+Updated: 17 October 2026. Status: the owner approved the compact reading-library direction, the written [component-first specification](../superpowers/specs/2026-10-17-component-first-redesign-design.md) and [implementation plan](../superpowers/plans/2026-10-17-component-first-redesign.md). Components were implemented first, then screen assembly and Kazakh-first/Russian UI. The later instruction to complete needed functionality autonomously also authorized connected-reading additions. See [implementation evidence and limits](REDESIGN-VALIDATION.md); the historical baseline below is not a description of the current UI.
 
 ## Owner decisions
 

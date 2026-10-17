@@ -1,5 +1,13 @@
 # Qmanga implementation progress
 
+## Component-first implementation checkpoint — 17 October 2026
+
+The approved redesign is implemented, not merely planned. Commits a526377 and 013f76c establish the component library and bilingual shell; 46eb105 completes remaining screen localization, safe error notices, compatible offline records, home continuation, first-chapter navigation, chapter search/order and help. Existing colors, Go media gateway and Clean Architecture boundaries remain intact. All changes are in the requested outputs/qmanga checkout and pushed to private origin/main.
+
+Fresh final checks: 28 Bun tests/141 assertions, 13 Svelte SSR UI tests/578 assertions, application and preview Svelte diagnostics 0 errors/warnings, dependency/contrast gates, production Docker build and full Go/PostgreSQL/codec suite pass. Default services are healthy. Reader clicks/keyboard, language preservation, account library/cloud progress and disconnected saved reading were exercised in the browser. See [exact evidence and remaining launch limits](ui/REDESIGN-VALIDATION.md).
+
+Owner amendment: after approving component execution, the owner explicitly authorized autonomous completion of needed functionality without further questions. This lifts the earlier hold on small connected-reading additions; it does not make the entire competitive P1 backlog part of this checkpoint.
+
 Plan: docs/IMPLEMENTATION.md
 
 Desktop cursor follow-up: reproduced cursor:wait on the disabled image-edge button at5/5, inherited from the global disabled-button rule. Disabled controls now use the ordinary cursor, not a false loading indicator; chapter boundaries remain disabled intentionally.

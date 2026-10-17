@@ -51,11 +51,15 @@ Navigation policy correction verification:22 Bun tests/115 assertions, architect
 
 Desktop cursor correction: at1280px and5/5, the disabled right-edge button incorrectly inherited cursor:wait from global CSS. A browser assertion reproduced this failure. After changing disabled controls to cursor:default, the same assertion passed; returning to4/5 restored an enabled right edge with cursor:pointer. Frontend tests/build and Svelte diagnostics pass. The local fixture contains only five source pages; disabled forward navigation at5/5 is intentional, not an unfinished image request.
 
+## Redesign verification
+
+The completed component-first bilingual pass and its fresh automated/browser evidence are recorded in [ui/REDESIGN-VALIDATION.md](ui/REDESIGN-VALIDATION.md). Read that report for exact test counts and the distinction between executed checks and remaining device/launch acceptance.
+
 ## Before a public launch
 
 - Test a physical weak Android, real network interruptions, long webtoons, app backgrounding, quota/eviction and service-worker updates across browser restarts. Emulation does not establish device performance.
 - Obtain authorized content and have Kazakh UI/content terminology reviewed. No copyrighted sample pages are distributed with the repository.
-- Finish the deferred general visual pass. Studio/admin lists are bounded; some do not yet expose cursor navigation beyond their initial limit.
+- Review the implemented visual pass on real devices. Studio/admin lists are bounded; some do not yet expose cursor navigation beyond their initial limit.
 - Define source/orphan retention and garbage collection, database plus both-bucket backup/restore, SMTP delivery monitoring and worker/error monitoring.
 - Configure per-client rate limiting at the trusted public gateway before exposing it: the default private Docker API deliberately does not trust forwarded IP headers, so its authentication limiter currently sees the gateway address.
 - Add the agreed deployment TLS/domain, security review, release/rollback procedure and CI execution. No public deployment, external mail delivery or production secrets are configured by this task.

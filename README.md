@@ -50,8 +50,15 @@ Create an administrator by setting ADMIN_EMAIL and supplying ADMIN_PASSWORD thro
 
 The first command skips PostgreSQL integration without TEST_DATABASE_URL. The tools service runs integration against isolated test schemas in the local database and checks concurrent migrations and cancellation. The web build runs Svelte checks and frontend dependency-boundary checks.
 
-## Architecture
+## Interface and local preview
 
+The interface defaults to Kazakh. An explicit Russian choice is available in settings and reader settings; it does not translate manga content or reset the reading position. The original green/dark/light palette is retained. Help and reporting guidance are at /help.
+
+For the isolated component gallery run `docker compose --profile tools up -d web-ui` and open http://localhost:3001. It is development tooling, not a production route. The web image build runs application tests, Svelte SSR component tests, architecture/contrast checks, both Svelte checks and the production build.
+
+See docs/ui/REDESIGN-VALIDATION.md for fresh evidence and the remaining public-launch/device acceptance limits.
+
+## Architecture
 See docs/ARCHITECTURE.md and docs/MEDIA-GATEWAY.md. Feature contexts contain domain, application ports/use cases, and adapters; Go and browser composition roots provide concrete dependencies. PostgreSQL migrations are embedded and serialized by an advisory lock.
 
 The original MinIO upload sources remain private. Reader original quality is an explicitly requested, sanitized full-resolution derivative through Go. Already downloaded offline files cannot be revoked while the device is disconnected. IndexedDB/Cache Storage can be evicted by the browser; the saved list can recheck completeness.
