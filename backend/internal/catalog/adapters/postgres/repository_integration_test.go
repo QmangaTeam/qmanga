@@ -253,4 +253,82 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 			}
 		}
 	}
+
+	testingTarget.Run("translator requests approval and creates chapters without catalogue administration", func(testingTarget *testing.T) {
+		request, failure := service.RequestProject(ctx, "reader", domain.ProjectRequestInput{TeamID: "team", Name: "Жаңа аударма", Kind: "manhwa", SourceURL: "https://example.test/story", Note: "Команда жаңа аударма дайындайды"})
+		if failure != nil {
+			testingTarget.Fatal("translator cannot request project", failure)
+		}
+		if _, failure = service.RequestProject(ctx, "foreign", domain.ProjectRequestInput{TeamID: "team", TitleID: title.ID, Note: "Бөтен командаға өтінім"}); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("foreign request accepted", failure)
+		}
+		own, failure := service.ProjectRequests(ctx, "reader", false, "")
+		if failure != nil || len(own) != 1 {
+			testingTarget.Fatal("request history missing", failure)
+		}
+		hidden, failure := service.ProjectRequests(ctx, "foreign", false, "")
+		if failure != nil || len(hidden) != 0 {
+			testingTarget.Fatal("request history leaks", failure)
+		}
+		if _, failure = service.ProjectRequests(ctx, "reader", true, ""); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("reader accessed admin queue", failure)
+		}
+		if _, failure = service.ReviewProjectRequest(ctx, "reader", request.ID, "approve", "", ""); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("self approval allowed", failure)
+		}
+		accepted, failure := service.ReviewProjectRequest(ctx, "admin", request.ID, "approve", "", "")
+		if failure != nil || accepted.ProjectID == "" || accepted.Status != "approved" {
+			testingTarget.Fatal("approval did not create project", accepted, failure)
+		}
+		repeated, failure := service.ReviewProjectRequest(ctx, "admin", request.ID, "approve", "", "")
+		if failure != nil || repeated.ProjectID != accepted.ProjectID {
+			testingTarget.Fatal("approval replay duplicated project", failure)
+		}
+		chapter, failure := service.CreateStudioChapter(ctx, "reader", accepted.ProjectID, "1", "1", "Басталуы", 0)
+		if failure != nil {
+			testingTarget.Fatal("editor cannot create chapter", failure)
+		}
+		same, failure := service.CreateStudioChapter(ctx, "reader", accepted.ProjectID, "1", "1", "Басталуы", 0)
+		if failure != nil || same != chapter {
+			testingTarget.Fatal("chapter retry duplicated logical chapter", failure)
+		}
+		if _, failure = service.CreateStudioChapter(ctx, "reader", accepted.ProjectID, "1", "1", "Басталуы", 8); !errors.Is(failure, domain.ErrConflict) {
+			testingTarget.Fatal("existing chapter silently discarded explicit order", failure)
+		}
+		if _, failure = service.CreateStudioChapter(ctx, "reader", accepted.ProjectID, "2", "", "", 0); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		if _, failure = service.CreateStudioChapter(ctx, "reader", accepted.ProjectID, "2", "", "New name", 0); !errors.Is(failure, domain.ErrConflict) {
+			testingTarget.Fatal("existing chapter silently discarded new name", failure)
+		}
+		if _, failure = service.CreateStudioChapter(ctx, "foreign", accepted.ProjectID, "2", "", "", 0); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("foreign chapter created", failure)
+		}
+		execute("UPDATE team_memberships SET role='member' WHERE user_id='reader'")
+		if _, failure = service.CreateStudioChapter(ctx, "reader", accepted.ProjectID, "2", "", "", 0); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("regular member created shared chapter", failure)
+		}
+		execute("UPDATE team_memberships SET role='editor' WHERE user_id='reader'")
+		proposed, failure := service.RequestProject(ctx, "reader", domain.ProjectRequestInput{TeamID: "team", TitleID: listed.Items[0].ID, Note: "Жарияланған анонсты аударамыз"})
+		if failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		if _, failure = service.RequestProject(ctx, "reader", proposed.ProjectRequestInput); !errors.Is(failure, domain.ErrConflict) {
+			testingTarget.Fatal("duplicate pending request", failure)
+		}
+		rejected, failure := service.ReviewProjectRequest(ctx, "admin", proposed.ID, "reject", "Дереккөзді нақтылау қажет", "")
+		if failure != nil || rejected.Resolution == "" {
+			testingTarget.Fatal("rejection reason missing", failure)
+		}
+		retry, failure := service.RequestProject(ctx, "reader", proposed.ProjectRequestInput)
+		if failure != nil {
+			testingTarget.Fatal("cannot request after rejection", failure)
+		}
+		if failure = service.CancelProjectRequest(ctx, "foreign", retry.ID); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("foreign cancellation allowed", failure)
+		}
+		if failure = service.CancelProjectRequest(ctx, "reader", retry.ID); failure != nil {
+			testingTarget.Fatal("cannot cancel own request", failure)
+		}
+	})
 }

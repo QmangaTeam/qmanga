@@ -11,16 +11,18 @@ import (
 
 type TeamHandler struct{ service *application.Service }
 type teamDTO struct {
-	ID          string `json:"id"`
-	Slug        string `json:"slug"`
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Approved    bool   `json:"approved"`
-	Role        string `json:"my_role,omitempty"`
+	ReviewStatus string `json:"review_status"`
+	ReviewNote   string `json:"review_note"`
+	ID           string `json:"id"`
+	Slug         string `json:"slug"`
+	Name         string `json:"name"`
+	Description  string `json:"description"`
+	Approved     bool   `json:"approved"`
+	Role         string `json:"my_role,omitempty"`
 }
 
 func viewTeam(team domain.Team, role domain.Role) teamDTO {
-	return teamDTO{team.ID, team.Slug, team.Name, team.Description, team.Approved, string(role)}
+	return teamDTO{ID: team.ID, Slug: team.Slug, Name: team.Name, Description: team.Description, Approved: team.Approved, Role: string(role), ReviewStatus: team.ReviewStatus, ReviewNote: team.ReviewNote}
 }
 func NewTeamHandler(service *application.Service) *TeamHandler { return &TeamHandler{service: service} }
 func (handler *TeamHandler) Register(api *gin.RouterGroup, identity *IdentityHandler) {
@@ -28,6 +30,7 @@ func (handler *TeamHandler) Register(api *gin.RouterGroup, identity *IdentityHan
 	studio.Use(identity.RequireUser())
 	studio.GET("/teams", handler.list)
 	studio.POST("/teams", handler.create)
+	studio.PUT("/teams/:id", handler.update)
 	studio.GET("/teams/:id/members", handler.members)
 	studio.POST("/teams/:id/invitations", handler.invite)
 	studio.DELETE("/teams/:id/members/:user_id", handler.remove)
@@ -36,6 +39,7 @@ func (handler *TeamHandler) Register(api *gin.RouterGroup, identity *IdentityHan
 	admin.Use(identity.RequireUser(), RequireRole("admin"))
 	admin.GET("/teams/pending", handler.pending)
 	admin.POST("/teams/:id/approve", handler.approve)
+	admin.POST("/teams/:id/reject", handler.reject)
 }
 func (handler *TeamHandler) list(request *gin.Context) {
 	account, _ := CurrentAccount(request)

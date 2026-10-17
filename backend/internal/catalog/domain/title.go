@@ -8,10 +8,11 @@ import (
 )
 
 var (
-	ErrInvalid   = errors.New("invalid catalogue data")
-	ErrForbidden = errors.New("catalogue access denied")
-	ErrNotFound  = errors.New("title not found")
-	ErrConflict  = errors.New("catalogue conflict")
+	ErrInvalid      = errors.New("invalid catalogue data")
+	ErrForbidden    = errors.New("catalogue access denied")
+	ErrNotFound     = errors.New("title not found")
+	ErrConflict     = errors.New("catalogue conflict")
+	ErrRequestLimit = errors.New("project request limit")
 )
 
 type Metadata struct {

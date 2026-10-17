@@ -73,6 +73,12 @@ type UpdatePage struct {
 	Next  string
 }
 type Repository interface {
+	CreateProjectRequest(context.Context, string, domain.ProjectRequest) error
+	ProjectRequests(context.Context, string, bool, string) ([]domain.ProjectRequest, error)
+	ReviewProjectRequest(context.Context, string, string, string, string, string) (domain.ProjectRequest, error)
+	CancelProjectRequest(context.Context, string, string) error
+	StudioProject(context.Context, string, string) (StudioProject, error)
+	CreateStudioChapter(context.Context, string, string, string, string, string, int) (string, error)
 	Updates(context.Context, string, string, int) (UpdatePage, error)
 	List(context.Context, Filter) (Page, error)
 	Detail(context.Context, string) (Detail, error)

@@ -3,7 +3,9 @@ package application
 import (
 	"context"
 	"qmanga/internal/teams/domain"
+	"strings"
 	"time"
+	"unicode/utf8"
 )
 
 type Invitation struct {
@@ -26,6 +28,8 @@ type Repository interface {
 	ListForUser(context.Context, string, ...int) ([]TeamMembership, error)
 	Pending(context.Context, string, ...int) ([]domain.Team, error)
 	Approve(context.Context, string, string) error
+	Reject(context.Context, string, string, string) error
+	Update(context.Context, string, domain.Team) error
 	SaveInvitation(context.Context, string, Invitation) error
 	AcceptInvitation(context.Context, string, string, time.Time) (string, error)
 	Members(context.Context, string, string, ...int) ([]Member, error)
@@ -117,4 +121,19 @@ func (service *Service) Members(ctx context.Context, actorID, teamID string, off
 }
 func (service *Service) Remove(ctx context.Context, actorID, teamID, userID string) error {
 	return service.repository.RemoveMember(ctx, actorID, teamID, userID)
+}
+
+func (service *Service) Reject(ctx context.Context, actor, id, reason string) error {
+	reason = strings.TrimSpace(reason)
+	if utf8.RuneCountInString(reason) < 8 || utf8.RuneCountInString(reason) > 2000 {
+		return domain.ErrInvalid
+	}
+	return service.repository.Reject(ctx, actor, id, reason)
+}
+func (service *Service) Update(ctx context.Context, actor, id, slug, name, description string) error {
+	team, failure := domain.NewTeam(id, slug, name, description)
+	if failure != nil {
+		return failure
+	}
+	return service.repository.Update(ctx, actor, team)
 }

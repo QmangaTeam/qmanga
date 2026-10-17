@@ -159,4 +159,59 @@ func TestTeamIsolationAndRevocation(testingTarget *testing.T) {
 			testingTarget.Fatal("pagination bypasses membership authorization")
 		}
 	})
+
+	testingTarget.Run("team rejection is visible and owner can correct and resubmit", func(testingTarget *testing.T) {
+		requested, failure := service.Create(ctx, "owner", "review-team", "Review team", "Needs review")
+		if failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		if failure = service.Reject(ctx, "other", requested.ID, "Недостаточно сведений"); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("reader rejected team", failure)
+		}
+		if failure = service.Reject(ctx, "admin", requested.ID, "Недостаточно сведений"); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		if failure = service.Approve(ctx, "admin", requested.ID); !errors.Is(failure, domain.ErrConflict) {
+			testingTarget.Fatal("stale approval overrides rejected application", failure)
+		}
+		listed, failure := service.List(ctx, "owner")
+		later, listFailure := service.List(ctx, "owner", 100)
+		if listFailure != nil {
+			testingTarget.Fatal(listFailure)
+		}
+		listed = append(listed, later...)
+		found := false
+		for _, item := range listed {
+			if item.Team.ID == requested.ID {
+				found = item.Team.ReviewStatus == "rejected" && item.Team.ReviewNote == "Недостаточно сведений"
+			}
+		}
+		if failure != nil || !found {
+			testingTarget.Fatal("owner cannot see review outcome", failure)
+		}
+		if failure = service.Update(ctx, "other", requested.ID, requested.Slug, requested.Name, "Fixed"); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("foreign team edited", failure)
+		}
+		if failure = service.Update(ctx, "owner", requested.ID, requested.Slug, requested.Name, "Подробное описание команды"); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		pending, failure := service.Pending(ctx, "admin")
+		laterPending, listFailure := service.Pending(ctx, "admin", 100)
+		if listFailure != nil {
+			testingTarget.Fatal(listFailure)
+		}
+		pending = append(pending, laterPending...)
+		found = false
+		for _, item := range pending {
+			if item.ID == requested.ID {
+				found = item.ReviewStatus == "pending" && item.ReviewNote == ""
+			}
+		}
+		if failure != nil || !found {
+			testingTarget.Fatal("resubmitted team absent from queue", failure)
+		}
+		if failure = service.Approve(ctx, "admin", requested.ID); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+	})
 }

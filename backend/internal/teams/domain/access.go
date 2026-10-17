@@ -70,6 +70,7 @@ func (access Access) Allows(action Action) bool {
 
 type Team struct {
 	ID, Slug, Name, Description string
+	ReviewStatus, ReviewNote    string
 	Approved                    bool
 }
 
@@ -82,7 +83,7 @@ func NewTeam(id, slug, name, description string) (Team, error) {
 	if id == "" || len(slug) < 3 || len(slug) > 64 || !slugPattern.MatchString(slug) || utf8.RuneCountInString(name) < 2 || utf8.RuneCountInString(name) > 80 || strings.ContainsAny(name, "\r\n\t") || utf8.RuneCountInString(description) > 2000 {
 		return Team{}, ErrInvalid
 	}
-	return Team{ID: id, Slug: slug, Name: name, Description: description}, nil
+	return Team{ID: id, Slug: slug, Name: name, Description: description, ReviewStatus: "pending"}, nil
 }
 func InvitationEmail(value string) (string, error) {
 	value = strings.ToLower(strings.TrimSpace(value))

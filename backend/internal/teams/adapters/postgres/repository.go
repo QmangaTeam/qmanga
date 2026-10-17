@@ -102,7 +102,7 @@ func (repository *Repository) withAccess(ctx context.Context, actorID, teamID st
 	return transaction.Commit(ctx)
 }
 func (repository *Repository) ListForUser(ctx context.Context, actorID string, offset ...int) ([]application.TeamMembership, error) {
-	rows, failure := repository.pool.Query(ctx, `SELECT team.id,team.slug,team.name,team.description,team.is_approved,member.role FROM teams team JOIN team_memberships member ON member.team_id=team.id WHERE member.user_id=$1 ORDER BY team.name,team.id LIMIT 100 OFFSET `+pageOffset(offset), actorID)
+	rows, failure := repository.pool.Query(ctx, `SELECT team.id,team.slug,team.name,team.description,team.is_approved,team.review_status,team.review_note,member.role FROM teams team JOIN team_memberships member ON member.team_id=team.id WHERE member.user_id=$1 ORDER BY team.name,team.id LIMIT 100 OFFSET `+pageOffset(offset), actorID)
 	if failure != nil {
 		return nil, failure
 	}
@@ -111,7 +111,7 @@ func (repository *Repository) ListForUser(ctx context.Context, actorID string, o
 	for rows.Next() {
 		var membership application.TeamMembership
 		team := &membership.Team
-		if failure = rows.Scan(&team.ID, &team.Slug, &team.Name, &team.Description, &team.Approved, &membership.Role); failure != nil {
+		if failure = rows.Scan(&team.ID, &team.Slug, &team.Name, &team.Description, &team.Approved, &team.ReviewStatus, &team.ReviewNote, &membership.Role); failure != nil {
 			return nil, failure
 		}
 		items = append(items, membership)
@@ -126,7 +126,7 @@ func (repository *Repository) Pending(ctx context.Context, actorID string, offse
 	if !access.Allows(domain.Approve) {
 		return nil, domain.ErrForbidden
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT id,slug,name,description,is_approved FROM teams WHERE NOT is_approved ORDER BY created_at,id LIMIT 100 OFFSET "+pageOffset(offset))
+	rows, failure := repository.pool.Query(ctx, "SELECT id,slug,name,description,is_approved,review_status,review_note FROM teams WHERE NOT is_approved AND review_status='pending' ORDER BY created_at,id LIMIT 100 OFFSET "+pageOffset(offset))
 	if failure != nil {
 		return nil, failure
 	}
@@ -134,7 +134,7 @@ func (repository *Repository) Pending(ctx context.Context, actorID string, offse
 	items := make([]domain.Team, 0)
 	for rows.Next() {
 		var team domain.Team
-		if failure = rows.Scan(&team.ID, &team.Slug, &team.Name, &team.Description, &team.Approved); failure != nil {
+		if failure = rows.Scan(&team.ID, &team.Slug, &team.Name, &team.Description, &team.Approved, &team.ReviewStatus, &team.ReviewNote); failure != nil {
 			return nil, failure
 		}
 		items = append(items, team)
@@ -143,9 +143,19 @@ func (repository *Repository) Pending(ctx context.Context, actorID string, offse
 }
 func (repository *Repository) Approve(ctx context.Context, actorID, teamID string) error {
 	return repository.withAccess(ctx, actorID, teamID, domain.Approve, func(transaction pgx.Tx) error {
-		_, failure := transaction.Exec(ctx, "UPDATE teams SET is_approved=true WHERE id=$1", teamID)
+		result, failure := transaction.Exec(ctx, "UPDATE teams SET is_approved=true,review_status='approved',review_note='' WHERE id=$1 AND NOT is_approved AND review_status='pending'", teamID)
 		if failure != nil {
 			return failure
+		}
+		if result.RowsAffected() == 0 {
+			var approved bool
+			if failure = transaction.QueryRow(ctx, "SELECT is_approved FROM teams WHERE id=$1", teamID).Scan(&approved); failure != nil {
+				return failure
+			}
+			if approved {
+				return nil
+			}
+			return domain.ErrConflict
 		}
 		_, failure = transaction.Exec(ctx, "INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id) VALUES($1,$2,'approve','team',$3)", uuid.NewString(), actorID, teamID)
 		return failure

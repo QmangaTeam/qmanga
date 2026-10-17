@@ -28,6 +28,11 @@ func (handler *CatalogHandler) Register(api *gin.RouterGroup, identity *Identity
 	api.GET("/genres", handler.genres)
 	api.GET("/teams/:slug", handler.team)
 	api.GET("/studio/projects", identity.RequireUser(), handler.studioProjects)
+	api.GET("/studio/projects/:id", identity.RequireUser(), handler.studioProject)
+	api.POST("/studio/projects/:id/chapters", identity.RequireUser(), handler.studioCreateChapter)
+	api.GET("/studio/project-requests", identity.RequireUser(), handler.projectRequests)
+	api.POST("/studio/project-requests", identity.RequireUser(), handler.requestProject)
+	api.POST("/studio/project-requests/:id/cancel", identity.RequireUser(), handler.cancelProjectRequest)
 	admin := api.Group("/admin", identity.RequireUser(), RequireRole("admin"))
 	admin.GET("/titles", handler.adminTitles)
 	admin.GET("/titles/:id", handler.adminDetail)
@@ -37,6 +42,8 @@ func (handler *CatalogHandler) Register(api *gin.RouterGroup, identity *Identity
 	admin.POST("/genres", handler.createGenre)
 	admin.POST("/titles/:id/chapters", handler.createChapter)
 	admin.POST("/titles/:id/projects", handler.createProject)
+	admin.GET("/project-requests", handler.projectRequests)
+	admin.POST("/project-requests/:id/review", handler.reviewProjectRequest)
 }
 
 type titleSummaryDTO struct {
@@ -363,6 +370,8 @@ func (handler *CatalogHandler) createProject(request *gin.Context) {
 }
 func catalogError(request *gin.Context, failure error) {
 	switch {
+	case errors.Is(failure, domain.ErrRequestLimit):
+		Error(request, 429, "request_limit", "Өтінімдер шегіне жеттіңіз. Алдыңғы өтінімдер қаралғанша күтіңіз.")
 	case errors.Is(failure, domain.ErrInvalid):
 		Error(request, 422, "validation", "Тайтл деректерін тексеріңіз")
 	case errors.Is(failure, domain.ErrForbidden):
