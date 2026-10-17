@@ -39,7 +39,7 @@ func (handler *TeamHandler) Register(api *gin.RouterGroup, identity *IdentityHan
 }
 func (handler *TeamHandler) list(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.List(request.Request.Context(), account.ID)
+	items, failure := handler.service.List(request.Request.Context(), account.ID, requestOffset(request))
 	if failure != nil {
 		teamError(request, failure)
 		return
@@ -120,7 +120,7 @@ func (handler *TeamHandler) accept(request *gin.Context) {
 }
 func (handler *TeamHandler) members(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.Members(request.Request.Context(), account.ID, request.Param("id"))
+	items, failure := handler.service.Members(request.Request.Context(), account.ID, request.Param("id"), requestOffset(request))
 	if failure != nil {
 		teamError(request, failure)
 		return

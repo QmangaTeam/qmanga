@@ -10,12 +10,12 @@ function team(value: unknown): Team {
 function items(value: unknown): unknown[] { if (!object(value) || !Array.isArray(value.items)) throw new Error('Сервер жауабы дұрыс емес'); return value.items; }
 export class HttpTeamsGateway implements TeamsGateway {
  constructor(private api: ApiClient) {}
- async list() { return items(await this.api.call('/api/v1/studio/teams')).map(team); }
+ async list(offset=0) { return items(await this.api.call('/api/v1/studio/teams?offset='+offset)).map(team); }
  async pending(offset=0) { return items(await this.api.call('/api/v1/admin/teams/pending?offset='+offset)).map(team); }
  async create(input: NewTeam) { return team(await this.api.call('/api/v1/studio/teams', 'POST', input)); }
  async approve(id: string) { await this.api.call('/api/v1/admin/teams/' + encodeURIComponent(id) + '/approve', 'POST', {}); }
- async members(id: string): Promise<Member[]> {
-  return items(await this.api.call('/api/v1/studio/teams/' + encodeURIComponent(id) + '/members')).map(value => {
+ async members(id: string, offset=0): Promise<Member[]> {
+  return items(await this.api.call('/api/v1/studio/teams/' + encodeURIComponent(id) + '/members?offset='+offset)).map(value => {
    if (!object(value) || typeof value.user_id !== 'string' || typeof value.email !== 'string' || value.role !== 'member' && value.role !== 'editor' && value.role !== 'owner') throw new Error('Сервер жауабы дұрыс емес');
    return { userId: value.user_id, email: value.email, role: value.role };
   });

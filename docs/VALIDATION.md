@@ -59,9 +59,13 @@ The completed component-first bilingual pass and its fresh automated/browser evi
 
 - Test a physical weak Android, real network interruptions, long webtoons, app backgrounding, quota/eviction and service-worker updates across browser restarts. Emulation does not establish device performance.
 - Obtain authorized content and have Kazakh UI/content terminology reviewed. No copyrighted sample pages are distributed with the repository.
-- Review the implemented visual pass on real devices. Studio/admin lists are bounded; some do not yet expose cursor navigation beyond their initial limit.
+- Review the implemented visual pass on real devices. Essential studio/admin lists now expose incremental pagination; see `MVP-GAP-AUDIT.md` for exact scope and remaining public-preview limits.
 - Define source/orphan retention and garbage collection, database plus both-bucket backup/restore, SMTP delivery monitoring and worker/error monitoring.
 - Configure per-client rate limiting at the trusted public gateway before exposing it: the default private Docker API deliberately does not trust forwarded IP headers, so its authentication limiter currently sees the gateway address.
 - Add the agreed deployment TLS/domain, security review, release/rollback procedure and CI execution. No public deployment, external mail delivery or production secrets are configured by this task.
 
-Selected downloads have a soft200MiB ceiling and use no more than20% of estimated remaining storage. Automatic browser HTTP caching is browser-managed, not a separately implemented50MiB app LRU; only explicitly selected chapters are guaranteed eligible for offline reading. Decoded reader scheduling uses a40MiB pixel estimate, not a guarantee of total browser process memory. These operational/acceptance limits are not hidden by a passing build.
+Selected downloads have a soft200MiB ceiling and use no more than20% of estimated remaining storage. A separate50MiB LRU now stores fully received public media for network-failure fallback without evicting selected downloads; browser HTTP caching remains browser-managed. Only explicitly selected chapters are guaranteed eligible for complete offline reading. Decoded reader scheduling uses a40MiB pixel estimate, not a guarantee of total browser process memory. These operational/acceptance limits are not hidden by a passing build.
+
+## Functional gap closure
+
+See [MVP-GAP-AUDIT.md](MVP-GAP-AUDIT.md) for the requirement matrix, new functionality, review regressions and the distinction between implemented software and remaining physical-device/content/language acceptance. No production deployment was performed.

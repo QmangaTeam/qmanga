@@ -2,9 +2,9 @@ import {AppFailure} from '../../../shared/domain/failure';
 import type { Team, Member, NewTeam, TeamRole } from '../domain/team';
 import { validTeam } from '../domain/team';
 export interface TeamsGateway {
- list(): Promise<Team[]>;
+ list(offset?:number): Promise<Team[]>;
  create(input: NewTeam): Promise<Team>;
- members(teamId: string): Promise<Member[]>;
+ members(teamId: string, offset?:number): Promise<Member[]>;
  invite(teamId: string, email: string, role: Exclude<TeamRole, 'owner'>): Promise<void>;
  remove(teamId: string, userId: string): Promise<void>;
  accept(token: string): Promise<void>;

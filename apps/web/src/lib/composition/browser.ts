@@ -20,7 +20,7 @@ export function createCommunity(){const {api,scope}=scopedApi();return new HttpC
 export function createNotifications(){const {api,scope}=scopedApi();return new HttpNotificationsGateway(api,scope);}
 import {LibrarySync,CachedReadingGateway} from '$lib/features/reading/application/library-sync';
 import {BrowserLibraryStorage} from '$lib/features/reading/infrastructure/browser-library-storage';
-export function createReading(){const {api,scope}=scopedApi();const remote=new HttpReadingGateway(api,scope),librarySync=new LibrarySync(remote,new BrowserLibraryStorage());return {readingGateway:new CachedReadingGateway(remote,librarySync),librarySync,progressStorage:new BrowserProgressStorage()};}
+export function createReading(){const {api,scope}=scopedApi();const remote=new HttpReadingGateway(api,scope),librarySync=new LibrarySync(remote,new BrowserLibraryStorage(),()=>crypto.randomUUID());return {readingGateway:new CachedReadingGateway(remote,librarySync),librarySync,progressStorage:new BrowserProgressStorage()};}
 export function createDownloads(){return new Downloads(new BrowserDownloadStorage(),()=>Date.now());}
 import { HttpCatalogGateway } from '$lib/features/catalog/infrastructure/http-catalog-gateway';
 import { BrowserReaderPlatform } from '$lib/features/reading/infrastructure/browser-reader-platform';

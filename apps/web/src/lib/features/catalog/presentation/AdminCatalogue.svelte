@@ -36,6 +36,7 @@
  <label>{copy($locale,"Түпнұсқа атауы")}<input bind:value={input.originalName} maxlength="200"/></label>
  <label>{copy($locale,"Басқа атаулар, әр жолға біреуі")}<textarea bind:value={aliases} rows="3"></textarea></label>
  <label>{text($locale,'Авторлар, әр жолға біреуі','Авторы, по одному на строке')}<textarea bind:value={authors} rows="3" maxlength="2000"></textarea></label>
+ <label class="check"><input type="checkbox" bind:checked={input.listed}/>{text($locale,'Тараусыз тайтлды анонс ретінде көрсету','Показывать тайтл без глав как анонс')}</label><p class="muted">{text($locale,'Өшірілсе, тайтл алғашқы тарау жарияланғанша жасырын қалады.','Если выключено, тайтл скрыт до публикации первой главы.')}</p>
  <label class="check"><input type="checkbox" bind:checked={input.featured}/>{text($locale,'Редакция таңдауы','Подборка редакции')}</label>
  <label>{copy($locale,"Түрі")}<select bind:value={input.kind}>{#each Object.entries(kindNames) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
  <label>{copy($locale,"Түпнұсқа күйі")}<select bind:value={input.originalStatus}>{#each Object.entries(originalStatusNames) as [value,name]}<option {value}>{name}</option>{/each}</select></label>

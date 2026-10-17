@@ -15,6 +15,7 @@ var (
 )
 
 type Metadata struct {
+	Listed                                                                                    bool
 	Slug, Name, OriginalName, Kind, OriginalStatus, TranslationStatus, Description, Direction string
 	Aliases, GenreIDs, Authors                                                                []string
 	Featured                                                                                  bool

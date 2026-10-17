@@ -221,6 +221,22 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		testingTarget.Fatal("adapter allowed revoked administrator")
 	}
 	execute("UPDATE users SET role='admin' WHERE id='admin'")
+	announcement := input
+	announcement.Slug = "announced-title"
+	announcement.Name = "Announcement"
+	announcement.Aliases = []string{}
+	announcement.Listed = true
+	if _, failure = service.CreateTitle(ctx, "admin", announcement); failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	listed, failure := service.List(ctx, application.Filter{Query: "announcement"})
+	if failure != nil || len(listed.Items) != 1 {
+		testingTarget.Fatal("explicit announcement missing", failure)
+	}
+	publishedOnly, failure := service.List(ctx, application.Filter{Query: "announcement", HasChapters: true})
+	if failure != nil || len(publishedOnly.Items) != 0 {
+		testingTarget.Fatal("unpublished title in published-only filter", failure)
+	}
 	execute("INSERT INTO titles(id,slug,name_kk,type) SELECT 'extra-'||number,'extra-'||number,'Extra '||number,'manga' FROM generate_series(1,105)number")
 	firstPage, failure := repository.AdminTitles(ctx, "admin")
 	if failure != nil || len(firstPage) != 100 {

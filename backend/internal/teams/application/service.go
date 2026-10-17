@@ -23,12 +23,12 @@ type Repository interface {
 	Create(context.Context, string, domain.Team) error
 	Access(context.Context, string, string) (domain.Access, error)
 	ProjectAccess(context.Context, string, string) (domain.Access, error)
-	ListForUser(context.Context, string) ([]TeamMembership, error)
+	ListForUser(context.Context, string, ...int) ([]TeamMembership, error)
 	Pending(context.Context, string, ...int) ([]domain.Team, error)
 	Approve(context.Context, string, string) error
 	SaveInvitation(context.Context, string, Invitation) error
 	AcceptInvitation(context.Context, string, string, time.Time) (string, error)
-	Members(context.Context, string, string) ([]Member, error)
+	Members(context.Context, string, string, ...int) ([]Member, error)
 	RemoveMember(context.Context, string, string, string) error
 }
 type Tokens interface {
@@ -76,8 +76,8 @@ func (service *Service) Check(ctx context.Context, actorID, teamID string, actio
 	}
 	return nil
 }
-func (service *Service) List(ctx context.Context, actorID string) ([]TeamMembership, error) {
-	return service.repository.ListForUser(ctx, actorID)
+func (service *Service) List(ctx context.Context, actorID string, offset ...int) ([]TeamMembership, error) {
+	return service.repository.ListForUser(ctx, actorID, offset...)
 }
 func (service *Service) Pending(ctx context.Context, actorID string, offset ...int) ([]domain.Team, error) {
 	return service.repository.Pending(ctx, actorID, offset...)
@@ -112,8 +112,8 @@ func (service *Service) Accept(ctx context.Context, actorID, token string) (stri
 	}
 	return service.repository.AcceptInvitation(ctx, actorID, service.tokens.Digest(token), time.Now())
 }
-func (service *Service) Members(ctx context.Context, actorID, teamID string) ([]Member, error) {
-	return service.repository.Members(ctx, actorID, teamID)
+func (service *Service) Members(ctx context.Context, actorID, teamID string, offset ...int) ([]Member, error) {
+	return service.repository.Members(ctx, actorID, teamID, offset...)
 }
 func (service *Service) Remove(ctx context.Context, actorID, teamID, userID string) error {
 	return service.repository.RemoveMember(ctx, actorID, teamID, userID)

@@ -128,6 +128,11 @@ func TestPublicationIsolationAndAtomicReplacement(testingTarget *testing.T) {
 	if failure = repository.Review(ctx, "owner", draft.ID, "publish", ""); !errors.Is(failure, domain.ErrForbidden) {
 		testingTarget.Fatal("owner published own revision")
 	}
+	execute("UPDATE revisions SET rights_confirmed=false WHERE id=$1", draft.ID)
+	if failure = repository.Review(ctx, "admin", draft.ID, "publish", ""); !errors.Is(failure, domain.ErrTransition) {
+		testingTarget.Fatal("legacy unconfirmed submission published", failure)
+	}
+	execute("UPDATE revisions SET rights_confirmed=true WHERE id=$1", draft.ID)
 	if failure = repository.Review(ctx, "admin", draft.ID, "publish", ""); failure != nil {
 		testingTarget.Fatal(failure)
 	}
@@ -173,4 +178,48 @@ func TestPublicationIsolationAndAtomicReplacement(testingTarget *testing.T) {
 	if _, failure = repository.Manifest(ctx, "", draft.ReleaseID, ""); !errors.Is(failure, domain.ErrWithdrawn) {
 		testingTarget.Fatal("withdrawn manifest exposed", failure)
 	}
+
+	testingTarget.Run("staged page deletion is atomic and versioned", func(testingTarget *testing.T) {
+		for position := 1; position <= 2; position++ {
+			pageInput := input
+			pageInput.RevisionID = replacement.ID
+			pageInput.PageID = uuid.NewString()
+			pageInput.Key = pageInput.PageID
+			pageInput.SourceKey = pageInput.PageID
+			pageInput.Position = position
+			reserved, failure := repository.Reserve(ctx, "owner", pageInput, "order-claim")
+			if failure != nil {
+				testingTarget.Fatal(failure)
+			}
+			if failure = repository.Uploaded(ctx, "owner", reserved.PageID, "order-claim"); failure != nil {
+				testingTarget.Fatal(failure)
+			}
+		}
+		before, failure := repository.Revision(ctx, "owner", replacement.ID)
+		if failure != nil || len(before.Pages) != 2 {
+			testingTarget.Fatal("draft pages missing", failure)
+		}
+		if failure = repository.Reorder(ctx, "owner", before.ID, before.Version, []string{"foreign-page"}); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("foreign page accepted", failure)
+		}
+		unchanged, failure := repository.Revision(ctx, "owner", before.ID)
+		if failure != nil || len(unchanged.Pages) != 2 || unchanged.Version != before.Version {
+			testingTarget.Fatal("invalid order deleted pages")
+		}
+		kept := before.Pages[1].ID
+		if failure = repository.Reorder(ctx, "owner", before.ID, before.Version, []string{kept}); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		after, failure := repository.Revision(ctx, "owner", before.ID)
+		if failure != nil || len(after.Pages) != 1 || after.Pages[0].ID != kept || after.Pages[0].Position != 1 || after.Version != before.Version+1 {
+			testingTarget.Fatal("staged deletion not applied", failure)
+		}
+		if failure = repository.Reorder(ctx, "owner", before.ID, before.Version, []string{}); !errors.Is(failure, domain.ErrConflict) {
+			testingTarget.Fatal("stale delete accepted", failure)
+		}
+		var status string
+		if failure = database.Pool().QueryRow(ctx, "SELECT status FROM jobs WHERE payload->>'page_id'=$1", before.Pages[0].ID).Scan(&status); failure != nil || status != "cancelled" {
+			testingTarget.Fatal("deleted page job remains active", status, failure)
+		}
+	})
 }

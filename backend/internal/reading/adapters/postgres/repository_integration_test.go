@@ -221,6 +221,16 @@ func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 	if failure != nil || len(ungrouped) != 1 {
 		testingTarget.Fatal("logical chapter duplicated across teams", len(ungrouped), failure)
 	}
+	execute("INSERT INTO titles(id,slug,name_kk,is_listed)VALUES('announcement','announcement','Анонс',true),('private-title','private-title','Private',false)")
+	if _, failure = community.Discussion(ctx, "announcement", "", ""); failure != nil {
+		testingTarget.Fatal("announcement discussion inaccessible", failure)
+	}
+	if _, failure = community.RightsReport(ctx, communityApp.RightsRequest{TitleSlug: "announcement", Email: "rights@example.test", Reason: "Functional test announcement report"}); failure != nil {
+		testingTarget.Fatal("announcement rights contact inaccessible", failure)
+	}
+	if _, failure = community.RightsReport(ctx, communityApp.RightsRequest{TitleSlug: "private-title", Email: "rights@example.test", Reason: "Private title should remain private"}); !errors.Is(failure, communityDomain.ErrNotFound) {
+		testingTarget.Fatal("draft exposed through rights form", failure)
+	}
 	communityService := community
 	receipt, failure := communityService.RightsReport(ctx, communityApp.RightsRequest{TitleSlug: "title", Email: "rights@example.test", Reason: "Мен құқық иесімін, материалды тексеріңіз."})
 	if failure != nil {

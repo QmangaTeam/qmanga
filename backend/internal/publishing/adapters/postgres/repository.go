@@ -306,6 +306,13 @@ func (repository *Repository) Review(ctx context.Context, actor, id, decision, r
 		if decision != "publish" {
 			return domain.ErrTransition
 		}
+		var confirmed bool
+		if failure := transaction.QueryRow(ctx, "SELECT rights_confirmed FROM revisions WHERE id=$1", id).Scan(&confirmed); failure != nil {
+			return failure
+		}
+		if !confirmed {
+			return domain.ErrTransition
+		}
 		var release domain.Release
 		if failure := transaction.QueryRow(ctx, "SELECT id,project_id,chapter_id FROM releases WHERE id=$1 FOR UPDATE", revision.ReleaseID()).Scan(&release.ID, &release.ProjectID, &release.ChapterID); failure != nil {
 			return failure
@@ -346,6 +353,9 @@ func (repository *Repository) Withdraw(ctx context.Context, actor, releaseID, re
 			return failure
 		}
 		if _, failure := transaction.Exec(ctx, "UPDATE titles SET cover_asset_id='' WHERE cover_asset_id IN(SELECT variant.id FROM page_variants variant JOIN pages page ON page.id=variant.page_id WHERE page.revision_id=$1)", id); failure != nil {
+			return failure
+		}
+		if _, failure := transaction.Exec(ctx, "UPDATE titles SET is_listed=false WHERE id=(SELECT chapter.title_id FROM chapters chapter JOIN releases publication ON publication.chapter_id=chapter.id WHERE publication.id=$1)", releaseID); failure != nil {
 			return failure
 		}
 		if failure := publicationDecision(ctx, transaction, id, "withdrawn", reason); failure != nil {

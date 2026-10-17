@@ -16,7 +16,7 @@ type Repository struct{ pool *pgxpool.Pool }
 
 func New(pool *pgxpool.Pool) *Repository { return &Repository{pool} }
 
-const visibleTitle = `EXISTS(SELECT 1 FROM chapters chapter JOIN releases release ON release.chapter_id=chapter.id JOIN revisions revision ON revision.id=release.current_revision_id JOIN projects project ON project.id=release.project_id AND project.status='active' JOIN teams team ON team.id=release.team_id AND team.is_approved WHERE chapter.title_id=$1 AND release.status='published' AND revision.status='published')`
+const visibleTitle = `(EXISTS(SELECT 1 FROM titles WHERE id=$1 AND is_listed) OR EXISTS(SELECT 1 FROM chapters chapter JOIN releases release ON release.chapter_id=chapter.id JOIN revisions revision ON revision.id=release.current_revision_id AND revision.release_id=release.id JOIN projects project ON project.id=release.project_id AND project.title_id=chapter.title_id AND project.team_id=release.team_id JOIN teams team ON team.id=release.team_id WHERE chapter.title_id=$1 AND release.status='published' AND release.language='kk' AND revision.status='published'))`
 
 func available(ctx context.Context, transaction pgx.Tx, title, release string) error {
 	var valid bool

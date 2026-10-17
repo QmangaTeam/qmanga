@@ -8,5 +8,6 @@ export class BrowserLibraryStorage implements LibraryStorage {
  async read(account:string,title:string){this.check();return(await execute<LibraryLocal|undefined>('readonly',store=>store.get([account,title])))||null;}
  async write(row:LibraryLocal){this.check();await execute('readwrite',store=>{this.check();return store.put(row);});}
  async list(account:string){this.check();return execute<LibraryLocal[]>('readonly',store=>store.index('account').getAll(account));}
+ async replace(row:LibraryLocal,expected:string){this.check();const connection=await database();return new Promise<boolean>((resolve,reject)=>{const transaction=connection.transaction('selections','readwrite'),store=transaction.objectStore('selections'),request=store.get([row.account,row.selection.titleId]);let replaced=false;request.onsuccess=()=>{try{this.check();if((request.result?.changeId||'')===expected){store.put(row);replaced=true;}}catch{transaction.abort();}};transaction.oncomplete=()=>{connection.close();resolve(replaced);};transaction.onerror=transaction.onabort=()=>{connection.close();reject(new AppFailure('storage_unavailable'));};});}
  async clear(){await execute('readwrite',store=>store.clear());}
 }

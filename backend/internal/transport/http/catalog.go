@@ -95,7 +95,7 @@ func (handler *CatalogHandler) list(request *gin.Context) {
 	if !valid {
 		return
 	}
-	filter := application.Filter{Query: request.Query("q"), Kind: request.Query("kind"), Genre: request.Query("genre"), OriginalStatus: request.Query("original_status"), TranslationStatus: request.Query("translation_status"), Sort: request.DefaultQuery("sort", "updated"), Featured: request.Query("featured") == "true", Limit: limit}
+	filter := application.Filter{Query: request.Query("q"), Kind: request.Query("kind"), Genre: request.Query("genre"), OriginalStatus: request.Query("original_status"), TranslationStatus: request.Query("translation_status"), Sort: request.DefaultQuery("sort", "updated"), Featured: request.Query("featured") == "true", HasChapters: request.Query("has_chapters") == "true", Limit: limit}
 	if raw := request.Query("cursor"); raw != "" {
 		decoded, failure := base64.RawURLEncoding.DecodeString(raw)
 		var cursor catalogueCursor
@@ -157,7 +157,7 @@ func (handler *CatalogHandler) detail(request *gin.Context) {
 }
 func detailView(detail application.Detail) gin.H {
 	title := detail.Title
-	return gin.H{"id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "aliases": title.Aliases, "authors": title.Authors, "featured": title.Featured, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
+	return gin.H{"id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "aliases": title.Aliases, "authors": title.Authors, "featured": title.Featured, "listed": title.Listed, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
 }
 func (handler *CatalogHandler) adminDetail(request *gin.Context) {
 	account, _ := CurrentAccount(request)
@@ -286,6 +286,7 @@ func (handler *CatalogHandler) createTitle(request *gin.Context) {
 		Aliases           []string `json:"aliases"`
 		Authors           []string `json:"authors"`
 		Featured          bool     `json:"featured"`
+		Listed            bool     `json:"listed"`
 		GenreIDs          []string `json:"genre_ids"`
 		Demo              bool     `json:"demo"`
 	}
@@ -293,7 +294,7 @@ func (handler *CatalogHandler) createTitle(request *gin.Context) {
 		return
 	}
 	account, _ := CurrentAccount(request)
-	metadata := domain.Metadata{Slug: input.Slug, Name: input.Name, OriginalName: input.OriginalName, Kind: input.Kind, OriginalStatus: input.OriginalStatus, TranslationStatus: input.TranslationStatus, Description: input.Description, Direction: input.Direction, Authors: input.Authors, Featured: input.Featured, Aliases: input.Aliases, GenreIDs: input.GenreIDs, Demo: input.Demo}
+	metadata := domain.Metadata{Slug: input.Slug, Name: input.Name, OriginalName: input.OriginalName, Kind: input.Kind, OriginalStatus: input.OriginalStatus, TranslationStatus: input.TranslationStatus, Description: input.Description, Direction: input.Direction, Authors: input.Authors, Featured: input.Featured, Listed: input.Listed, Aliases: input.Aliases, GenreIDs: input.GenreIDs, Demo: input.Demo}
 	var title domain.Title
 	var failure error
 	if request.Request.Method == "PUT" {

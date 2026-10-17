@@ -21,6 +21,7 @@ type Cursor struct {
 	Name, ID  string
 }
 type Filter struct {
+	HasChapters                                                 bool
 	Featured                                                    bool
 	Query, Kind, Genre, OriginalStatus, TranslationStatus, Sort string
 	Limit                                                       int

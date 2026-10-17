@@ -109,4 +109,54 @@ func TestTeamIsolationAndRevocation(testingTarget *testing.T) {
 	if !errors.Is(service.Check(ctx, "member", team.ID, domain.ReadDraft), domain.ErrForbidden) {
 		testingTarget.Fatal("removed member retains access")
 	}
+
+	testingTarget.Run("team and member lists expose later pages without overlap", func(testingTarget *testing.T) {
+		for _, statement := range []string{
+			"INSERT INTO teams(id,slug,name,description) SELECT 'paged-team-'||number,'paged-team-'||number,'Paged team '||number,'' FROM generate_series(1,101) number",
+			"INSERT INTO team_memberships(id,team_id,user_id,role) SELECT 'paged-owner-'||number,'paged-team-'||number,'owner','owner' FROM generate_series(1,101) number",
+			"INSERT INTO users(id,email,password_hash,is_verified) SELECT 'paged-user-'||number,'paged-user-'||number||'@example.test','test-only',true FROM generate_series(1,101) number",
+			"INSERT INTO team_memberships(id,team_id,user_id,role) SELECT 'paged-member-'||number,'paged-team-1','paged-user-'||number,'member' FROM generate_series(1,101) number",
+		} {
+			if _, failure := database.Pool().Exec(ctx, statement); failure != nil {
+				testingTarget.Fatal(failure)
+			}
+		}
+		first, failure := service.List(ctx, "owner", 0)
+		if failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		second, failure := service.List(ctx, "owner", 100)
+		if failure != nil || len(first) != 100 || len(second) != 2 {
+			testingTarget.Fatalf("team pages: %d/%d, %v", len(first), len(second), failure)
+		}
+		seen := map[string]bool{}
+		for _, membership := range first {
+			seen[membership.Team.ID] = true
+		}
+		for _, membership := range second {
+			if seen[membership.Team.ID] {
+				testingTarget.Fatal("team page overlaps")
+			}
+		}
+		members, failure := service.Members(ctx, "owner", "paged-team-1", 0)
+		if failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		more, failure := service.Members(ctx, "owner", "paged-team-1", 100)
+		if failure != nil || len(members) != 100 || len(more) != 2 {
+			testingTarget.Fatalf("member pages: %d/%d, %v", len(members), len(more), failure)
+		}
+		seen = map[string]bool{}
+		for _, member := range members {
+			seen[member.UserID] = true
+		}
+		for _, member := range more {
+			if seen[member.UserID] {
+				testingTarget.Fatal("member page overlaps")
+			}
+		}
+		if _, failure := service.Members(ctx, "other", "paged-team-1", 100); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("pagination bypasses membership authorization")
+		}
+	})
 }

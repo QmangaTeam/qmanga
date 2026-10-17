@@ -101,8 +101,8 @@ func (repository *Repository) withAccess(ctx context.Context, actorID, teamID st
 	}
 	return transaction.Commit(ctx)
 }
-func (repository *Repository) ListForUser(ctx context.Context, actorID string) ([]application.TeamMembership, error) {
-	rows, failure := repository.pool.Query(ctx, `SELECT team.id,team.slug,team.name,team.description,team.is_approved,member.role FROM teams team JOIN team_memberships member ON member.team_id=team.id WHERE member.user_id=$1 ORDER BY team.name LIMIT 100`, actorID)
+func (repository *Repository) ListForUser(ctx context.Context, actorID string, offset ...int) ([]application.TeamMembership, error) {
+	rows, failure := repository.pool.Query(ctx, `SELECT team.id,team.slug,team.name,team.description,team.is_approved,member.role FROM teams team JOIN team_memberships member ON member.team_id=team.id WHERE member.user_id=$1 ORDER BY team.name,team.id LIMIT 100 OFFSET `+pageOffset(offset), actorID)
 	if failure != nil {
 		return nil, failure
 	}
@@ -209,7 +209,7 @@ func (repository *Repository) AcceptInvitation(ctx context.Context, actorID, has
 	}
 	return teamID, transaction.Commit(ctx)
 }
-func (repository *Repository) Members(ctx context.Context, actorID, teamID string) ([]application.Member, error) {
+func (repository *Repository) Members(ctx context.Context, actorID, teamID string, offset ...int) ([]application.Member, error) {
 	access, failure := repository.Access(ctx, actorID, teamID)
 	if failure != nil {
 		return nil, failure
@@ -217,7 +217,7 @@ func (repository *Repository) Members(ctx context.Context, actorID, teamID strin
 	if !access.Allows(domain.Manage) {
 		return nil, domain.ErrForbidden
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT member.user_id,account.email,member.role FROM team_memberships member JOIN users account ON account.id=member.user_id WHERE member.team_id=$1 ORDER BY member.created_at LIMIT 100", teamID)
+	rows, failure := repository.pool.Query(ctx, "SELECT member.user_id,account.email,member.role FROM team_memberships member JOIN users account ON account.id=member.user_id WHERE member.team_id=$1 ORDER BY member.created_at,member.id LIMIT 100 OFFSET "+pageOffset(offset), teamID)
 	if failure != nil {
 		return nil, failure
 	}

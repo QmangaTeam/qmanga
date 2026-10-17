@@ -11,6 +11,8 @@
  let { user, gateway }: { user: Account | null; gateway: TeamsGateway } = $props();
  let teams = $state<Team[]>([]);
  let selected = $state('');
+ let moreTeams = $state(false); let moreMembers = $state(false);
+ let teamOffset = $state(0); let memberOffset = $state(0);
  let members = $state<Member[]>([]);
  let name = $state(''); let slug = $state(''); let description = $state('');
  let email = $state(''); let role = $state<'member' | 'editor'>('member');
@@ -18,12 +20,13 @@
  const labels = $derived({ owner: copy($locale,"Иесі"), editor: copy($locale,"Редактор"), member: copy($locale,"Қатысушы") });
  let active = $derived(teams.find(team => team.id === selected));
  function message(failure: unknown) { error = failureCode(failure); }
- async function load() { teams = await gateway.list(); if (!selected && teams.length) selected = teams[0].id; await loadMembers(); }
- async function loadMembers() { members = []; if (active && canManage(active)) members = await gateway.members(active.id); }
+ async function load(append=false) { const batch = await gateway.list(append ? teamOffset : 0); moreTeams=batch.length===100; teamOffset=(append ? teamOffset : 0)+batch.length; teams=append ? [...teams,...batch.filter(team=>!teams.some(existing=>existing.id===team.id))] : batch; if (!selected && teams.length) selected = teams[0].id; if (!append) await loadMembers(); }
+ async function loadMembers(append=false) { const team=active; if (!append) { members=[]; memberOffset=0; moreMembers=false; } if (!team || !canManage(team)) return; const batch=await gateway.members(team.id,append ? memberOffset : 0); if (selected!==team.id) return; moreMembers=batch.length===100; memberOffset=(append ? memberOffset : 0)+batch.length; members=append ? [...members,...batch.filter(member=>!members.some(existing=>existing.userId===member.userId))] : batch; }
+ async function loadMore(kind:'teams'|'members') { busy=true; error=''; try { if(kind==='teams') await load(true); else await loadMembers(true); } catch(failure) { message(failure); } finally { busy=false; } }
  onMount(() => { if (user) load().catch(message); });
  async function create(event: SubmitEvent) {
   event.preventDefault(); busy = true; error = ''; notice = '';
-  try { const team = await requestTeam(gateway, { name, slug, description }); selected = team.id; await load(); name = ''; slug = ''; description = ''; notice = "team_requested"; } catch (failure) { message(failure); } finally { busy = false; }
+  try { const team = await requestTeam(gateway, { name, slug, description }); teams=[team,...teams]; selected = team.id; await loadMembers(); name = ''; slug = ''; description = ''; notice = "team_requested"; } catch (failure) { message(failure); } finally { busy = false; }
  }
  async function invite(event: SubmitEvent) {
   event.preventDefault(); if (!active) return; busy = true; error = '';
@@ -43,12 +46,14 @@
  {#if error}<p class="form-message" role="alert">{noticeText($locale,error)}</p>{/if}{#if notice}<p class="form-message success" role="status">{noticeText($locale,notice)}</p>{/if}
  <div class="workspace-grid">
   <section class="panel"><h2>{copy($locale,"Менің командаларым")}</h2>
-   {#if teams.length}<label>{copy($locale,"Команда")}<select bind:value={selected} onchange={() => loadMembers().catch(message)}>{#each teams as team}<option value={team.id}>{team.name}</option>{/each}</select></label>
+   {#if teams.length}<label>{copy($locale,"Команда")}<select disabled={busy} bind:value={selected} onchange={() => loadMembers().catch(message)}>{#each teams as team}<option value={team.id}>{team.name}</option>{/each}</select></label>
    {:else}<p class="muted">{copy($locale,"Әлі командаға қосылмадың. Жаңа командаға өтінім бере аласың.")}</p>{/if}
+   {#if moreTeams}<button class="button subtle" disabled={busy} onclick={()=>loadMore('teams')}>{text($locale,'Тағы көрсету','Показать ещё')}</button>{/if}
    {#if active}<div class="team-state"><span class:approved={active.approved} class="status-badge">{active.approved ? copy($locale,"Мақұлданған") : copy($locale,"Мақұлдау күтілуде")}</span><span>{active.role ? labels[active.role] : ''}</span></div><p class="muted">{active.description}</p>
     {#if canManage(active)}
      <h3>{copy($locale,"Қатысушылар")}</h3>
      {#each members as member}<div class="member-row"><div><strong>{member.email}</strong><small>{labels[member.role]}</small></div>{#if member.role !== 'owner'}<button class="button subtle" disabled={busy} onclick={() => remove(member.userId)}>{copy($locale,"Шығару")}</button>{/if}</div>{/each}
+     {#if moreMembers}<button class="button subtle" disabled={busy} onclick={()=>loadMore('members')}>{text($locale,'Тағы көрсету','Показать ещё')}</button>{/if}
      <form onsubmit={invite}><h3>{copy($locale,"Шақыру жіберу")}</h3><label>{copy($locale,"Пошта")}<input type="email" bind:value={email} required autocomplete="off"/></label><label>{copy($locale,"Рөл")}<select bind:value={role}><option value="member">{copy($locale,"Қатысушы")}</option><option value="editor">{copy($locale,"Редактор")}</option></select></label><button class="button primary" disabled={busy}>{copy($locale,"Шақыру")}</button></form>
     {/if}
    {/if}
