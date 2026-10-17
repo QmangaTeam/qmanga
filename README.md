@@ -4,7 +4,7 @@
 
 ## Current development state
 
-The Alpine stack, Kazakh mobile shell and account lifecycle run. Gin handles HTTP; accounts support email verification, session cookies, CSRF and password recovery. Team authorization, catalogue, publishing, reader, offline and community are remaining milestones; this is not yet the full MVP.
+The Alpine stack, Kazakh mobile shell, accounts and approved-team workflows run. Gin handles HTTP; accounts support email verification, session cookies, CSRF and password recovery. Teams have owner/editor/member access, invitations and admin approval. Catalogue, publishing, reader, offline and community remain in development; this is not yet the full MVP.
 
 ## Local start
 

@@ -1,6 +1,10 @@
 <script lang="ts">
   import '../app.css';
   import { page } from '$app/stores';
+  import { onMount } from 'svelte';
+  import { createPreferences } from '$lib/composition/browser';
+  import { initializeTheme } from '$lib/features/preferences/application/theme';
+  onMount(() => { initializeTheme(createPreferences()); });
   let { children, data } = $props();
   const navigation = [
     { name: 'Басты бет', path: '/', icon: 'M3 10 12 3l9 7v10a1 1 0 0 1-1 1h-5v-7H9v7H4a1 1 0 0 1-1-1Z' },

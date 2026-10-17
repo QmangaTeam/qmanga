@@ -1,10 +1,9 @@
 <script lang="ts">
  import { page } from '$app/stores';
  import { goto, invalidateAll } from '$app/navigation';
- import { createAuth } from '$lib/composition/browser';
  import { authenticate } from '../application/auth';
- import type { AuthResult } from '../application/auth';
- let { mode }: { mode: 'login' | 'register' | 'forgot-password' | 'reset-password' | 'verify-email' } = $props();
+ import type { AuthResult, AuthGateway } from '../application/auth';
+ let { mode, gateway }: { mode: 'login' | 'register' | 'forgot-password' | 'reset-password' | 'verify-email'; gateway: AuthGateway } = $props();
  let email = $state('');
  let password = $state('');
  let busy = $state(false);
@@ -15,7 +14,6 @@
   event.preventDefault();
   if (busy) return;
   busy = true; result = null;
-  const gateway = createAuth();
   const token = $page.url.searchParams.get('token') || '';
   try {
    if (mode === 'login' || mode === 'register') result = await authenticate(gateway, mode, { email, password });
@@ -27,7 +25,7 @@
  }
  async function resend() {
   busy = true;
-  try { result = await createAuth().resend(email); } finally { busy = false; }
+  try { result = await gateway.resend(email); } finally { busy = false; }
  }
 </script>
 <svelte:head><title>{labels[mode]} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>

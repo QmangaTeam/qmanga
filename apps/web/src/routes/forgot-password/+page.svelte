@@ -1,2 +1,6 @@
-<script lang="ts">import AuthForm from '$lib/features/identity/presentation/AuthForm.svelte';</script>
-<AuthForm mode="forgot-password"/>
+<script lang="ts">
+ import AuthForm from '$lib/features/identity/presentation/AuthForm.svelte';
+ import { createAuth } from '$lib/composition/browser';
+ const gateway = createAuth();
+</script>
+<AuthForm mode="forgot-password" {gateway}/>

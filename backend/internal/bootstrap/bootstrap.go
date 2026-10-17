@@ -15,6 +15,8 @@ import (
 	"qmanga/internal/platform/postgres"
 	"qmanga/internal/platform/readiness"
 	"qmanga/internal/platform/s3"
+	teamPostgres "qmanga/internal/teams/adapters/postgres"
+	teamApp "qmanga/internal/teams/application"
 	transport "qmanga/internal/transport/http"
 )
 
@@ -70,6 +72,8 @@ func Initialize(parentContext context.Context) (*Application, error) {
 	identityService := identityApp.New(identityPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)
 	identityHandler := transport.NewIdentityHandler(identityService, appConfig.AppOrigin, appConfig.Environment == "production")
 	identityHandler.Register(httpRouter.Group("/api/v1"))
+	teamService := teamApp.New(teamPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)
+	transport.NewTeamHandler(teamService).Register(httpRouter.Group("/api/v1"), identityHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf(":%s", appConfig.HTTPPort),
