@@ -2,6 +2,8 @@
 
 Plan: docs/IMPLEMENTATION.md
 
+Desktop cursor follow-up: reproduced cursor:wait on the disabled image-edge button at5/5, inherited from the global disabled-button rule. Disabled controls now use the ordinary cursor, not a false loading indicator; chapter boundaries remain disabled intentionally.
+
 Owner navigation correction: manga RTL no longer mirrors the default tap zones, toolbar or keyboard in page mode. Default and legacy auto use right-next/left-previous on mobile and desktop. Reverse page controls are an explicit manual preference; the settings label no longer implies that source reading direction controls the UI.
 
 Reader follow-up: reproduced and fixed missing edge taps, keyboard suppression after button focus, strip RTL inversion, rapid-input races and fractional-pixel boundary/counter rollback. Shared application navigation policy/cursor, consistent RTL page controls and disabled chapter boundaries. Automatic WebP processing was already present; strengthened actual-format validation and JPEG/PNG/WebP decode/hash/MIME coverage, added studio explanation and checked a fresh real upload through all three profiles and the Go gateway. Fresh22 Bun tests/113 assertions, Svelte0 errors/warnings, architecture/build and full Go/PostgreSQL/codec suite pass. See docs/VALIDATION.md for browser evidence and remaining device acceptance.

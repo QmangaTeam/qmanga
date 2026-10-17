@@ -47,9 +47,11 @@ Fresh checks:22 Bun tests/113 assertions; frontend boundaries, Svelte0 errors/wa
 
 Browser: the original five-page chapter was exercised at320/360px in both themes, in pages and strip modes. Tested a physical right-edge coordinate click, toolbar previous/next, ArrowLeft/ArrowRight after button focus, two rapid turns from1/5 to3/5, end-of-chapter disabled controls and RTL's consistent reversed sides. No horizontal overflow at320/360px; mobile toolbar targets remain44px. These are desktop-browser checks, not physical Android acceptance.
 
-## Before a public launch
-
 Navigation policy correction verification:22 Bun tests/115 assertions, architecture and production build pass, Svelte0 errors/warnings. At360px, right-edge tap advanced3→4, toolbar next4→5, ArrowLeft5→4. The control preference offers normal and explicitly reversed page controls, with no title-driven option. No horizontal overflow at320px. The viewport override was reset after review.
+
+Desktop cursor correction: at1280px and5/5, the disabled right-edge button incorrectly inherited cursor:wait from global CSS. A browser assertion reproduced this failure. After changing disabled controls to cursor:default, the same assertion passed; returning to4/5 restored an enabled right edge with cursor:pointer. Frontend tests/build and Svelte diagnostics pass. The local fixture contains only five source pages; disabled forward navigation at5/5 is intentional, not an unfinished image request.
+
+## Before a public launch
 
 - Test a physical weak Android, real network interruptions, long webtoons, app backgrounding, quota/eviction and service-worker updates across browser restarts. Emulation does not establish device performance.
 - Obtain authorized content and have Kazakh UI/content terminology reviewed. No copyrighted sample pages are distributed with the repository.
