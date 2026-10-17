@@ -7,7 +7,7 @@ function accountView(value: unknown): Account | undefined {
  return { id: value.id, email: value.email, role: value.role, verified: value.email_verified };
 }
 export class HttpAuthGateway implements AuthGateway {
- constructor(private base: string, private request: typeof fetch, private cookie = '') {}
+ constructor(private base: string, private request: typeof fetch, private cookie = '',private accountChanged:()=>Promise<void>=async()=>{}) {}
  private async call(action: string, input?: Record<string, string>, csrf?: string): Promise<AuthResult> {
   try {
    const response = await this.request(this.base + '/api/v1/auth/' + action, {
@@ -24,7 +24,7 @@ export class HttpAuthGateway implements AuthGateway {
    return { ok: true, message: typeof payload.message === 'string' ? payload.message : '', account: accountView(payload.user) };
   } catch { return { ok: false, message: 'Қосылым үзілді. Қайталап көріңіз.' }; }
  }
- login(input: Credentials) { return this.call('login', { email: input.email, password: input.password }); }
+ async login(input: Credentials) {const result=await this.call('login', { email: input.email, password: input.password });if(result.ok)await this.accountChanged();return result;}
  register(input: Credentials) { return this.call('register', { email: input.email, password: input.password }); }
  async current() { const result = await this.call('me'); return result.ok ? result.account || null : null; }
  requestReset(email: string) { return this.call('forgot-password', { email }); }
@@ -36,7 +36,7 @@ export class HttpAuthGateway implements AuthGateway {
    const response = await this.request(this.base + '/api/v1/auth/csrf', { credentials: 'same-origin', signal: AbortSignal.timeout(10000) });
    const payload: unknown = await response.json();
    if (!response.ok || !object(payload) || typeof payload.csrf_token !== 'string') return { ok: false, message: 'Қайта кіріңіз' };
-   return this.call('logout', {}, payload.csrf_token);
+   const result=await this.call('logout', {}, payload.csrf_token);if(result.ok)await this.accountChanged();return result;
   } catch { return { ok: false, message: 'Қосылым үзілді' }; }
  }
 }

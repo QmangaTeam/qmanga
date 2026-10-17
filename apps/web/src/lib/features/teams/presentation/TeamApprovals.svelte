@@ -13,6 +13,7 @@
 </script>
 <svelte:head><title>Командаларды мақұлдау — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>
 <div class="section-heading"><div><span class="eyebrow">Басқару</span><h1>Команда өтінімдері</h1></div></div>
+<a class="auth-link" href="/admin/catalog">Каталогты басқару</a><a class="auth-link" href="/moderation">Жарияланымдарды тексеру</a>
 {#if !user || user.role !== 'admin'}<div class="empty-state"><h2>Әкімші рұқсаты қажет</h2><a class="button primary" href="/login">Кіру</a></div>{:else}
  {#if error}<p class="form-message" role="alert">{error}</p>{/if}
  <div class="workspace-grid">{#each teams as team}<article class="panel"><span class="eyebrow">{team.slug}</span><h2>{team.name}</h2><p class="muted">{team.description}</p><button class="button primary" disabled={busy} onclick={() => approve(team.id)}>Команданы мақұлдау</button></article>{:else}<div class="empty-state"><h2>Жаңа өтінім жоқ</h2><p>Командалар жіберген өтінімдер осында көрінеді.</p></div>{/each}</div>

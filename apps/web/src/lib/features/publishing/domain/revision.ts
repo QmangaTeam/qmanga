@@ -1,0 +1,4 @@
+export function canSubmit(revision: { state: string; pages: { status: string }[] }): boolean { return revision.state === 'ready' && revision.pages.length > 0 && revision.pages.every(page => page.status === 'ready'); }
+export function canEdit(state: string): boolean { return state === 'draft' || state === 'processing' || state === 'ready'; }
+export function naturalOrder<Item extends {name: string}>(items: Item[]): Item[] { const collator = new Intl.Collator('kk', { numeric: true }); return [...items].sort((first, second) => collator.compare(first.name, second.name)); }
+export const stateNames: Record<string, string> = { draft: 'Қаралым', processing: 'Өңделуде', ready: 'Тексеруге дайын', submitted: 'Тексерілуде', published: 'Жарияланған', changes_requested: 'Түзету қажет', uploading: 'Жүктелуде', queued: 'Кезекте', failed: 'Қате' };

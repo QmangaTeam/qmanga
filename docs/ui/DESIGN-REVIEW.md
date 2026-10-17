@@ -17,6 +17,8 @@ The current empty catalogue is real: content/publishing has not been implemented
 
 ## Final-pass brief
 
+Reader amendment: the owner explicitly requests Senkuro-like reading controls now, while the rest of the visual redesign remains deferred. Rechecked its live desktop and360px reader: approximately48px top bar with back/title/chapter, image-first stage, mobile bottom previous/contents/settings/next controls, separate page counter, desktop side controls, full-width mobile settings and chapter drawers, desktop right drawer. Settings include reading mode, theme, fit, numbering and brightness. Qmanga retains green, Kazakh labels and its specified eco/high/original behavior; it does not copy artwork, branding, advertisements or unrelated premium controls. Opening the reference chapter may affect normal reading history; no account details are recorded.
+
 Keep green as an action/selection role; determine exact tokens with both-theme contrast checks. Rework hierarchy and content placement instead of merely recoloring. Home prioritizes actual reading progress and chapter updates. Catalogue prioritizes search, readable cover titles and compact filters. Authentication uses direct task headings such as Тіркелу. Content density must not shrink touch targets or make long Kazakh text unreadable.
 
 Keep five primary mobile destinations. Review at320/360px and desktop, with populated, empty, failed-network and long-content cases. Check44px product touch targets, keyboard focus/overlap, zoom, dark/light contrast and reduced motion. Record screenshots after the real interface is changed. Browser emulation does not establish low-end Android performance.

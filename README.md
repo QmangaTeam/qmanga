@@ -4,9 +4,9 @@
 
 ## Current development state
 
-The Alpine stack, Kazakh mobile shell, accounts and approved-team workflows run. Gin handles HTTP; accounts support email verification, session cookies, CSRF and password recovery. Teams have owner/editor/member access, invitations and admin approval. Public catalogue search/filters, title/chapter lists and approved-team pages are connected to Go through separate application ports and HTTP adapters. Administrator APIs create metadata, genres, ordered chapters and translation projects. Catalogue management UI/editing, publishing, reader, offline and community remain in development; this is not yet the full MVP.
+The local functional alpha runs on seven Alpine services. Accounts, approved teams, catalogue/admin editing, mobile publishing, private media processing, moderation and the reader are connected to real persistence. The reader has page/strip modes, eco/standard/high, controlled requests and decoded memory, local/cloud progress with explicit conflicts, library choices, selected offline copies, ratings, comments, reports and notifications. Domain/application ports remain separate from Gin, PostgreSQL, Svelte and browser adapters. This is not a claim of public-release acceptance: physical low-end Android and editorial/content review remain outstanding.
 
-The catalogue deliberately remains empty until actual releases are published. Test fixtures live in isolated schemas, not the public catalogue. The final visual redesign is deferred until functionality is complete; green stays per the owner's instruction. See docs/ui/DESIGN-REVIEW.md.
+Fresh installations have an empty catalogue until a team uploads and a moderator publishes content. Automated fixtures use isolated schemas. The owner's sample images are used only in local development storage and never committed. The reader follows the Senkuro workflow; the site's general visual redesign remains deferred and green stays. See docs/ui/DESIGN-REVIEW.md and docs/VALIDATION.md.
 
 ## Local start
 
@@ -54,7 +54,7 @@ The first command skips PostgreSQL integration without TEST_DATABASE_URL. The to
 
 See docs/ARCHITECTURE.md and docs/MEDIA-GATEWAY.md. Feature contexts contain domain, application ports/use cases, and adapters; Go and browser composition roots provide concrete dependencies. PostgreSQL migrations are embedded and serialized by an advisory lock.
 
-The original MinIO upload sources remain private. Reader original quality will be a sanitized full-resolution published derivative through the Go gateway. Already downloaded offline files cannot be revoked while the device is disconnected.
+The original MinIO upload sources remain private. Reader original quality is an explicitly requested, sanitized full-resolution derivative through Go. Already downloaded offline files cannot be revoked while the device is disconnected. IndexedDB/Cache Storage can be evicted by the browser; the saved list can recheck completeness.
 
 ## Product specification
 

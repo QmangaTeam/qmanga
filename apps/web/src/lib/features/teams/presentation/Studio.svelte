@@ -33,6 +33,7 @@
 </script>
 <svelte:head><title>Аудармашы кабинеті — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>
 <div class="section-heading"><div><span class="eyebrow">Бірге аударайық</span><h1>Аудармашы кабинеті</h1></div></div>
+<a class="auth-link" href="/studio/projects">Аударма жобаларым</a>
 {#if !user}<div class="empty-state"><h2>Алдымен есептікжазбаңа кір</h2><p>Команда құру және аударма жүктеу үшін поштаң расталуы керек.</p><a href="/login" class="button primary">Кіру</a></div>
 {:else}
  {#if !user.verified}<p class="form-message">Поштаңды растау қажет. <a href="/settings">Растау хатын қайта жіберу →</a></p>{/if}

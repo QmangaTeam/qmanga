@@ -21,5 +21,5 @@ export interface ExpectedFile { url: string; bytes: number }
 export interface StoredFile extends ExpectedFile { revision: string }
 export function offlineComplete(revision: string, expected: ExpectedFile[], stored: StoredFile[]): boolean {
   if (!revision || !expected.length || new Set(expected.map(file => file.url)).size !== expected.length) return false;
-  return expected.every(file => file.url.startsWith('/media/') && file.bytes > 0 && stored.some(saved => saved.revision === revision && saved.url === file.url && saved.bytes === file.bytes));
+  return expected.every(file => /^(?:\/api\/v1)?\/media\/[A-Za-z0-9_-]{1,128}$/.test(file.url) && file.bytes > 0 && stored.some(saved => saved.revision === revision && saved.url === file.url && saved.bytes === file.bytes));
 }

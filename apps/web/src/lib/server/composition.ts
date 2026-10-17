@@ -5,6 +5,11 @@ import { HttpAuthGateway } from '$lib/features/identity/infrastructure/http-auth
 import { HttpCatalogGateway } from '$lib/features/catalog/infrastructure/http-catalog-gateway';
 import { ApiClient } from '$lib/shared/infrastructure/api-client';
 import type { CatalogGateway } from '$lib/features/catalog/application/catalog';
+import { HttpReaderGateway } from '$lib/features/reading/infrastructure/http-reader-gateway';
+export function createServerReader(request: typeof fetch,cookie: string,preview: boolean) {
+ const base=env.API_INTERNAL_URL||'http://api:8080';
+ return new HttpReaderGateway(new ApiClient((input,init)=>request(base+String(input),{...init,headers:{...init?.headers,...(preview?{Cookie:cookie}:{})}})));
+}
 export function createPublicCatalogue(request: typeof fetch): CatalogGateway {
  const base = env.API_INTERNAL_URL || 'http://api:8080';
  return new HttpCatalogGateway(new ApiClient((input, init) => request(base + String(input), init)));

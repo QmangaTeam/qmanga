@@ -27,4 +27,5 @@
   {#if message}<p class="form-message" role="status">{message}</p>{/if}
  </section>
  <section class="panel"><h2>Сыртқы көрініс</h2><label>Тақырып<select value={theme} onchange={event => { theme = changeTheme(preferences, event.currentTarget.value); }}><option value="system">Құрылғы тақырыбы</option><option value="dark">Қараңғы</option><option value="light">Жарық</option></select></label><p class="muted">Таңдау осы құрылғыда сақталады.</p></section>
+ <section class="panel"><h2>Оқу</h2><a class="button subtle" href="/saved">Сақталған тараулар</a>{#if user?.role==='moderator'||user?.role==='admin'}<a class="button subtle" href="/moderation">Модерация</a>{/if}</section>
 </div>

@@ -15,7 +15,11 @@
   ];
 </script>
 <a class="skip-link" href="#content">Мазмұнға өту</a>
+{#if $page.url.pathname.startsWith('/read/') || $page.url.pathname === '/offline-reader'}
+ <main id="content">{@render children()}</main>
+{:else}
 <header class="topbar"><div class="topbar-inner"><a class="brand" href="/" aria-label="Qmanga басты бет"><span class="brand-mark">Q</span><span>qmanga<span class="brand-dot">.</span></span></a><nav class="desktop-nav" aria-label="Негізгі">{#each navigation.slice(0, 3) as item}<a class:active={$page.url.pathname === item.path} href={item.path}>{item.name}</a>{/each}</nav><a href={data.user ? '/settings' : '/login'} class="button subtle">{data.user ? 'Есептікжазба' : 'Кіру'} <span aria-hidden="true">↗</span></a></div></header>
 <main id="content" class="page-container">{@render children()}</main>
 <footer class="site-footer"><a class="brand" href="/">qmanga.</a><p>Әр оқиғаның өз тілі бар.</p></footer>
 <nav class="bottom-nav" aria-label="Мобильді навигация">{#each navigation as item}<a class:active={$page.url.pathname === item.path} href={item.path} aria-current={$page.url.pathname === item.path ? 'page' : undefined}><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d={item.icon}/></svg><span>{item.name}</span></a>{/each}</nav>
+{/if}
