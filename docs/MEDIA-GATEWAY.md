@@ -8,7 +8,7 @@ Mandatory owner decision, 2026-10-17: images are fetched through the Go backend,
 - Browser uploads -> scoped Go upload API -> private MinIO. No browser S3 client, public bucket policy, storage credentials, S3 URL, presigned URL or redirect to storage.
 - Default Compose does not publish MinIO API or console ports. A separately documented localhost-only development override may expose the console when explicitly enabled.
 - Public manifests contain only relative `/media/...` URLs. Server-side configuration owns bucket names and endpoints; clients cannot supply a remote URL, bucket or arbitrary object key.
-- Resolve opaque asset identifiers through PostgreSQL. A random identifier is not authorization. Only current published media is public; draft previews require active project membership or moderator access. Original access is explicit and follows the same publication/permission rules, not a bucket-wide bypass.
+- Resolve opaque asset identifiers through PostgreSQL. A random identifier is not authorization. Only current published media is public; draft previews require active project membership or moderator access. Reader “Original” means a sanitized full-resolution published derivative with metadata stripped, not the private upload source. Access is explicit and follows the same publication/permission rules, not a bucket-wide bypass. Raw uploads remain team/moderator-only.
 
 ## Delivery and integrity
 
