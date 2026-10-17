@@ -24,7 +24,7 @@ const publicationJoins = ` FROM chapters chapter JOIN releases publication ON pu
  JOIN teams team ON team.id=publication.team_id `
 const publicationVisible = `publication.status='published' AND publication.language='kk' AND revision.status='published'`
 const titleVisible = `EXISTS(SELECT 1` + publicationJoins + `WHERE chapter.title_id=title.id AND ` + publicationVisible + `)`
-const summaryColumns = `title.id,title.slug,title.name_kk,title.type,title.status_original,title.status_translation,title.cover_asset_id,title.is_demo,title.updated_at,
+const summaryColumns = `title.id,title.slug,title.name_kk,title.type,title.status_original,title.status_translation,title.cover_asset_id,title.is_demo,title.created_at,title.updated_at,
  (SELECT count(DISTINCT chapter.id)` + publicationJoins + `WHERE chapter.title_id=title.id AND ` + publicationVisible + `),
  (SELECT count(*) FROM ratings rating WHERE rating.title_id=title.id),
  coalesce((SELECT avg(rating.score)::float8 FROM ratings rating WHERE rating.title_id=title.id),0)`
@@ -47,13 +47,16 @@ func translate(failure error) error {
 
 func scanSummary(row pgx.Row) (application.Summary, error) {
 	var item application.Summary
-	failure := row.Scan(&item.ID, &item.Slug, &item.Name, &item.Kind, &item.OriginalStatus, &item.TranslationStatus, &item.CoverID, &item.Demo, &item.UpdatedAt, &item.ChapterCount, &item.RatingCount, &item.Score)
+	failure := row.Scan(&item.ID, &item.Slug, &item.Name, &item.Kind, &item.OriginalStatus, &item.TranslationStatus, &item.CoverID, &item.Demo, &item.CreatedAt, &item.UpdatedAt, &item.ChapterCount, &item.RatingCount, &item.Score)
 	return item, failure
 }
 
 func (repository *Repository) List(ctx context.Context, filter application.Filter) (application.Page, error) {
 	arguments := make([]any, 0)
 	conditions := []string{titleVisible}
+	if filter.Featured {
+		conditions = append(conditions, "title.is_featured")
+	}
 	bind := func(value any) string {
 		arguments = append(arguments, value)
 		return fmt.Sprintf("$%d", len(arguments))
@@ -70,7 +73,11 @@ func (repository *Repository) List(ctx context.Context, filter application.Filte
 	if filter.Genre != "" {
 		conditions = append(conditions, `EXISTS(SELECT 1 FROM title_genres mapping JOIN genres genre ON genre.id=mapping.genre_id WHERE mapping.title_id=title.id AND genre.slug=`+bind(filter.Genre)+`)`)
 	}
-	orderBy := "title.updated_at DESC,title.id DESC"
+	timestamp := "title.updated_at"
+	if filter.Sort == "new" {
+		timestamp = "title.created_at"
+	}
+	orderBy := timestamp + " DESC,title.id DESC"
 	if filter.Sort == "name" {
 		orderBy = `title.name_kk COLLATE "C",title.id`
 	}
@@ -78,7 +85,7 @@ func (repository *Repository) List(ctx context.Context, filter application.Filte
 		if filter.Sort == "name" {
 			conditions = append(conditions, `(title.name_kk COLLATE "C",title.id) > (`+bind(filter.After.Name)+` COLLATE "C",`+bind(filter.After.ID)+`)`)
 		} else {
-			conditions = append(conditions, `(title.updated_at,title.id) < (`+bind(filter.After.UpdatedAt)+`,`+bind(filter.After.ID)+`)`)
+			conditions = append(conditions, `(`+timestamp+`,title.id) < (`+bind(filter.After.UpdatedAt)+`,`+bind(filter.After.ID)+`)`)
 		}
 	}
 	query := "SELECT " + summaryColumns + " FROM titles title WHERE " + strings.Join(conditions, " AND ") + " ORDER BY " + orderBy + " LIMIT " + bind(filter.Limit+1)
@@ -101,7 +108,11 @@ func (repository *Repository) List(ctx context.Context, filter application.Filte
 	if len(page.Items) > filter.Limit {
 		page.Items = page.Items[:filter.Limit]
 		last := page.Items[len(page.Items)-1]
-		page.Next = &application.Cursor{UpdatedAt: last.UpdatedAt, Name: last.Name, ID: last.ID}
+		position := last.UpdatedAt
+		if filter.Sort == "new" {
+			position = last.CreatedAt
+		}
+		page.Next = &application.Cursor{UpdatedAt: position, Name: last.Name, ID: last.ID}
 	}
 	return page, nil
 }
@@ -122,8 +133,8 @@ func (repository *Repository) AdminDetail(ctx context.Context, actorID, id strin
 func (repository *Repository) detail(ctx context.Context, condition, id string, public bool) (application.Detail, error) {
 	detail := application.Detail{Genres: []application.Genre{}, Projects: []application.Project{}}
 	title := &detail.Title
-	failure := repository.pool.QueryRow(ctx, `SELECT title.id,title.slug,title.name_kk,title.name_original,title.aliases,title.type,title.status_original,title.status_translation,title.description_kk,title.direction,title.is_demo,title.cover_asset_id,
- coalesce((SELECT avg(score)::float8 FROM ratings WHERE title_id=title.id),0),(SELECT count(*) FROM ratings WHERE title_id=title.id) FROM titles title WHERE `+condition, id).Scan(&title.ID, &title.Slug, &title.Name, &title.OriginalName, &title.Aliases, &title.Kind, &title.OriginalStatus, &title.TranslationStatus, &title.Description, &title.Direction, &title.Demo, &detail.CoverID, &detail.Score, &detail.RatingCount)
+	failure := repository.pool.QueryRow(ctx, `SELECT title.id,title.slug,title.name_kk,title.name_original,title.aliases,title.type,title.status_original,title.status_translation,title.description_kk,title.direction,title.is_demo,title.authors,title.is_featured,title.cover_asset_id,
+ coalesce((SELECT avg(score)::float8 FROM ratings WHERE title_id=title.id),0),(SELECT count(*) FROM ratings WHERE title_id=title.id) FROM titles title WHERE `+condition, id).Scan(&title.ID, &title.Slug, &title.Name, &title.OriginalName, &title.Aliases, &title.Kind, &title.OriginalStatus, &title.TranslationStatus, &title.Description, &title.Direction, &title.Demo, &title.Authors, &title.Featured, &detail.CoverID, &detail.Score, &detail.RatingCount)
 	if failure != nil {
 		return detail, translate(failure)
 	}
@@ -156,7 +167,7 @@ func (repository *Repository) detail(ctx context.Context, condition, id string, 
 func (repository *Repository) UpdateTitle(ctx context.Context, actorID string, title domain.Title) error {
 	return repository.withAdmin(ctx, actorID, func(transaction pgx.Tx) error {
 		search := strings.ToLower(title.Name + " " + title.OriginalName + " " + strings.Join(title.Aliases, " "))
-		result, failure := transaction.Exec(ctx, `UPDATE titles SET slug=$2,name_kk=$3,name_original=$4,aliases=$5,type=$6,status_original=$7,status_translation=$8,description_kk=$9,direction=$10,is_demo=$11,search_text=$12,updated_at=now() WHERE id=$1`, title.ID, title.Slug, title.Name, title.OriginalName, title.Aliases, title.Kind, title.OriginalStatus, title.TranslationStatus, title.Description, title.Direction, title.Demo, search)
+		result, failure := transaction.Exec(ctx, `UPDATE titles SET slug=$2,name_kk=$3,name_original=$4,aliases=$5,type=$6,status_original=$7,status_translation=$8,description_kk=$9,direction=$10,is_demo=$11,search_text=$12,authors=$13,is_featured=$14,updated_at=now() WHERE id=$1`, title.ID, title.Slug, title.Name, title.OriginalName, title.Aliases, title.Kind, title.OriginalStatus, title.TranslationStatus, title.Description, title.Direction, title.Demo, search, title.Authors, title.Featured)
 		if failure != nil {
 			return failure
 		}
@@ -280,6 +291,24 @@ func (repository *Repository) Team(ctx context.Context, slug string) (applicatio
 	if failure != nil {
 		return team, translate(failure)
 	}
+	rows, failure := repository.pool.Query(ctx, "SELECT COALESCE(NULLIF(account.display_name,''),'Оқырман · '||right(account.id,6)),member.role FROM team_memberships member JOIN users account ON account.id=member.user_id WHERE member.team_id=$1 ORDER BY member.created_at,member.id LIMIT 200", team.ID)
+	if failure != nil {
+		return team, failure
+	}
+	team.Members = []application.PublicMember{}
+	for rows.Next() {
+		var member application.PublicMember
+		if failure = rows.Scan(&member.Name, &member.Role); failure != nil {
+			rows.Close()
+			return team, failure
+		}
+		team.Members = append(team.Members, member)
+	}
+	failure = rows.Err()
+	rows.Close()
+	if failure != nil {
+		return team, failure
+	}
 	team.Projects, failure = repository.projects(ctx, `outer_project.team_id=$1 AND EXISTS(SELECT 1`+publicationJoins+` WHERE publication.project_id=outer_project.id AND `+publicationVisible+`)`, team.ID)
 	return team, failure
 }
@@ -339,7 +368,7 @@ func audit(ctx context.Context, transaction pgx.Tx, actorID, kind, entityID stri
 func (repository *Repository) CreateTitle(ctx context.Context, actorID string, title domain.Title) error {
 	return repository.withAdmin(ctx, actorID, func(transaction pgx.Tx) error {
 		search := strings.ToLower(title.Name + " " + title.OriginalName + " " + strings.Join(title.Aliases, " "))
-		_, failure := transaction.Exec(ctx, `INSERT INTO titles(id,slug,name_kk,name_original,aliases,type,status_original,status_translation,description_kk,direction,is_demo,search_text) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12)`, title.ID, title.Slug, title.Name, title.OriginalName, title.Aliases, title.Kind, title.OriginalStatus, title.TranslationStatus, title.Description, title.Direction, title.Demo, search)
+		_, failure := transaction.Exec(ctx, `INSERT INTO titles(id,slug,name_kk,name_original,aliases,type,status_original,status_translation,description_kk,direction,is_demo,search_text,authors,is_featured) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14)`, title.ID, title.Slug, title.Name, title.OriginalName, title.Aliases, title.Kind, title.OriginalStatus, title.TranslationStatus, title.Description, title.Direction, title.Demo, search, title.Authors, title.Featured)
 		if failure != nil {
 			return failure
 		}

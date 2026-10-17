@@ -2,6 +2,7 @@ import type { Account, Credentials } from '../domain/account';
 import { credentialError } from '../domain/account';
 export interface AuthResult { ok: boolean; message: string; code?: string; account?: Account }
 export interface AuthGateway {
+ updateProfile(accountId:string,displayName:string):Promise<AuthResult>;
  login(input: Credentials): Promise<AuthResult>;
  register(input: Credentials): Promise<AuthResult>;
  current(): Promise<Account | null>;

@@ -266,6 +266,13 @@ func (repository *Repository) Submit(ctx context.Context, actor, id string, vers
 		if version != revision.Version() {
 			return domain.ErrConflict
 		}
+		var confirmed bool
+		if failure := transaction.QueryRow(ctx, "SELECT rights_confirmed AND length(trim(source_note))>=8 AND length(trim(credits))>=2 AND rights_confirmed_by IS NOT NULL FROM revisions WHERE id=$1", id).Scan(&confirmed); failure != nil {
+			return failure
+		}
+		if !confirmed {
+			return domain.ErrTransition
+		}
 		if failure := revision.Submit(); failure != nil {
 			return failure
 		}
@@ -281,8 +288,13 @@ func (repository *Repository) Review(ctx context.Context, actor, id, decision, r
 			if failure := persist(ctx, transaction, revision); failure != nil {
 				return failure
 			}
-			_, failure := transaction.Exec(ctx, "UPDATE revisions SET moderation_note=$2 WHERE id=$1", id, reason)
-			return failure
+			if _, failure := transaction.Exec(ctx, "UPDATE revisions SET moderation_note=$2 WHERE id=$1", id, reason); failure != nil {
+				return failure
+			}
+			if failure := publicationDecision(ctx, transaction, id, "rejected", reason); failure != nil {
+				return failure
+			}
+			return audit(ctx, transaction, actor, "reject", revision.ReleaseID(), reason)
 		}
 		if decision != "publish" {
 			return domain.ErrTransition
@@ -307,6 +319,9 @@ func (repository *Repository) Review(ctx context.Context, actor, id, decision, r
 		if _, failure := transaction.Exec(ctx, "INSERT INTO outbox_events(id,event_type,payload)VALUES($1,'release_published',$2)", uuid.NewString(), payload); failure != nil {
 			return failure
 		}
+		if failure := publicationDecision(ctx, transaction, id, "published", reason); failure != nil {
+			return failure
+		}
 		return audit(ctx, transaction, actor, "publish", release.ID, reason)
 	})
 }
@@ -326,6 +341,17 @@ func (repository *Repository) Withdraw(ctx context.Context, actor, releaseID, re
 		if _, failure := transaction.Exec(ctx, "UPDATE titles SET cover_asset_id='' WHERE cover_asset_id IN(SELECT variant.id FROM page_variants variant JOIN pages page ON page.id=variant.page_id WHERE page.revision_id=$1)", id); failure != nil {
 			return failure
 		}
+		if failure := publicationDecision(ctx, transaction, id, "withdrawn", reason); failure != nil {
+			return failure
+		}
 		return audit(ctx, transaction, actor, "withdraw", releaseID, reason)
 	})
+}
+func publicationDecision(ctx context.Context, transaction pgx.Tx, revisionID, decision, reason string) error {
+	payload, failure := json.Marshal(map[string]string{"revision_id": revisionID, "decision": decision, "reason": reason})
+	if failure != nil {
+		return failure
+	}
+	_, failure = transaction.Exec(ctx, "INSERT INTO outbox_events(id,event_type,payload)VALUES($1,'publication_decision',$2)", uuid.NewString(), payload)
+	return failure
 }

@@ -16,7 +16,8 @@ var (
 
 type Metadata struct {
 	Slug, Name, OriginalName, Kind, OriginalStatus, TranslationStatus, Description, Direction string
-	Aliases, GenreIDs                                                                         []string
+	Aliases, GenreIDs, Authors                                                                []string
+	Featured                                                                                  bool
 	Demo                                                                                      bool
 }
 type Title struct {
@@ -42,6 +43,17 @@ func NewTitle(id string, input Metadata) (Title, error) {
 	}
 	if !oneOf(input.Kind, "manga", "manhwa", "manhua") || !oneOf(input.OriginalStatus, "ongoing", "completed", "hiatus", "cancelled") || !oneOf(input.TranslationStatus, "ongoing", "completed", "paused", "stopped") || !oneOf(input.Direction, "ltr", "rtl") {
 		return Title{}, ErrInvalid
+	}
+	if len(input.Authors) > 12 {
+		return Title{}, ErrInvalid
+	}
+	if input.Authors == nil {
+		input.Authors = []string{}
+	}
+	for _, author := range input.Authors {
+		if strings.TrimSpace(author) == "" || utf8.RuneCountInString(author) > 160 || strings.ContainsAny(author, "\r\n") {
+			return Title{}, ErrInvalid
+		}
 	}
 	if input.Aliases == nil {
 		input.Aliases = []string{}

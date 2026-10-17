@@ -47,6 +47,7 @@ func (handler *PublishingHandler) Register(router *gin.Engine, identity *Identit
 	studio.PUT("/revisions/:id/order", handler.reorder)
 	studio.DELETE("/revisions/:id/pages/:page_id", handler.deletePage)
 	studio.POST("/revisions/:id/submit", handler.submit)
+	studio.PUT("/revisions/:id/attribution", handler.attribution)
 	studio.GET("/revisions/:id/manifest", handler.preview)
 	moderation := api.Group("/moderation", identity.RequireUser(), RequireRole("admin", "moderator"))
 	moderation.GET("/revisions", handler.queue)
@@ -75,7 +76,7 @@ func revisionView(item application.StudioRevision) gin.H {
 	for _, page := range item.Pages {
 		pages = append(pages, gin.H{"id": page.ID, "position": page.Position, "width": page.Width, "height": page.Height, "bytes": page.Bytes, "status": page.Status, "failure": page.Failure, "upload_key": page.UploadKey})
 	}
-	return gin.H{"id": item.ID, "release_id": item.ReleaseID, "project_id": item.ProjectID, "chapter_id": item.ChapterID, "title_id": item.TitleID, "title_name": item.TitleName, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "state": item.State, "note": item.Note, "version": item.Version, "pages": pages}
+	return gin.H{"source_note": item.Source, "credits": item.Credits, "rights_confirmed": item.RightsConfirmed, "confirmed_by": item.ConfirmedBy, "id": item.ID, "release_id": item.ReleaseID, "project_id": item.ProjectID, "chapter_id": item.ChapterID, "title_id": item.TitleID, "title_name": item.TitleName, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "state": item.State, "note": item.Note, "version": item.Version, "pages": pages}
 }
 func (handler *PublishingHandler) projectChapters(request *gin.Context) {
 	items, failure := handler.service.ProjectChapters(request.Request.Context(), handler.actor(request), request.Param("id"))
@@ -271,4 +272,20 @@ func publicationError(request *gin.Context, failure error) {
 		log.Printf("publication failure: %T", failure)
 		Error(request, 503, "unavailable", "Қызмет уақытша қолжетімсіз")
 	}
+}
+func (handler *PublishingHandler) attribution(request *gin.Context) {
+	var input struct {
+		Version   int64  `json:"version"`
+		Source    string `json:"source_note"`
+		Credits   string `json:"credits"`
+		Confirmed bool   `json:"rights_confirmed"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	if failure := handler.service.SaveAttribution(request.Request.Context(), handler.actor(request), request.Param("id"), input.Version, domain.Attribution{Source: input.Source, Credits: input.Credits, Confirmed: input.Confirmed}); failure != nil {
+		publicationError(request, failure)
+		return
+	}
+	request.Status(204)
 }

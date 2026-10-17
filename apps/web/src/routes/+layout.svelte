@@ -26,7 +26,7 @@
 {#if $page.url.pathname.startsWith('/read/') || $page.url.pathname==='/offline-reader'}
  <main id="content">{@render children()}</main>
 {:else}
- <AppHeader items={navigation.slice(0,4)} currentPath={$page.url.pathname} accountHref={data.user?'/settings':'/login'} accountLabel={data.user?'Аккаунт':text($locale,'Кіру','Войти')} homeLabel={text($locale,'Qmanga басты бет','Qmanga — главная')} navigationLabel={text($locale,'Негізгі','Основная навигация')}/>
+ <AppHeader items={navigation.slice(0,4)} currentPath={$page.url.pathname} accountHref={data.user?'/settings':'/login?returnTo='+encodeURIComponent($page.url.pathname+$page.url.search)} accountLabel={data.user?'Аккаунт':text($locale,'Кіру','Войти')} homeLabel={text($locale,'Qmanga басты бет','Qmanga — главная')} navigationLabel={text($locale,'Негізгі','Основная навигация')}/>
  <main id="content" class="page-container">{@render children()}</main>
  <footer class="site-footer"><a href="/help">{text($locale,'Көмек және ережелер','Помощь и правила')}</a><a href="/settings">{text($locale,'Қазақша · Баптаулар','Русский · Настройки')}</a></footer>
  <MobileNavigation items={navigation} currentPath={$page.url.pathname} label={text($locale,'Мобильді навигация','Мобильная навигация')}/>

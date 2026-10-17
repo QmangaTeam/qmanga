@@ -99,6 +99,7 @@
  <dialog bind:this={dialog} class="reader-drawer" onclose={()=>{if(panel)dismiss();}}>
   <header><h2>{panel==='settings'?copy($locale,"Оқу баптаулары"):copy($locale,"Тараулар")}</h2><button class="icon" onclick={dismiss} aria-label={copy($locale,"Панельді жабу")}>×</button></header>
   {#if panel==='settings'}
+  {#if manifest.credits||manifest.source}<details class="attribution"><summary>{text($locale,'Авторлар және дереккөз','Авторы и источник')}</summary><p>{manifest.credits}</p><p>{manifest.source}</p></details>{/if}
    <div class="drawer-body">
     <label>{text($locale,'Интерфейс тілі','Язык интерфейса')}<select value={$locale} onchange={event=>changeLanguage(event.currentTarget.value==='ru'?'ru':'kk')}><option value="kk">Қазақша</option><option value="ru">Русский</option></select></label>
     {#if community&&!preview&&!offlineTier}<ReportForm gateway={community} titleId={manifest.titleId} releaseId={manifest.releaseId} pageId={manifest.pages[current.pageIndex].id} targetType="page" targetId={manifest.pages[current.pageIndex].id}/>{/if}
@@ -126,7 +127,7 @@
  </dialog>
 </div>
 
-<style>
+<style>.attribution summary{display:flex;align-items:center;min-height:44px;cursor:pointer}.attribution p{white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0;font-size:14px}
  .reader{--bg:var(--reader-bg);--panel:var(--reader-panel);--text:var(--reader-text);--muted:var(--reader-muted);--line:var(--reader-line)}
  .reader-discussion{padding:0 20px}
  .reader{--reader-bg:#0d1117;--reader-panel:#161c25;--reader-line:#29323e;--reader-text:#edf2f5;--reader-muted:#96a2b2;--accent:#b4ee69;--accent-ink:#17220d;min-height:100dvh;background:var(--reader-bg);color:var(--reader-text);padding:52px 0 100px;line-height:1.4;color-scheme:dark}

@@ -7,6 +7,7 @@ import (
 )
 
 type Comment struct {
+	DisplayName string
 	domain.Comment
 	CreatedAt time.Time
 	Replies   int
@@ -18,10 +19,14 @@ type Discussion struct {
 	Ratings  int
 }
 type Report struct {
+	ContactEmail                                                                                       string
 	ID, UserID, TitleID, ReleaseID, PageID, TargetType, TargetID, Category, Reason, Status, Resolution string
 	CreatedAt                                                                                          time.Time
 }
 type Repository interface {
+	RightsReport(context.Context, ReportReceipt, RightsRequest) error
+	RightsStatus(context.Context, string, string) (Report, error)
+	MyReports(context.Context, string, string) ([]Report, error)
 	Replies(context.Context, string, string) (Discussion, error)
 	Discussion(context.Context, string, string, string) (Discussion, error)
 	Comment(context.Context, string, domain.Comment) (string, error)

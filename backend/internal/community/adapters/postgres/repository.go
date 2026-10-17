@@ -77,7 +77,7 @@ func (repository *Repository) Discussion(ctx context.Context, title, release, af
 	SELECT comment.id,comment.user_id,comment.title_id,COALESCE(comment.release_id,''),COALESCE(comment.parent_id,''),
 	CASE WHEN comment.is_hidden OR comment.deleted_at IS NOT NULL THEN '' ELSE comment.body END,
 	comment.is_spoiler,comment.is_hidden OR comment.deleted_at IS NOT NULL,comment.created_at,
-	(SELECT count(*) FROM comments reply WHERE reply.parent_id=comment.id)
+	(SELECT count(*) FROM comments reply WHERE reply.parent_id=comment.id),(SELECT display_name FROM users WHERE id=comment.user_id)
 	FROM comments comment WHERE comment.id IN(SELECT id FROM selected) ORDER BY comment.created_at,comment.id`, title, release, after)
 	if failure != nil {
 		return result, failure
@@ -87,7 +87,7 @@ func (repository *Repository) Discussion(ctx context.Context, title, release, af
 	var oldest application.Comment
 	for rows.Next() {
 		var item application.Comment
-		if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.ParentID, &item.Body, &item.Spoiler, &item.Hidden, &item.CreatedAt, &item.Replies); failure != nil {
+		if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.ParentID, &item.Body, &item.Spoiler, &item.Hidden, &item.CreatedAt, &item.Replies, &item.DisplayName); failure != nil {
 			return result, failure
 		}
 		result.Comments = append(result.Comments, item)
@@ -219,14 +219,14 @@ func (repository *Repository) Report(ctx context.Context, user string, input app
 func (repository *Repository) Reports(ctx context.Context, user, after string) ([]application.Report, error) {
 	items := []application.Report{}
 	failure := repository.write(ctx, user, true, func(transaction pgx.Tx) error {
-		rows, failure := transaction.Query(ctx, `SELECT id,COALESCE(user_id,''),COALESCE(title_id,''),COALESCE(release_id,''),COALESCE(page_id,''),target_type,target_id,category,reason,status,resolution_note,created_at FROM reports WHERE status='pending' AND ($1::varchar='' OR id>$1::varchar)ORDER BY id LIMIT 50`, after)
+		rows, failure := transaction.Query(ctx, `SELECT id,COALESCE(user_id,''),COALESCE(title_id,''),COALESCE(release_id,''),COALESCE(page_id,''),target_type,target_id,category,reason,status,resolution_note,created_at,contact_email FROM reports WHERE status='pending' AND ($1::varchar='' OR id>$1::varchar)ORDER BY id LIMIT 50`, after)
 		if failure != nil {
 			return failure
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var item application.Report
-			if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.PageID, &item.TargetType, &item.TargetID, &item.Category, &item.Reason, &item.Status, &item.Resolution, &item.CreatedAt); failure != nil {
+			if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.PageID, &item.TargetType, &item.TargetID, &item.Category, &item.Reason, &item.Status, &item.Resolution, &item.CreatedAt, &item.ContactEmail); failure != nil {
 				return failure
 			}
 			items = append(items, item)

@@ -4,7 +4,7 @@ function object(value: unknown): value is Record<string, unknown> { return typeo
 function accountView(value: unknown): Account | undefined {
  if (!object(value) || typeof value.id !== 'string' || typeof value.email !== 'string' || typeof value.email_verified !== 'boolean') return;
  if (value.role !== 'reader' && value.role !== 'moderator' && value.role !== 'admin') return;
- return { id: value.id, email: value.email, role: value.role, verified: value.email_verified };
+ return { displayName:typeof value.display_name==='string'?value.display_name:'',id: value.id, email: value.email, role: value.role, verified: value.email_verified };
 }
 export class HttpAuthGateway implements AuthGateway {
  constructor(private base: string, private request: typeof fetch, private cookie = '',private accountChanged:()=>Promise<void>=async()=>{}) {}
@@ -31,12 +31,14 @@ export class HttpAuthGateway implements AuthGateway {
  resend(email: string) { return this.call('resend-verification', { email }); }
  verify(token: string) { return this.call('verify-email', { token }); }
  reset(token: string, password: string) { return this.call('reset-password', { token, password }); }
- async logout(): Promise<AuthResult> {
+ private async authenticated(action:string,input:Record<string,string>): Promise<AuthResult> {
   try {
    const response = await this.request(this.base + '/api/v1/auth/csrf', { credentials: 'same-origin', signal: AbortSignal.timeout(10000) });
    const payload: unknown = await response.json();
    if (!response.ok || !object(payload) || typeof payload.csrf_token !== 'string') return { ok: false, code:'unauthorized', message: 'Қайта кіріңіз' };
-   const result=await this.call('logout', {}, payload.csrf_token);if(result.ok)await this.accountChanged();return result;
+   return await this.call(action,input,payload.csrf_token);
   } catch { return { ok: false, code:'network', message: 'Қосылым үзілді' }; }
  }
+ async updateProfile(accountId:string,displayName:string){return this.authenticated('profile',{account_id:accountId,display_name:displayName});}
+ async logout(){const result=await this.authenticated('logout',{});if(result.ok)await this.accountChanged();return result;}
 }

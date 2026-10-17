@@ -2,6 +2,7 @@
  import {page} from '$app/stores';
  import {goto,invalidateAll} from '$app/navigation';
  import {authenticate,type AuthResult,type AuthGateway} from '../application/auth';
+ import {safeReturnPath} from '../domain/return-path';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {errorText} from '$lib/shared/presentation/messages';
  import AuthLayout from '$lib/shared/presentation/ui/AuthLayout.svelte';
@@ -18,7 +19,7 @@
   else if(mode==='forgot-password')result=await gateway.requestReset(email);
   else if(mode==='verify-email')result=await gateway.verify(token);
   else result=await gateway.reset(token,password);
-  if(mode==='login'&&result.ok){await invalidateAll();await goto('/');}
+  if(mode==='login'&&result.ok){const destination=safeReturnPath($page.url.searchParams.get('returnTo'));await invalidateAll();await goto(destination);}
  }finally{busy=false;}}
  async function resend(){if(busy)return;busy=true;try{result=await gateway.resend(email);}finally{busy=false;}}
 </script>

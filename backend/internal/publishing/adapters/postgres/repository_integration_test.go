@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	notificationPostgres "qmanga/internal/notifications/adapters/postgres"
 	platform "qmanga/internal/platform/postgres"
 	"qmanga/internal/publishing/application"
 	"qmanga/internal/publishing/domain"
@@ -108,6 +109,16 @@ func TestPublicationIsolationAndAtomicReplacement(testingTarget *testing.T) {
 	if failure != nil {
 		testingTarget.Fatal(failure)
 	}
+	if failure = repository.Submit(ctx, "owner", draft.ID, draft.Version); failure == nil {
+		testingTarget.Fatal("publication without rights confirmation accepted")
+	}
+	if failure = repository.SaveAttribution(ctx, "owner", draft.ID, draft.Version, domain.Attribution{Source: "Permission from rights holder", Credits: "Translation team", Confirmed: true}); failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	draft, failure = repository.Revision(ctx, "owner", draft.ID)
+	if failure != nil {
+		testingTarget.Fatal(failure)
+	}
 	if failure = repository.Submit(ctx, "owner", draft.ID, draft.Version); failure != nil {
 		testingTarget.Fatal(failure)
 	}
@@ -119,6 +130,24 @@ func TestPublicationIsolationAndAtomicReplacement(testingTarget *testing.T) {
 	}
 	if failure = repository.Review(ctx, "admin", draft.ID, "publish", ""); failure != nil {
 		testingTarget.Fatal(failure)
+	}
+	notifications := notificationPostgres.New(database.Pool())
+	for {
+		worked, deliveryFailure := notifications.Deliver(ctx)
+		if deliveryFailure != nil {
+			testingTarget.Fatal(deliveryFailure)
+		}
+		if !worked {
+			break
+		}
+	}
+	decisions, failure := notifications.List(ctx, "owner", "")
+	if failure != nil || len(decisions) != 1 || decisions[0].Kind != "publication_published" {
+		testingTarget.Fatal("publication decision missing", decisions, failure)
+	}
+	foreignDecisions, failure := notifications.List(ctx, "other", "")
+	if failure != nil || len(foreignDecisions) != 0 {
+		testingTarget.Fatal("decision crossed team", foreignDecisions, failure)
 	}
 	manifest, failure := repository.Manifest(ctx, "", draft.ReleaseID, "")
 	if failure != nil || manifest.RevisionID != draft.ID || len(manifest.Pages) != 1 {

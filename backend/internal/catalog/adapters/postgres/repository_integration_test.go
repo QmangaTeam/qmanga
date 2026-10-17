@@ -76,6 +76,8 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		testingTarget.Fatal(failure)
 	}
 	input.Description = "Жаңартылған сипаттама"
+	input.Authors = []string{"Қаламгер"}
+	input.Featured = true
 	if _, failure = service.UpdateTitle(ctx, "reader", title.ID, input); !errors.Is(failure, domain.ErrForbidden) {
 		testingTarget.Fatal("reader edited metadata")
 	}
@@ -83,7 +85,7 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		testingTarget.Fatal(failure)
 	}
 	privateDetail, failure := service.AdminDetail(ctx, "admin", title.ID)
-	if failure != nil || privateDetail.Title.Description != input.Description {
+	if failure != nil || privateDetail.Title.Description != input.Description || len(privateDetail.Title.Authors) != 1 || !privateDetail.Title.Featured {
 		testingTarget.Fatal("metadata editing failed", failure)
 	}
 	chapters := make([]string, 0)
@@ -109,6 +111,18 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 			state = "submitted"
 		}
 		execute("INSERT INTO revisions(id,release_id,status) VALUES($1,$2,$3)", revisionID, releaseID, state)
+	}
+	updates, failure := service.Updates(ctx, "", "", 2)
+	if failure != nil || len(updates.Items) != 2 || updates.Next == "" {
+		testingTarget.Fatal("release feed missing", updates, failure)
+	}
+	remaining, failure := service.Updates(ctx, updates.Next, "", 2)
+	if failure != nil || len(remaining.Items) != 2 || remaining.Next != "" || remaining.Items[0].ReleaseID == updates.Items[0].ReleaseID {
+		testingTarget.Fatal("feed cursor/private revision", remaining, failure)
+	}
+	picks, failure := service.List(ctx, application.Filter{Featured: true, Sort: "new"})
+	if failure != nil || len(picks.Items) != 1 {
+		testingTarget.Fatal("editorial selection/new sort", picks, failure)
 	}
 	page, failure = service.List(ctx, application.Filter{Query: "өркен әлем"})
 	if failure != nil || len(page.Items) != 1 || page.Items[0].ChapterCount != 4 {

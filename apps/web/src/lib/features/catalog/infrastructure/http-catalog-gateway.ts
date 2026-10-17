@@ -1,6 +1,6 @@
 import { ApiFailure, type ApiClient } from '../../../shared/infrastructure/api-client';
 import { kinds, originalStatuses, translationStatuses } from '../domain/catalog';
-import type { CatalogGateway, CatalogFilter, ChapterFilter, Summary, Genre, Project, Release, Chapter, TitleDetail, ResultPage, PublicTeam } from '../application/catalog';
+import type { ReleaseUpdate, CatalogGateway, CatalogFilter, ChapterFilter, Summary, Genre, Project, Release, Chapter, TitleDetail, ResultPage, PublicTeam } from '../application/catalog';
 import type { CatalogManagementGateway } from '../application/management';
 import type { Metadata } from '../domain/metadata';
 
@@ -15,7 +15,7 @@ export class HttpCatalogManagementGateway implements CatalogManagementGateway {
  async genres() { return page(await this.api.call('/api/v1/genres'), genre).items; }
  async teams() { return page(await this.api.call('/api/v1/admin/catalog-teams'), value => { const item = object(value); return { id: text(item.id), name: text(item.name) }; }).items; }
  async save(input: Metadata, id?: string) {
-  const result = object(await this.api.call('/api/v1/admin/titles' + (id ? '/' + encodeURIComponent(id) : ''), id ? 'PUT' : 'POST', { slug: input.slug, name: input.name, original_name: input.originalName, aliases: input.aliases, kind: input.kind, original_status: input.originalStatus, translation_status: input.translationStatus, description: input.description, direction: input.direction, genre_ids: input.genreIds, demo: input.demo }));
+  const result = object(await this.api.call('/api/v1/admin/titles' + (id ? '/' + encodeURIComponent(id) : ''), id ? 'PUT' : 'POST', {authors:input.authors||[],featured:input.featured||false,slug: input.slug, name: input.name, original_name: input.originalName, aliases: input.aliases, kind: input.kind, original_status: input.originalStatus, translation_status: input.translationStatus, description: input.description, direction: input.direction, genre_ids: input.genreIds, demo: input.demo }));
   return text(result.id);
  }
  async createGenre(name: string, slug: string) { await this.api.call('/api/v1/admin/genres', 'POST', { name, slug }); }
@@ -42,7 +42,7 @@ function summary(value: unknown): Summary {
 }
 function detail(value: unknown): TitleDetail {
  const item = object(value);
- return { id: text(item.id), slug: text(item.slug), name: text(item.name), originalName: text(item.original_name), aliases: array(item.aliases, text), kind: choice(item.kind, kinds), originalStatus: choice(item.original_status, originalStatuses), translationStatus: choice(item.translation_status, translationStatuses), description: text(item.description), direction: choice(item.direction, ['ltr', 'rtl']), demo: boolean(item.demo), coverURL: media(item.cover_url), score: number(item.score), ratingCount: integer(item.rating_count), genres: array(item.genres, genre), projects: array(item.projects, project) };
+ return { id: text(item.id), slug: text(item.slug), name: text(item.name), originalName: text(item.original_name), authors:item.authors===undefined?[]:array(item.authors,text),featured:item.featured===true,aliases: array(item.aliases, text), kind: choice(item.kind, kinds), originalStatus: choice(item.original_status, originalStatuses), translationStatus: choice(item.translation_status, translationStatuses), description: text(item.description), direction: choice(item.direction, ['ltr', 'rtl']), demo: boolean(item.demo), coverURL: media(item.cover_url), score: number(item.score), ratingCount: integer(item.rating_count), genres: array(item.genres, genre), projects: array(item.projects, project) };
 }
 function release(value: unknown): Release { const item = object(value); return { id: text(item.id), projectId: text(item.project_id), teamId: text(item.team_id), teamName: text(item.team_name), teamSlug: text(item.team_slug), publishedAt: date(item.published_at) }; }
 function chapter(value: unknown): Chapter { const item = object(value); return { id: text(item.id), label: text(item.label), volume: text(item.volume), name: text(item.name), order: integer(item.order), releases: array(item.releases, release) }; }
@@ -50,13 +50,16 @@ export class HttpCatalogGateway implements CatalogGateway {
  constructor(private api: ApiClient) {}
  async list(filter: CatalogFilter, cursor?: string) {
   const query = new URLSearchParams();
-  for (const [key, value] of Object.entries({ q: filter.query, kind: filter.kind, genre: filter.genre, original_status: filter.originalStatus, translation_status: filter.translationStatus, sort: filter.sort, cursor })) if (value) query.set(key, value);
+  for (const [key, value] of Object.entries({ q: filter.query, kind: filter.kind, genre: filter.genre, original_status: filter.originalStatus, translation_status: filter.translationStatus, sort: filter.sort, featured:filter.featured?'true':undefined,cursor })) if (value) query.set(key, value);
   return page(await this.api.call('/api/v1/titles?' + query), summary);
  }
  async genres() { return page(await this.api.call('/api/v1/genres'), genre).items; }
  async detail(slug: string) {
   try { return detail(await this.api.call('/api/v1/titles/' + encodeURIComponent(slug))); }
   catch (failure) { if (failure instanceof ApiFailure && failure.status === 404) return null; throw failure; }
+ }
+ async updates(after='',team=''):Promise<ResultPage<ReleaseUpdate>> {
+  return page(await this.api.call('/api/v1/updates?'+new URLSearchParams({after,team})),value=>{const item=object(value);return {releaseId:text(item.release_id),titleId:text(item.title_id),titleName:text(item.title_name),titleSlug:text(item.title_slug),chapterLabel:text(item.chapter_label),teamName:text(item.team_name),teamSlug:text(item.team_slug),demo:boolean(item.demo),publishedAt:date(item.published_at)};});
  }
  async chapters(slug: string, cursor?: string, filter:ChapterFilter={}) {
   const query=new URLSearchParams();
@@ -69,7 +72,7 @@ export class HttpCatalogGateway implements CatalogGateway {
  async team(slug: string): Promise<PublicTeam | null> {
   try {
    const item = object(await this.api.call('/api/v1/teams/' + encodeURIComponent(slug)));
-   return { id: text(item.id), name: text(item.name), slug: text(item.slug), description: text(item.description), projects: array(item.projects, project) };
+   return { id: text(item.id), name: text(item.name), slug: text(item.slug), description: text(item.description), members:array(item.members||[],value=>{const member=object(value);return {name:text(member.name),role:text(member.role)};}),projects: array(item.projects, project) };
   } catch (failure) { if (failure instanceof ApiFailure && failure.status === 404) return null; throw failure; }
  }
 }

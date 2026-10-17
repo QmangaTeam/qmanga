@@ -1,3 +1,5 @@
+import {HttpRightsGateway} from '$lib/features/community/infrastructure/http-rights-gateway';
+export function createRights(){return new HttpRightsGateway(globalThis.fetch.bind(globalThis));}
 import { HttpAuthGateway } from '$lib/features/identity/infrastructure/http-auth-gateway';
 import { BrowserLocaleStore } from '$lib/features/preferences/infrastructure/browser-locale-store';
 export function createLocalePreferences() { return new BrowserLocaleStore(); }

@@ -17,6 +17,7 @@ type Token struct {
 	ExpiresAt          time.Time
 }
 type Repository interface {
+	UpdateProfile(context.Context, string, string) error
 	CreateAccount(context.Context, domain.Account) error
 	AccountByEmail(context.Context, string) (domain.Account, error)
 	SaveSession(context.Context, Session) error
@@ -192,4 +193,11 @@ func (service *Service) CreateBootstrapAdmin(ctx context.Context, email, passwor
 	account.Role = "admin"
 	account.Verified = true
 	return account.ID, service.repository.CreateAccount(ctx, account)
+}
+func (service *Service) UpdateProfile(ctx context.Context, actor, name string) error {
+	normalized, failure := domain.NormalizeDisplayName(name)
+	if failure != nil {
+		return failure
+	}
+	return service.repository.UpdateProfile(ctx, actor, normalized)
 }

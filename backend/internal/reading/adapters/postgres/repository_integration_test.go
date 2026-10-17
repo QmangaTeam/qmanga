@@ -197,4 +197,42 @@ func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 	if failure != nil || items[0].Read {
 		testingTarget.Fatal("foreign notification marked", failure)
 	}
+	execute(`INSERT INTO library_entries(id,user_id,title_id)VALUES('library-second','second','title'); INSERT INTO teams(id,slug,name,is_approved)VALUES('alternate','alternate','Екінші топ',true); INSERT INTO projects(id,title_id,team_id)VALUES('alternate-project','title','alternate'); INSERT INTO releases(id,chapter_id,project_id,team_id,status,current_revision_id)VALUES('alternate-release','chapter','alternate-project','alternate','published','alternate-revision'); INSERT INTO revisions(id,release_id,status)VALUES('alternate-revision','alternate-release','published'); INSERT INTO outbox_events(id,event_type,payload)VALUES('new-original','release_published','{"release_id":"release","revision_id":"revision"}'),('new-alternate','release_published','{"release_id":"alternate-release","revision_id":"alternate-revision"}')`)
+	for attempt := 0; attempt < 2; attempt++ {
+		if _, failure = notifications.Deliver(ctx); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+	}
+	ungrouped, failure := notifications.List(ctx, "second", "")
+	if failure != nil || len(ungrouped) != 1 {
+		testingTarget.Fatal("logical chapter duplicated across teams", len(ungrouped), failure)
+	}
+	communityService := community
+	receipt, failure := communityService.RightsReport(ctx, communityApp.RightsRequest{TitleSlug: "title", Email: "rights@example.test", Reason: "Мен құқық иесімін, материалды тексеріңіз."})
+	if failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	if _, failure = communityService.RightsStatus(ctx, receipt.ID, "wrong-token"); !errors.Is(failure, communityDomain.ErrNotFound) {
+		testingTarget.Fatal("anonymous receipt leaked", failure)
+	}
+	status, failure := communityService.RightsStatus(ctx, receipt.ID, receipt.Token)
+	if failure != nil || status.Status != "pending" {
+		testingTarget.Fatal("receipt status missing", status, failure)
+	}
+	if failure = community.Resolve(ctx, "first", receipt.ID, "resolved", "Материал тексерілді."); failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	status, failure = communityService.RightsStatus(ctx, receipt.ID, receipt.Token)
+	if failure != nil || status.Resolution != "Материал тексерілді." {
+		testingTarget.Fatal("resolution not visible to reporter", status, failure)
+	}
+	personal, failure := communityService.MyReports(ctx, "second", "")
+	if failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	for _, report := range personal {
+		if report.ID == receipt.ID {
+			testingTarget.Fatal("anonymous report leaked into account history")
+		}
+	}
 }

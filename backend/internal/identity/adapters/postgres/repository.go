@@ -31,7 +31,7 @@ func (repository *Repository) CreateAccount(ctx context.Context, account domain.
 }
 func (repository *Repository) AccountByEmail(ctx context.Context, email string) (domain.Account, error) {
 	var account domain.Account
-	failure := repository.pool.QueryRow(ctx, "SELECT id,email,password_hash,role,is_verified FROM users WHERE lower(email)=$1", email).Scan(&account.ID, &account.Email, &account.PasswordHash, &account.Role, &account.Verified)
+	failure := repository.pool.QueryRow(ctx, "SELECT id,email,password_hash,role,is_verified,display_name FROM users WHERE lower(email)=$1", email).Scan(&account.ID, &account.Email, &account.PasswordHash, &account.Role, &account.Verified, &account.DisplayName)
 	return account, translate(failure)
 }
 func (repository *Repository) SaveSession(ctx context.Context, session application.Session) error {
@@ -41,9 +41,9 @@ func (repository *Repository) SaveSession(ctx context.Context, session applicati
 func (repository *Repository) SessionAccount(ctx context.Context, hash string, now time.Time) (application.Session, domain.Account, error) {
 	var session application.Session
 	var account domain.Account
-	failure := repository.pool.QueryRow(ctx, `SELECT session.id,session.user_id,session.csrf_hash,session.expires_at,account.id,account.email,account.password_hash,account.role,account.is_verified
+	failure := repository.pool.QueryRow(ctx, `SELECT session.id,session.user_id,session.csrf_hash,session.expires_at,account.id,account.email,account.password_hash,account.role,account.is_verified,account.display_name
  FROM sessions session JOIN users account ON account.id=session.user_id WHERE session.id=$1 AND session.expires_at>$2`, hash, now).Scan(
-		&session.Hash, &session.UserID, &session.CSRFHash, &session.ExpiresAt, &account.ID, &account.Email, &account.PasswordHash, &account.Role, &account.Verified)
+		&session.Hash, &session.UserID, &session.CSRFHash, &session.ExpiresAt, &account.ID, &account.Email, &account.PasswordHash, &account.Role, &account.Verified, &account.DisplayName)
 	if errors.Is(failure, pgx.ErrNoRows) {
 		return session, account, domain.ErrCredentials
 	}
@@ -86,4 +86,14 @@ func (repository *Repository) ConsumeToken(ctx context.Context, hash, kind strin
 		return failure
 	}
 	return transaction.Commit(ctx)
+}
+func (repository *Repository) UpdateProfile(ctx context.Context, actor, name string) error {
+	result, failure := repository.pool.Exec(ctx, "UPDATE users SET display_name=$2,updated_at=now() WHERE id=$1", actor, name)
+	if failure != nil {
+		return failure
+	}
+	if result.RowsAffected() != 1 {
+		return domain.ErrNotFound
+	}
+	return nil
 }

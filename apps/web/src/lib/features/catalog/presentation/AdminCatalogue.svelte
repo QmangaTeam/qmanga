@@ -11,14 +11,14 @@
  const kindNames=$derived(catalogNames($locale).kind),originalStatusNames=$derived(catalogNames($locale).original),translationStatusNames=$derived(catalogNames($locale).translation);
  let { user, gateway }: { user: Account | null; gateway: CatalogManagementGateway } = $props();
  let titles = $state<Summary[]>([]), genres = $state<Genre[]>([]), teams = $state<{id: string; name: string}[]>([]);
- let selected = $state(''), input = $state(emptyMetadata()), aliases = $state(''), detail = $state<TitleDetail | null>(null);
+ let selected = $state(''), input = $state(emptyMetadata()), aliases = $state(''), authors = $state(''), detail = $state<TitleDetail | null>(null);
  let busy = $state(false), notice = $state(''), failure = $state('');
  let chapterLabel = $state(''), chapterOrder = $state(1), volume = $state(''), chapterName = $state(''), teamId = $state(''), genreName = $state(''), genreSlug = $state('');
  async function reload() { [titles, genres, teams] = await Promise.all([gateway.titles(), gateway.genres(), gateway.teams()]); }
  async function operation(action: () => Promise<void>) { if (busy) return; busy = true; failure = ''; notice = ''; try { await action(); notice = "saved"; } catch (error) { failure = failureCode(error); } finally { busy = false; } }
- async function choose(id: string) { selected = id; detail = id ? await gateway.detail(id) : null; input = detail ? editableMetadata(detail) : emptyMetadata(); aliases = input.aliases.join('\n'); }
+ async function choose(id: string) { selected = id; detail = id ? await gateway.detail(id) : null; input = detail ? editableMetadata(detail) : emptyMetadata(); aliases = input.aliases.join('\n'); authors=(input.authors||[]).join('\n'); }
  onMount(() => { if (user?.role === 'admin') operation(reload); });
- async function save(event: SubmitEvent) { event.preventDefault(); input.aliases = aliases.split('\n').map(value => value.trim()).filter(Boolean); if (metadataError(input)) { failure = "metadata_invalid"; return; } await operation(async () => { const id = await gateway.save(input, selected || undefined); await reload(); await choose(id); }); }
+ async function save(event: SubmitEvent) { event.preventDefault(); input.authors=authors.split('\n').map(value=>value.trim()).filter(Boolean); input.aliases = aliases.split('\n').map(value => value.trim()).filter(Boolean); if (metadataError(input)) { failure = "metadata_invalid"; return; } await operation(async () => { const id = await gateway.save(input, selected || undefined); await reload(); await choose(id); }); }
 </script>
 <svelte:head><title>{copy($locale,"Каталогты басқару — Qmanga")}</title><meta name="robots" content="noindex"/></svelte:head>
 <h1>{copy($locale,"Каталогты басқару")}</h1><a class="auth-link" href="/admin">{copy($locale,"Командалар")}</a><a class="auth-link" href="/moderation">{copy($locale,"Жарияланымдарды тексеру")}</a>
@@ -31,6 +31,8 @@
  <label>{copy($locale,"Сілтемедегі атауы")}<input bind:value={input.slug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="128" placeholder="dala-sapary"/></label>
  <label>{copy($locale,"Түпнұсқа атауы")}<input bind:value={input.originalName} maxlength="200"/></label>
  <label>{copy($locale,"Басқа атаулар, әр жолға біреуі")}<textarea bind:value={aliases} rows="3"></textarea></label>
+ <label>{text($locale,'Авторлар, әр жолға біреуі','Авторы, по одному на строке')}<textarea bind:value={authors} rows="3" maxlength="2000"></textarea></label>
+ <label class="check"><input type="checkbox" bind:checked={input.featured}/>{text($locale,'Редакция таңдауы','Подборка редакции')}</label>
  <label>{copy($locale,"Түрі")}<select bind:value={input.kind}>{#each Object.entries(kindNames) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
  <label>{copy($locale,"Түпнұсқа күйі")}<select bind:value={input.originalStatus}>{#each Object.entries(originalStatusNames) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
  <label>{copy($locale,"Аударма күйі")}<select bind:value={input.translationStatus}>{#each Object.entries(translationStatusNames) as [value,name]}<option {value}>{name}</option>{/each}</select></label>

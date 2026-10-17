@@ -14,13 +14,14 @@ type Summary struct {
 	Demo                                                             bool
 	ChapterCount, RatingCount                                        int
 	Score                                                            float64
-	UpdatedAt                                                        time.Time
+	CreatedAt, UpdatedAt                                             time.Time
 }
 type Cursor struct {
 	UpdatedAt time.Time
 	Name, ID  string
 }
 type Filter struct {
+	Featured                                                    bool
 	Query, Kind, Genre, OriginalStatus, TranslationStatus, Sort string
 	Limit                                                       int
 	After                                                       *Cursor
@@ -55,11 +56,23 @@ type ChapterFilter struct {
 	Query, Sort  string
 	After, Limit int
 }
+type PublicMember struct{ Name, Role string }
 type Team struct {
+	Members                     []PublicMember
 	ID, Slug, Name, Description string
 	Projects                    []Project
 }
+type Update struct {
+	ReleaseID, TitleID, TitleName, TitleSlug, ChapterLabel, TeamName, TeamSlug string
+	Demo                                                                       bool
+	PublishedAt                                                                time.Time
+}
+type UpdatePage struct {
+	Items []Update
+	Next  string
+}
 type Repository interface {
+	Updates(context.Context, string, string, int) (UpdatePage, error)
 	List(context.Context, Filter) (Page, error)
 	Detail(context.Context, string) (Detail, error)
 	Chapters(context.Context, string, ChapterFilter) (ChapterPage, error)
@@ -92,7 +105,7 @@ func (service *Service) List(ctx context.Context, filter Filter) (Page, error) {
 	if filter.Sort == "" {
 		filter.Sort = "updated"
 	}
-	if filter.Sort != "updated" && filter.Sort != "name" {
+	if filter.Sort != "updated" && filter.Sort != "name" && filter.Sort != "new" {
 		return Page{}, domain.ErrInvalid
 	}
 	if filter.Limit == 0 {
@@ -221,4 +234,13 @@ func (service *Service) ApprovedTeams(ctx context.Context, actorID string) ([]Te
 		return nil, failure
 	}
 	return service.repository.ApprovedTeams(ctx, actorID)
+}
+func (service *Service) Updates(ctx context.Context, after, team string, limit int) (UpdatePage, error) {
+	if len(after) > 36 || len(team) > 128 {
+		return UpdatePage{}, domain.ErrInvalid
+	}
+	if limit == 0 {
+		limit = 24
+	}
+	return service.repository.Updates(ctx, after, team, min(max(limit, 1), 48))
 }

@@ -1,4 +1,4 @@
-export interface Account { id: string; email: string; role: 'reader' | 'moderator' | 'admin'; verified: boolean }
+export interface Account { displayName?:string; id: string; email: string; role: 'reader' | 'moderator' | 'admin'; verified: boolean }
 export interface Credentials { email: string; password: string }
 export function credentialError(input: Credentials, registration: boolean): 'email' | 'password' | null {
  if (!/^[^@\s]+@[^@\s]+$/.test(input.email.trim()) || input.email.length > 254) return 'email';

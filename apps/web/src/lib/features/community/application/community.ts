@@ -1,8 +1,10 @@
-export interface Comment {id:string;userId:string;parentId:string;body:string;spoiler:boolean;hidden:boolean;createdAt:string;replies:number}
+import type {PersonalReport} from './rights';
+export interface Comment {displayName?:string;id:string;userId:string;parentId:string;body:string;spoiler:boolean;hidden:boolean;createdAt:string;replies:number}
 export interface Discussion {comments:Comment[];next:string;score:number;ratings:number}
 export interface Report {titleId:string;releaseId:string;pageId:string;targetType:'title'|'release'|'page'|'comment';targetId:string;category:string;reason:string}
-export interface ModerationReport extends Report {id:string;status:string;createdAt:string}
+export interface ModerationReport extends Report {contactEmail?:string;id:string;status:string;createdAt:string}
 export interface CommunityGateway {
+ myReports(accountId:string,after?:string):Promise<{items:PersonalReport[];hasMore:boolean}>;
  account():Promise<string|null>;
  discussion(titleId:string,releaseId:string,after?:string):Promise<Discussion>;
  replies(parentId:string,after?:string):Promise<{comments:Comment[];next:string}>;

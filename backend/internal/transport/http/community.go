@@ -15,6 +15,8 @@ func NewCommunityHandler(service *application.Service) *CommunityHandler {
 }
 func (handler *CommunityHandler) Register(api *gin.RouterGroup, identity *IdentityHandler) {
 	api.GET("/community/titles/:id", handler.discussion)
+	api.POST("/rights-reports", identity.CheckOrigin(), identity.limit(), handler.rightsReport)
+	api.POST("/rights-reports/status", identity.CheckOrigin(), identity.limit(), handler.rightsStatus)
 	api.GET("/community/comments/:id/replies", handler.replies)
 	member := api.Group("/community", identity.RequireUser(), expectedAccount())
 	member.GET("/titles/:id/rating", handler.myRating)
@@ -23,6 +25,7 @@ func (handler *CommunityHandler) Register(api *gin.RouterGroup, identity *Identi
 	member.PUT("/comments/:id", handler.edit)
 	member.DELETE("/comments/:id", handler.remove)
 	member.POST("/reports", handler.report)
+	member.GET("/reports", handler.myReports)
 	moderator := api.Group("/moderation", identity.RequireUser(), expectedAccount(), RequireRole("admin", "moderator"))
 	moderator.GET("/reports", handler.reports)
 	moderator.PUT("/reports/:id", handler.resolve)
@@ -41,7 +44,7 @@ func (handler *CommunityHandler) discussion(request *gin.Context) {
 	request.JSON(200, gin.H{"comments": items, "next": result.Next, "score": result.Score, "ratings": result.Ratings})
 }
 func commentView(item application.Comment) gin.H {
-	return gin.H{"id": item.ID, "user_id": item.UserID, "parent_id": item.ParentID, "body": item.Body, "spoiler": item.Spoiler, "hidden": item.Hidden, "created_at": item.CreatedAt, "replies": item.Replies}
+	return gin.H{"id": item.ID, "user_id": item.UserID, "display_name": item.DisplayName, "parent_id": item.ParentID, "body": item.Body, "spoiler": item.Spoiler, "hidden": item.Hidden, "created_at": item.CreatedAt, "replies": item.Replies}
 }
 func (handler *CommunityHandler) replies(request *gin.Context) {
 	result, failure := handler.service.Replies(request.Request.Context(), request.Param("id"), request.Query("after"))
@@ -150,7 +153,7 @@ func (handler *CommunityHandler) reports(request *gin.Context) {
 	}
 	result := []gin.H{}
 	for _, item := range items {
-		result = append(result, gin.H{"id": item.ID, "title_id": item.TitleID, "release_id": item.ReleaseID, "page_id": item.PageID, "target_type": item.TargetType, "target_id": item.TargetID, "category": item.Category, "reason": item.Reason, "status": item.Status, "created_at": item.CreatedAt})
+		result = append(result, gin.H{"id": item.ID, "title_id": item.TitleID, "release_id": item.ReleaseID, "page_id": item.PageID, "target_type": item.TargetType, "target_id": item.TargetID, "category": item.Category, "reason": item.Reason, "contact_email": item.ContactEmail, "status": item.Status, "created_at": item.CreatedAt})
 	}
 	request.JSON(200, gin.H{"items": result, "has_more": len(items) == 50})
 }
@@ -199,4 +202,50 @@ func communityError(request *gin.Context, failure error) {
 		log.Printf("community failure: %T", failure)
 		Error(request, 503, "unavailable", "Қызмет уақытша қолжетімсіз")
 	}
+}
+func (handler *CommunityHandler) rightsReport(request *gin.Context) {
+	var input struct {
+		TitleSlug string `json:"title_slug"`
+		Email     string `json:"email"`
+		Reason    string `json:"reason"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	receipt, failure := handler.service.RightsReport(request.Request.Context(), application.RightsRequest{TitleSlug: input.TitleSlug, Email: input.Email, Reason: input.Reason})
+	if failure != nil {
+		communityError(request, failure)
+		return
+	}
+	request.Header("Cache-Control", "no-store")
+	request.JSON(201, gin.H{"id": receipt.ID, "token": receipt.Token})
+}
+func (handler *CommunityHandler) rightsStatus(request *gin.Context) {
+	var input struct {
+		ID    string `json:"id"`
+		Token string `json:"token"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	result, failure := handler.service.RightsStatus(request.Request.Context(), input.ID, input.Token)
+	if failure != nil {
+		communityError(request, failure)
+		return
+	}
+	request.Header("Cache-Control", "no-store")
+	request.JSON(200, gin.H{"id": result.ID, "status": result.Status, "resolution": result.Resolution})
+}
+func (handler *CommunityHandler) myReports(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	items, failure := handler.service.MyReports(request.Request.Context(), account.ID, request.Query("after"))
+	if failure != nil {
+		communityError(request, failure)
+		return
+	}
+	result := []gin.H{}
+	for _, item := range items {
+		result = append(result, gin.H{"id": item.ID, "category": item.Category, "reason": item.Reason, "status": item.Status, "resolution": item.Resolution, "created_at": item.CreatedAt})
+	}
+	request.JSON(200, gin.H{"items": result, "has_more": len(items) == 50})
 }

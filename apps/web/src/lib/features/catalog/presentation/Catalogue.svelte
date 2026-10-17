@@ -22,7 +22,7 @@
  <label>Жанр<select name="genre" value={view.filter.genre}><option value="">{text($locale,'Барлығы','Все')}</option>{#each view.genres as genre}<option value={genre.slug}>{genre.name}</option>{/each}</select></label>
  <label>{text($locale,'Түпнұсқа','Статус оригинала')}<select name="original_status" value={view.filter.originalStatus}><option value="">{text($locale,'Барлығы','Все')}</option>{#each Object.entries(names.original) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
  <label>{text($locale,'Аударма','Статус перевода')}<select name="translation_status" value={view.filter.translationStatus}><option value="">{text($locale,'Барлығы','Все')}</option>{#each Object.entries(names.translation) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
- <label>{text($locale,'Реттеу','Сортировка')}<select name="sort" value={view.filter.sort}><option value="updated">{text($locale,'Соңғы жаңартулар','Недавно обновлённые')}</option><option value="name">{text($locale,'Атауы бойынша','По названию')}</option></select></label>
+ <label>{text($locale,'Реттеу','Сортировка')}<select name="sort" value={view.filter.sort}><option value="updated">{text($locale,'Соңғы жаңартулар','Недавно обновлённые')}</option><option value="new">{text($locale,'Жаңа тайтлдар','Новые тайтлы')}</option><option value="name">{text($locale,'Атауы бойынша','По названию')}</option></select></label>
  <div class="filter-actions"><Button type="submit" variant="primary">{text($locale,'Қолдану','Применить')}</Button><ActionLink href="/catalog">{text($locale,'Тазарту','Сбросить')}</ActionLink></div>
  </div></details>
 </form>

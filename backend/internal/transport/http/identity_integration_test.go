@@ -116,6 +116,24 @@ func TestIdentityFlowWithPostgres(testingTarget *testing.T) {
 	if failure = json.Unmarshal(csrfResponse.Body.Bytes(), &csrfPayload); failure != nil {
 		testingTarget.Fatal(failure)
 	}
+
+	var identityPayload struct {
+		User struct {
+			ID string `json:"id"`
+		} `json:"user"`
+	}
+	if failure = json.Unmarshal(me.Body.Bytes(), &identityPayload); failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	profile := map[string]string{"account_id": identityPayload.User.ID, "display_name": "Қазақ оқырманы"}
+	expect(send("POST", "profile", profile, cookies, "", origin), 403)
+	expect(send("POST", "profile", profile, cookies, csrfPayload.Token, origin), 200)
+	me = send("GET", "me", nil, cookies, "", origin)
+	if !strings.Contains(me.Body.String(), "Қазақ оқырманы") {
+		testingTarget.Fatal("profile name not persisted")
+	}
+	profile["account_id"] = "another-account"
+	expect(send("POST", "profile", profile, cookies, csrfPayload.Token, origin), 409)
 	expect(send("POST", "logout", nil, cookies, csrfPayload.Token, "http://foreign.example"), 403)
 	expect(send("POST", "forgot-password", map[string]string{"email": "unknown@example.com"}, nil, "", origin), 202)
 	expect(send("POST", "forgot-password", map[string]string{"email": "reader@example.com"}, nil, "", origin), 202)

@@ -6,9 +6,9 @@ import (
 )
 
 type Notification struct {
-	ID, Kind, Title, Body, ReleaseID, TitleSlug string
-	Read                                        bool
-	CreatedAt                                   time.Time
+	ID, Kind, Title, Body, ReleaseID, TitleSlug, ProjectID string
+	Read                                                   bool
+	CreatedAt                                              time.Time
 }
 type Repository interface {
 	List(context.Context, string, string) ([]Notification, error)

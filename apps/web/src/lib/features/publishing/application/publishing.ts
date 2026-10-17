@@ -1,7 +1,7 @@
 import {AppFailure} from '../../../shared/domain/failure';
 import { naturalOrder } from '../domain/revision';
 export interface StudioPage { id: string; position: number; width: number; height: number; bytes: number; status: string; failure: string; uploadKey: string }
-export interface Revision { id: string; releaseId: string; projectId: string; chapterId: string; titleId: string; titleName: string; chapterLabel: string; teamName: string; state: string; note: string; version: number; pages: StudioPage[] }
+export interface Revision { source?:string;credits?:string;rightsConfirmed?:boolean;confirmedBy?:string; id: string; releaseId: string; projectId: string; chapterId: string; titleId: string; titleName: string; chapterLabel: string; teamName: string; state: string; note: string; version: number; pages: StudioPage[] }
 export interface ChapterChoice { id: string; label: string; name: string; order: number }
 export interface UploadSource { name: string; size: number; key: string; content: unknown }
 export interface UploadTask { done: Promise<void>; cancel(): void }
@@ -15,6 +15,7 @@ export interface PublishingGateway {
  upload(id: string, source: UploadSource, position: number, progress: (fraction: number) => void): UploadTask;
  reorder(id: string, version: number, pageIds: string[]): Promise<void>;
  remove(id: string, pageId: string): Promise<void>;
+ attribution(id:string,version:number,source:string,credits:string,confirmed:boolean):Promise<void>;
  submit(id: string, version: number): Promise<void>;
  pending(): Promise<Revision[]>;
  review(id: string, decision: 'publish' | 'reject', reason: string): Promise<void>;

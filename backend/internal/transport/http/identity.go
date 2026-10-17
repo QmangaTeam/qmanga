@@ -22,6 +22,7 @@ type IdentityHandler struct {
 }
 type userDTO struct {
 	ID            string `json:"id"`
+	DisplayName   string `json:"display_name"`
 	Email         string `json:"email"`
 	Role          string `json:"role"`
 	EmailVerified bool   `json:"email_verified"`
@@ -32,7 +33,7 @@ type principal struct {
 }
 
 func userView(account domain.Account) userDTO {
-	return userDTO{account.ID, account.Email, account.Role, account.Verified}
+	return userDTO{ID: account.ID, Email: account.Email, Role: account.Role, EmailVerified: account.Verified, DisplayName: account.DisplayName}
 }
 func NewIdentityHandler(service *application.Service, origin string, secure bool) *IdentityHandler {
 	return &IdentityHandler{service: service, origin: origin, secure: secure, limiter: &rateLimiter{entries: make(map[string]rateEntry)}}
@@ -47,6 +48,7 @@ func (handler *IdentityHandler) Register(api *gin.RouterGroup) {
 	auth.POST("/reset-password", handler.limit(), handler.resetPassword)
 	auth.POST("/verify-email", handler.limit(), handler.verifyEmail)
 	auth.GET("/me", handler.RequireUser(), handler.me)
+	auth.POST("/profile", handler.RequireUser(), handler.updateProfile)
 	auth.GET("/csrf", handler.RequireUser(), handler.csrf)
 	auth.POST("/logout", handler.RequireUser(), handler.logout)
 }
@@ -285,4 +287,23 @@ func (handler *IdentityHandler) limit() gin.HandlerFunc {
 		}
 		request.Next()
 	}
+}
+func (handler *IdentityHandler) updateProfile(request *gin.Context) {
+	var input struct {
+		AccountID   string `json:"account_id"`
+		DisplayName string `json:"display_name"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	account, _ := CurrentAccount(request)
+	if account.ID != input.AccountID {
+		Error(request, 409, "account_changed", "Аккаунт өзгерді. Бетті жаңартыңыз")
+		return
+	}
+	if failure := handler.service.UpdateProfile(request.Request.Context(), account.ID, input.DisplayName); failure != nil {
+		handler.respondError(request, failure)
+		return
+	}
+	request.JSON(200, gin.H{"message": "Профиль сақталды"})
 }

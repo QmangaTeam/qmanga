@@ -11,5 +11,5 @@ export interface CatalogManagementGateway {
  createProject(titleId: string, teamId: string): Promise<void>;
 }
 export function editableMetadata(title: TitleDetail): Metadata {
- return { slug: title.slug, name: title.name, originalName: title.originalName, aliases: [...title.aliases], kind: title.kind, originalStatus: title.originalStatus, translationStatus: title.translationStatus, description: title.description, direction: title.direction, genreIds: title.genres.map(genre => genre.id), demo: title.demo };
+ return { authors:[...(title.authors||[])],featured:title.featured||false,slug: title.slug, name: title.name, originalName: title.originalName, aliases: [...title.aliases], kind: title.kind, originalStatus: title.originalStatus, translationStatus: title.translationStatus, description: title.description, direction: title.direction, genreIds: title.genres.map(genre => genre.id), demo: title.demo };
 }

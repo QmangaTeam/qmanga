@@ -17,8 +17,8 @@ var (
 )
 
 type Account struct {
-	ID, Email, PasswordHash, Role string
-	Verified                      bool
+	ID, Email, PasswordHash, Role, DisplayName string
+	Verified                                   bool
 }
 
 func NormalizeEmail(value string) (string, error) {
@@ -45,4 +45,11 @@ func ValidatePassword(password string) error {
 		return ErrInvalid
 	}
 	return nil
+}
+func NormalizeDisplayName(value string) (string, error) {
+	value = strings.TrimSpace(value)
+	if utf8.RuneCountInString(value) > 40 || (value != "" && utf8.RuneCountInString(value) < 2) || strings.ContainsAny(value, "\r\n\t") {
+		return "", ErrInvalid
+	}
+	return value, nil
 }

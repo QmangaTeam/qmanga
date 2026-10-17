@@ -8,12 +8,12 @@ import (
 	"qmanga/internal/publishing/domain"
 )
 
-const studioColumns = `revision.id,publication.id,publication.project_id,chapter.id,title.id,title.name_kk,chapter.label,team.name,revision.status,revision.moderation_note,revision.version`
+const studioColumns = `revision.id,publication.id,publication.project_id,chapter.id,title.id,title.name_kk,chapter.label,team.name,revision.status,revision.moderation_note,revision.version,revision.source_note,revision.credits,revision.rights_confirmed,coalesce(revision.rights_confirmed_by,'')`
 const studioJoins = ` FROM revisions revision JOIN releases publication ON publication.id=revision.release_id JOIN chapters chapter ON chapter.id=publication.chapter_id JOIN titles title ON title.id=chapter.title_id JOIN teams team ON team.id=publication.team_id `
 
 func scanStudio(row pgx.Row) (application.StudioRevision, error) {
 	item := application.StudioRevision{Pages: []application.Page{}}
-	failure := row.Scan(&item.ID, &item.ReleaseID, &item.ProjectID, &item.ChapterID, &item.TitleID, &item.TitleName, &item.ChapterLabel, &item.TeamName, &item.State, &item.Note, &item.Version)
+	failure := row.Scan(&item.ID, &item.ReleaseID, &item.ProjectID, &item.ChapterID, &item.TitleID, &item.TitleName, &item.ChapterLabel, &item.TeamName, &item.State, &item.Note, &item.Version, &item.Source, &item.Credits, &item.RightsConfirmed, &item.ConfirmedBy)
 	return item, failure
 }
 func (repository *Repository) Revision(ctx context.Context, actor, id string) (application.StudioRevision, error) {
@@ -109,7 +109,7 @@ func (repository *Repository) Manifest(ctx context.Context, actor, releaseID, pr
 			return manifest, domain.ErrNotFound
 		}
 	}
-	if failure = repository.pool.QueryRow(ctx, "SELECT status FROM revisions WHERE id=$1 AND release_id=$2", manifest.RevisionID, releaseID).Scan(&revisionState); failure != nil {
+	if failure = repository.pool.QueryRow(ctx, "SELECT status,source_note,credits FROM revisions WHERE id=$1 AND release_id=$2", manifest.RevisionID, releaseID).Scan(&revisionState, &manifest.Source, &manifest.Credits); failure != nil {
 		return manifest, translate(failure)
 	}
 	if previewID == "" && revisionState != "published" {

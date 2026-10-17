@@ -7,7 +7,7 @@ function number(value: unknown) { if (typeof value !== 'number' || !Number.isSaf
 function array<Item>(value: unknown, map: (item: unknown) => Item): Item[] { if (!Array.isArray(value)) throw new AppFailure('unavailable'); return value.map(map); }
 function revision(value: unknown): Revision {
  const item = object(value);
- return { id: text(item.id), releaseId: text(item.release_id), projectId: text(item.project_id), chapterId: text(item.chapter_id), titleId: text(item.title_id), titleName: text(item.title_name), chapterLabel: text(item.chapter_label), teamName: text(item.team_name), state: text(item.state), note: text(item.note), version: number(item.version), pages: array(item.pages, value => { const page = object(value); return { id: text(page.id), position: number(page.position), width: number(page.width), height: number(page.height), bytes: number(page.bytes), status: text(page.status), failure: text(page.failure), uploadKey: text(page.upload_key) }; }) };
+ return {source:typeof item.source_note==='string'?item.source_note:'',credits:typeof item.credits==='string'?item.credits:'',rightsConfirmed:item.rights_confirmed===true,confirmedBy:typeof item.confirmed_by==='string'?item.confirmed_by:'', id: text(item.id), releaseId: text(item.release_id), projectId: text(item.project_id), chapterId: text(item.chapter_id), titleId: text(item.title_id), titleName: text(item.title_name), chapterLabel: text(item.chapter_label), teamName: text(item.team_name), state: text(item.state), note: text(item.note), version: number(item.version), pages: array(item.pages, value => { const page = object(value); return { id: text(page.id), position: number(page.position), width: number(page.width), height: number(page.height), bytes: number(page.bytes), status: text(page.status), failure: text(page.failure), uploadKey: text(page.upload_key) }; }) };
 }
 export class HttpPublishingGateway implements PublishingGateway {
  constructor(private api: ApiClient) {}
@@ -51,6 +51,7 @@ export class HttpPublishingGateway implements PublishingGateway {
  }
  async reorder(id: string, version: number, pageIds: string[]) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/order', 'PUT', { version, page_ids: pageIds }); }
  async remove(id: string, pageId: string) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/pages/' + encodeURIComponent(pageId), 'DELETE'); }
+ async attribution(id:string,version:number,source:string,credits:string,confirmed:boolean){await this.api.call('/api/v1/studio/revisions/'+encodeURIComponent(id)+'/attribution','PUT',{version,source_note:source,credits,rights_confirmed:confirmed});}
  async submit(id: string, version: number) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/submit', 'POST', { version }); }
  async pending() { return this.items('/api/v1/moderation/revisions', revision); }
  async review(id: string, decision: 'publish' | 'reject', reason: string) { await this.api.call('/api/v1/moderation/revisions/' + encodeURIComponent(id) + '/review', 'POST', { decision, reason }); }

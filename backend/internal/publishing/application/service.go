@@ -56,6 +56,12 @@ func (service *Service) Reorder(ctx context.Context, actor, id string, version i
 func (service *Service) DeletePage(ctx context.Context, actor, id, page string) error {
 	return service.repository.DeletePage(ctx, actor, id, page)
 }
+func (service *Service) SaveAttribution(ctx context.Context, actor, id string, version int64, input domain.Attribution) error {
+	if !input.Valid() {
+		return domain.ErrTransition
+	}
+	return service.repository.SaveAttribution(ctx, actor, id, version, input)
+}
 func (service *Service) Submit(ctx context.Context, actor, id string, version int64) error {
 	return service.repository.Submit(ctx, actor, id, version)
 }

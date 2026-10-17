@@ -3,6 +3,7 @@ package application
 import (
 	"context"
 	"io"
+	"qmanga/internal/publishing/domain"
 	"time"
 )
 
@@ -12,6 +13,8 @@ type Page struct {
 	Bytes                                                                   int64
 }
 type StudioRevision struct {
+	Source, Credits, ConfirmedBy                                                                 string
+	RightsConfirmed                                                                              bool
 	ID, ReleaseID, ProjectID, ChapterID, TitleID, TitleName, ChapterLabel, TeamName, State, Note string
 	Version                                                                                      int64
 	Pages                                                                                        []Page
@@ -46,6 +49,7 @@ type ManifestPage struct {
 	Variants                map[string][]Variant
 }
 type Manifest struct {
+	Source, Credits                                                                                                                      string
 	ReleaseID, RevisionID, TitleID, TitleSlug, TitleName, ChapterLabel, ProjectID, TeamID, TeamName, Kind, Direction, PreviousID, NextID string
 	ChapterOrder                                                                                                                         int
 	Pages                                                                                                                                []ManifestPage
@@ -75,6 +79,7 @@ type Repository interface {
 	UploadFailed(context.Context, string, string) error
 	Reorder(context.Context, string, string, int64, []string) error
 	DeletePage(context.Context, string, string, string) error
+	SaveAttribution(context.Context, string, string, int64, domain.Attribution) error
 	Submit(context.Context, string, string, int64) error
 	Review(context.Context, string, string, string, string) error
 	Withdraw(context.Context, string, string, string) error
