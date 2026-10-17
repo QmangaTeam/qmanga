@@ -2,6 +2,7 @@ import { ApiFailure, type ApiClient } from '../../../shared/infrastructure/api-c
 import { kinds, originalStatuses, translationStatuses } from '../domain/catalog';
 import type { ReleaseUpdate, CatalogGateway, CatalogFilter, ChapterFilter, Summary, Genre, Project, Release, Chapter, TitleDetail, ResultPage, PublicTeam } from '../application/catalog';
 import type { CatalogManagementGateway } from '../application/management';
+import {emptyPublication,validPublication,type Publication} from '../domain/publication';
 import type { Metadata } from '../domain/metadata';
 
 function object(value: unknown): Record<string, unknown> {
@@ -16,7 +17,7 @@ export class HttpCatalogManagementGateway implements CatalogManagementGateway {
  async genres() { return page(await this.api.call('/api/v1/genres'), genre).items; }
  async teams(offset=0) { return page(await this.api.call('/api/v1/admin/catalog-teams?offset='+offset), value => { const item = object(value); return { id: text(item.id), name: text(item.name) }; }).items; }
  async save(input: Metadata, id?: string) {
-  const result = object(await this.api.call('/api/v1/admin/titles' + (id ? '/' + encodeURIComponent(id) : ''), id ? 'PUT' : 'POST', {authors:input.authors||[],listed:input.listed===true,featured:input.featured||false,slug: input.slug, name: input.name, original_name: input.originalName, aliases: input.aliases, kind: input.kind, original_status: input.originalStatus, translation_status: input.translationStatus, description: input.description, direction: input.direction, genre_ids: input.genreIds, demo: input.demo }));
+  const result = object(await this.api.call('/api/v1/admin/titles' + (id ? '/' + encodeURIComponent(id) : ''), id ? 'PUT' : 'POST', {publication:input.publication||emptyPublication(),authors:input.authors||[],listed:input.listed===true,featured:input.featured||false,slug: input.slug, name: input.name, original_name: input.originalName, aliases: input.aliases, kind: input.kind, original_status: input.originalStatus, translation_status: input.translationStatus, description: input.description, direction: input.direction, genre_ids: input.genreIds, demo: input.demo }));
   return text(result.id);
  }
  async createGenre(name: string, slug: string) { await this.api.call('/api/v1/admin/genres', 'POST', { name, slug }); }
@@ -41,9 +42,16 @@ function summary(value: unknown): Summary {
  const item = object(value);
  return { id: text(item.id), slug: text(item.slug), name: text(item.name), kind: choice(item.kind, kinds), originalStatus: choice(item.original_status, originalStatuses), translationStatus: choice(item.translation_status, translationStatuses), coverURL: media(item.cover_url), demo: boolean(item.demo), chapterCount: integer(item.chapter_count), score: number(item.score), ratingCount: integer(item.rating_count), updatedAt: date(item.updated_at) };
 }
+function publication(value:unknown):Publication {
+ if(value===undefined)return emptyPublication();
+ const item=object(value);
+ const result:Publication={year:item.year?integer(item.year):0,publishers:array(item.publishers??[],text),source:text(item.source??''),country:text(item.country??''),formats:array(item.formats??[],text),links:array(item.links??[],value=>{const link=object(value);return {label:text(link.label),url:text(link.url)};})};
+ if(!validPublication(result))throw new Error('Invalid publication metadata');
+ return result;
+}
 function detail(value: unknown): TitleDetail {
  const item = object(value);
- return { id: text(item.id), slug: text(item.slug), name: text(item.name), originalName: text(item.original_name), authors:item.authors===undefined?[]:array(item.authors,text),listed:item.listed===true,featured:item.featured===true,aliases: array(item.aliases, text), kind: choice(item.kind, kinds), originalStatus: choice(item.original_status, originalStatuses), translationStatus: choice(item.translation_status, translationStatuses), description: text(item.description), direction: choice(item.direction, ['ltr', 'rtl']), demo: boolean(item.demo), coverURL: media(item.cover_url), score: number(item.score), ratingCount: integer(item.rating_count), genres: array(item.genres, genre), projects: array(item.projects, project) };
+ return { id: text(item.id), slug: text(item.slug), name: text(item.name), originalName: text(item.original_name),publication:publication(item.publication),chapterCount:item.chapter_count===undefined?undefined:integer(item.chapter_count),readerCount:item.reader_count===undefined?undefined:integer(item.reader_count), authors:item.authors===undefined?[]:array(item.authors,text),listed:item.listed===true,featured:item.featured===true,aliases: array(item.aliases, text), kind: choice(item.kind, kinds), originalStatus: choice(item.original_status, originalStatuses), translationStatus: choice(item.translation_status, translationStatuses), description: text(item.description), direction: choice(item.direction, ['ltr', 'rtl']), demo: boolean(item.demo), coverURL: media(item.cover_url), score: number(item.score), ratingCount: integer(item.rating_count), genres: array(item.genres, genre), projects: array(item.projects, project) };
 }
 function release(value: unknown): Release { const item = object(value); return { id: text(item.id), projectId: text(item.project_id), teamId: text(item.team_id), teamName: text(item.team_name), teamSlug: text(item.team_slug), publishedAt: date(item.published_at) }; }
 function chapter(value: unknown): Chapter { const item = object(value); return { id: text(item.id), label: text(item.label), volume: text(item.volume), name: text(item.name), order: integer(item.order), releases: array(item.releases, release) }; }

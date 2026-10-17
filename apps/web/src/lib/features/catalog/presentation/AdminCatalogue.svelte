@@ -8,6 +8,8 @@
  import type { Genre, Summary, TitleDetail } from '../application/catalog';
  import { emptyMetadata, metadataError } from '../domain/metadata';
  import {catalogNames} from './messages';
+ import PublicationFields from './PublicationFields.svelte';
+ import {emptyPublication} from '../domain/publication';
  const kindNames=$derived(catalogNames($locale).kind),originalStatusNames=$derived(catalogNames($locale).original),translationStatusNames=$derived(catalogNames($locale).translation);
  let { user, gateway, initialTitleId = '' }: { user: Account | null; gateway: CatalogManagementGateway; initialTitleId?: string } = $props();
  let titles = $state<Summary[]>([]), genres = $state<Genre[]>([]), teams = $state<{id: string; name: string}[]>([]);
@@ -19,7 +21,7 @@
  let chapterLabel = $state(''), chapterOrder = $state(1), volume = $state(''), chapterName = $state(''), teamId = $state(''), genreName = $state(''), genreSlug = $state('');
  async function reload() { [titles, genres, teams] = await Promise.all([gateway.titles(), gateway.genres(), gateway.teams()]);moreTitles=titles.length===100;moreTeams=teams.length===100; }
  async function operation(action: () => Promise<void>, success = '') { if (busy) return; busy = true; failure = ''; notice = ''; try { await action(); notice = success; } catch (error) { failure = failureCode(error); } finally { busy = false; } }
- async function choose(id: string) { const next = id ? await gateway.detail(id) : null; selected = id; detail = next; input = detail ? editableMetadata(detail) : emptyMetadata(); aliases = input.aliases.join('\n'); authors=(input.authors||[]).join('\n'); }
+ async function choose(id: string) { const next = id ? await gateway.detail(id) : null; selected = id; detail = next; input = detail ? editableMetadata(detail) : emptyMetadata(); input.publication??=emptyPublication(); aliases = input.aliases.join('\n'); authors=(input.authors||[]).join('\n'); }
  onMount(() => { if (user?.role === 'admin') operation(async () => { await reload(); if (initialTitleId) await choose(initialTitleId); }); });
  async function save(event: SubmitEvent) { event.preventDefault(); notice = ''; input.authors=authors.split('\n').map(value=>value.trim()).filter(Boolean); input.aliases = aliases.split('\n').map(value => value.trim()).filter(Boolean); if (metadataError(input)) { failure = "metadata_invalid"; return; } await operation(async () => { const id = await gateway.save(input, selected || undefined); await reload(); await choose(id); }, 'saved'); }
 </script>
@@ -43,6 +45,7 @@
  <label>{copy($locale,"Аударма күйі")}<select bind:value={input.translationStatus}>{#each Object.entries(translationStatusNames) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
  <label>{copy($locale,"Оқу бағыты")}<select bind:value={input.direction}><option value="ltr">{copy($locale,"Солдан оңға")}</option><option value="rtl">{copy($locale,"Оңнан солға")}</option></select></label>
  <label>{copy($locale,"Сипаттама")}<textarea bind:value={input.description} rows="5" maxlength="10000"></textarea></label>
+ <PublicationFields bind:value={input.publication}/>
  <fieldset><legend>{copy($locale,"Жанрлар")}</legend>{#each genres as genre}<label class="check"><input type="checkbox" bind:group={input.genreIds} value={genre.id}/>{genre.name}</label>{/each}</fieldset>
  <label class="check"><input type="checkbox" bind:checked={input.demo}/>{copy($locale,"Үлгі туынды")}</label>
  <button class="button primary" disabled={busy} type="submit">{copy($locale,"Тайтлды сақтау")}</button>

@@ -16,6 +16,7 @@ var (
 )
 
 type Metadata struct {
+	Publication                                                                               Publication
 	Listed                                                                                    bool
 	Slug, Name, OriginalName, Kind, OriginalStatus, TranslationStatus, Description, Direction string
 	Aliases, GenreIDs, Authors                                                                []string
@@ -38,6 +39,9 @@ func oneOf(value string, choices ...string) bool {
 	return false
 }
 func NewTitle(id string, input Metadata) (Title, error) {
+	if !input.Publication.Valid() {
+		return Title{}, ErrInvalid
+	}
 	input.Name = strings.TrimSpace(input.Name)
 	input.Slug = strings.TrimSpace(input.Slug)
 	if id == "" || !slugPattern.MatchString(input.Slug) || len(input.Slug) > 128 || utf8.RuneCountInString(input.Name) < 1 || utf8.RuneCountInString(input.Name) > 200 || utf8.RuneCountInString(input.Description) > 10000 || utf8.RuneCountInString(input.OriginalName) > 200 || len(input.Aliases) > 12 || len(input.GenreIDs) > 12 {

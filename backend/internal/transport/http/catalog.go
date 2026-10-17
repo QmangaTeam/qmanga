@@ -184,7 +184,7 @@ func (handler *CatalogHandler) detail(request *gin.Context) {
 }
 func detailView(detail application.Detail) gin.H {
 	title := detail.Title
-	return gin.H{"id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "aliases": title.Aliases, "authors": title.Authors, "featured": title.Featured, "listed": title.Listed, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
+	return gin.H{"id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "publication": title.Publication, "chapter_count": detail.ChapterCount, "reader_count": detail.ReaderCount, "aliases": title.Aliases, "authors": title.Authors, "featured": title.Featured, "listed": title.Listed, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
 }
 func (handler *CatalogHandler) adminDetail(request *gin.Context) {
 	account, _ := CurrentAccount(request)
@@ -311,26 +311,27 @@ func (handler *CatalogHandler) adminTitles(request *gin.Context) {
 }
 func (handler *CatalogHandler) createTitle(request *gin.Context) {
 	var input struct {
-		Slug              string   `json:"slug"`
-		Name              string   `json:"name"`
-		OriginalName      string   `json:"original_name"`
-		Kind              string   `json:"kind"`
-		OriginalStatus    string   `json:"original_status"`
-		TranslationStatus string   `json:"translation_status"`
-		Description       string   `json:"description"`
-		Direction         string   `json:"direction"`
-		Aliases           []string `json:"aliases"`
-		Authors           []string `json:"authors"`
-		Featured          bool     `json:"featured"`
-		Listed            bool     `json:"listed"`
-		GenreIDs          []string `json:"genre_ids"`
-		Demo              bool     `json:"demo"`
+		Publication       domain.Publication `json:"publication"`
+		Slug              string             `json:"slug"`
+		Name              string             `json:"name"`
+		OriginalName      string             `json:"original_name"`
+		Kind              string             `json:"kind"`
+		OriginalStatus    string             `json:"original_status"`
+		TranslationStatus string             `json:"translation_status"`
+		Description       string             `json:"description"`
+		Direction         string             `json:"direction"`
+		Aliases           []string           `json:"aliases"`
+		Authors           []string           `json:"authors"`
+		Featured          bool               `json:"featured"`
+		Listed            bool               `json:"listed"`
+		GenreIDs          []string           `json:"genre_ids"`
+		Demo              bool               `json:"demo"`
 	}
 	if !decode(request, &input) {
 		return
 	}
 	account, _ := CurrentAccount(request)
-	metadata := domain.Metadata{Slug: input.Slug, Name: input.Name, OriginalName: input.OriginalName, Kind: input.Kind, OriginalStatus: input.OriginalStatus, TranslationStatus: input.TranslationStatus, Description: input.Description, Direction: input.Direction, Authors: input.Authors, Featured: input.Featured, Listed: input.Listed, Aliases: input.Aliases, GenreIDs: input.GenreIDs, Demo: input.Demo}
+	metadata := domain.Metadata{Publication: input.Publication, Slug: input.Slug, Name: input.Name, OriginalName: input.OriginalName, Kind: input.Kind, OriginalStatus: input.OriginalStatus, TranslationStatus: input.TranslationStatus, Description: input.Description, Direction: input.Direction, Authors: input.Authors, Featured: input.Featured, Listed: input.Listed, Aliases: input.Aliases, GenreIDs: input.GenreIDs, Demo: input.Demo}
 	var title domain.Title
 	var failure error
 	if request.Request.Method == "PUT" {

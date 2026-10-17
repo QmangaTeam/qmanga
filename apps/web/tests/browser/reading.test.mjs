@@ -11,13 +11,39 @@ const fixture = JSON.parse(await readFile(process.env.QMANGA_FIXTURE_FILE, 'utf8
 const baseURL = fixture.app_url;
 if (!['localhost', '127.0.0.1'].includes(new URL(baseURL).hostname) || !fixture.env_file || !/^qmanga-(ci$|stage[0-9]+-)/.test(fixture.project_name || '')) throw Error('A dedicated qmanga-ci or qmanga-stageN-* fixture is required; never seed the owner environment.');
 let browser, owner, ownerId, teamId, otherTeam, libraryTarget, guestRows, coverURL;
-const titles = Array.from({ length: 110 }, (_, index) => ({ id: 'a0000000-0000-4000-8000-' + (110 - index).toString(16).padStart(12, '0'), slug: 'reading-' + randomUUID(), project: randomUUID(), chapter: randomUUID(), release: randomUUID(), revision: randomUUID(), page: randomUUID(), order: index + 1 }));
+const distantChapters = [];
+const titlePrefix = randomUUID().slice(0, 8);
+const titles = Array.from({ length: 110 }, (_, index) => ({ id: titlePrefix + '-0000-4000-8000-' + (110 - index).toString(16).padStart(12, '0'), slug: 'reading-' + randomUUID(), project: randomUUID(), chapter: randomUUID(), release: randomUUID(), revision: randomUUID(), page: randomUUID(), order: index + 1 }));
 function sql(text) {
  const args = ['compose', '--env-file', fixture.env_file];
  if (fixture.project_name) args.push('-p', fixture.project_name);
  args.push('exec', '-T', 'postgres', 'psql', '-U', 'qmanga', '-d', 'qmanga', '-v', 'ON_ERROR_STOP=1');
  const result = spawnSync('docker', args, { input: text, encoding: 'utf8', timeout: 30000, windowsHide: true });
  if (result.status !== 0) throw Error('Disposable reading fixture SQL failed: ' + result.stderr);
+}
+function cleanupSql() {
+ const titleIds = titles.map(t => `'${t.id}'`).join(',');
+ const distantChapterFilter = distantChapters.length
+  ? `ch.id IN (${distantChapters.map(c => `'${c}'`).join(',')})`
+  : 'false';
+ const distantChapterIdFilter = distantChapters.length
+  ? `id IN (${distantChapters.map(c => `'${c}'`).join(',')})`
+  : 'false';
+ return `BEGIN;
+DELETE FROM library_entries WHERE user_id='${ownerId}' AND title_id IN (${titleIds});
+DELETE FROM reading_progress WHERE user_id='${ownerId}' AND title_id IN (${titleIds});
+DELETE FROM pages WHERE revision_id IN (SELECT rev.id FROM revisions rev JOIN releases rel ON rel.id = rev.release_id JOIN chapters ch ON ch.id = rel.chapter_id WHERE ch.title_id IN (${titleIds}));
+DELETE FROM revisions WHERE release_id IN (SELECT rel.id FROM releases rel JOIN chapters ch ON ch.id = rel.chapter_id WHERE ch.title_id IN (${titleIds}));
+DELETE FROM releases WHERE chapter_id IN (SELECT id FROM chapters WHERE title_id IN (${titleIds}));
+DELETE FROM chapters WHERE title_id IN (${titleIds});
+DELETE FROM projects WHERE title_id IN (${titleIds});
+DELETE FROM titles WHERE id IN (${titleIds});
+DELETE FROM team_memberships WHERE team_id='${otherTeam}';
+DELETE FROM teams WHERE id='${otherTeam}';
+DELETE FROM revisions WHERE release_id IN (SELECT rel.id FROM releases rel JOIN chapters ch ON ch.id = rel.chapter_id WHERE ${distantChapterFilter});
+DELETE FROM releases WHERE chapter_id IN (SELECT id FROM chapters WHERE ${distantChapterIdFilter});
+DELETE FROM chapters WHERE ${distantChapterIdFilter};
+COMMIT;`;
 }
 before(async () => {
  browser = await chromium.launch({ headless: true, ...(process.env.QMANGA_BROWSER_EXECUTABLE ? { executablePath: process.env.QMANGA_BROWSER_EXECUTABLE } : {}) });
@@ -33,19 +59,6 @@ before(async () => {
  coverURL = source.cover_url;
  libraryTarget = [...titles].sort((left, right) => left.id.localeCompare(right.id))[0];
  let setup = `BEGIN;
-DELETE FROM library_entries WHERE user_id='${ownerId}' AND title_id IN (SELECT id FROM titles WHERE slug LIKE 'reading-%');
-DELETE FROM reading_progress WHERE user_id='${ownerId}' AND title_id IN (SELECT id FROM titles WHERE slug LIKE 'reading-%');
-DELETE FROM pages WHERE revision_id IN (SELECT rev.id FROM revisions rev JOIN releases rel ON rel.id = rev.release_id JOIN chapters ch ON ch.id = rel.chapter_id JOIN titles t ON t.id = ch.title_id WHERE t.slug LIKE 'reading-%');
-DELETE FROM revisions WHERE release_id IN (SELECT rel.id FROM releases rel JOIN chapters ch ON ch.id = rel.chapter_id JOIN titles t ON t.id = ch.title_id WHERE t.slug LIKE 'reading-%');
-DELETE FROM releases WHERE chapter_id IN (SELECT ch.id FROM chapters ch JOIN titles t ON t.id = ch.title_id WHERE t.slug LIKE 'reading-%');
-DELETE FROM chapters WHERE title_id IN (SELECT id FROM titles WHERE slug LIKE 'reading-%');
-DELETE FROM projects WHERE title_id IN (SELECT id FROM titles WHERE slug LIKE 'reading-%');
-DELETE FROM titles WHERE slug LIKE 'reading-%';
-DELETE FROM team_memberships WHERE team_id IN (SELECT id FROM teams WHERE slug LIKE 'reading-%');
-DELETE FROM teams WHERE slug LIKE 'reading-%';
-DELETE FROM revisions WHERE release_id IN (SELECT rel.id FROM releases rel JOIN chapters ch ON ch.id = rel.chapter_id WHERE ch.title_id='${fixture.title_id}' AND ch.order_num > 1000);
-DELETE FROM releases WHERE chapter_id IN (SELECT id FROM chapters WHERE title_id='${fixture.title_id}' AND order_num > 1000);
-DELETE FROM chapters WHERE title_id='${fixture.title_id}' AND order_num > 1000;
 INSERT INTO teams(id,slug,name,is_approved)VALUES('${otherTeam}','reading-${otherTeam}','Екінші сынақ командасы',true); INSERT INTO team_memberships(id,team_id,user_id,role)VALUES('${randomUUID()}','${otherTeam}','${ownerId}','owner');`;
  for (const item of titles) {
   const label = 'Ұзақ сынақ ' + String(item.order).padStart(3, '0') + (item === libraryTarget ? ' · Қашық інжу' : '');
@@ -59,6 +72,7 @@ INSERT INTO teams(id,slug,name,is_approved)VALUES('${otherTeam}','reading-${othe
  }
  for (let number = 1; number <= 305; number++) {
   const chapter = randomUUID(), release = randomUUID(), revision = randomUUID();
+  distantChapters.push(chapter);
   setup += `INSERT INTO chapters(id,title_id,label,title_kk,order_num)VALUES('${chapter}','${fixture.title_id}','${number + 1000}','Дала ${String(number).padStart(3, '0')}',${number + 1000});
    INSERT INTO releases(id,chapter_id,project_id,team_id,status,current_revision_id)VALUES('${release}','${chapter}','${fixture.project_id}','${teamId}','published','${revision}');
    INSERT INTO revisions(id,release_id,status)VALUES('${revision}','${release}','published');`;
@@ -69,24 +83,12 @@ INSERT INTO teams(id,slug,name,is_approved)VALUES('${otherTeam}','reading-${othe
  guestRows = [...titles].filter(item => !titles.slice(0, 3).includes(item)).sort((left, right) => left.id.localeCompare(right.id)).slice(0, 3);
 });
 after(async () => {
-  const cleanup = `BEGIN;
-DELETE FROM library_entries WHERE user_id='${ownerId}' AND title_id IN (SELECT id FROM titles WHERE slug LIKE 'reading-%');
-DELETE FROM reading_progress WHERE user_id='${ownerId}' AND title_id IN (SELECT id FROM titles WHERE slug LIKE 'reading-%');
-DELETE FROM pages WHERE revision_id IN (SELECT rev.id FROM revisions rev JOIN releases rel ON rel.id = rev.release_id JOIN chapters ch ON ch.id = rel.chapter_id JOIN titles t ON t.id = ch.title_id WHERE t.slug LIKE 'reading-%');
-DELETE FROM revisions WHERE release_id IN (SELECT rel.id FROM releases rel JOIN chapters ch ON ch.id = rel.chapter_id JOIN titles t ON t.id = ch.title_id WHERE t.slug LIKE 'reading-%');
-DELETE FROM releases WHERE chapter_id IN (SELECT ch.id FROM chapters ch JOIN titles t ON t.id = ch.title_id WHERE t.slug LIKE 'reading-%');
-DELETE FROM chapters WHERE title_id IN (SELECT id FROM titles WHERE slug LIKE 'reading-%');
-DELETE FROM projects WHERE title_id IN (SELECT id FROM titles WHERE slug LIKE 'reading-%');
-DELETE FROM titles WHERE slug LIKE 'reading-%';
-DELETE FROM team_memberships WHERE team_id IN (SELECT id FROM teams WHERE slug LIKE 'reading-%');
-DELETE FROM teams WHERE slug LIKE 'reading-%';
-DELETE FROM revisions WHERE release_id IN (SELECT rel.id FROM releases rel JOIN chapters ch ON ch.id = rel.chapter_id WHERE ch.title_id='${fixture.title_id}' AND ch.order_num > 1000);
-DELETE FROM releases WHERE chapter_id IN (SELECT id FROM chapters WHERE title_id='${fixture.title_id}' AND order_num > 1000);
-DELETE FROM chapters WHERE title_id='${fixture.title_id}' AND order_num > 1000;
-COMMIT;`;
-  sql(cleanup);
+ try {
+  if(ownerId && otherTeam) sql(cleanupSql());
+ } finally {
   await owner?.close();
   await browser?.close();
+ }
 });
 
 test('library and project filters find matches beyond 100 and reset pagination', { timeout: 60000 }, async () => {
@@ -174,4 +176,87 @@ test('account recent history uses activity and no library scan; guest v1 data up
    await guestPage.screenshot({ path: join(process.env.QMANGA_SCREENSHOT_DIR, 'recent-guest-360.png'), fullPage: true });
   }
  } finally { await guest.close(); }
+});
+
+test('library search error is displayed with retry and does not mask as empty state', { timeout: 60000 }, async () => {
+ const page = await owner.newPage();
+ try {
+  await page.goto('/library');
+  await page.getByText('Найдено: 110', { exact: true }).waitFor();
+
+  const failRegex = /\/api\/v1\/library\?.*q=FailQuery/;
+  await page.route(failRegex, route => route.fulfill({
+   status: 500,
+   contentType: 'application/json',
+   body: JSON.stringify({ error: { code: 'server_down', message: 'Internal error' } })
+  }));
+
+  const searchInput = page.locator('.library-search input[type="search"]');
+  await searchInput.fill('FailQuery');
+  await page.getByRole('button', { name: 'Найти', exact: true }).click();
+
+  await page.locator('p[role="alert"]').waitFor();
+  assert.equal(await page.locator('.empty-state').count(), 0);
+
+  await page.unroute(failRegex);
+  await page.getByRole('button', { name: 'Повторить', exact: true }).click();
+
+  await page.getByText('Найдено: 0', { exact: true }).waitFor();
+ } finally {
+  await page.close();
+ }
+});
+
+test('two rapid changes to entry status and favorite do not trigger artificial version conflict', { timeout: 60000 }, async () => {
+ const page = await owner.newPage();
+ let releaseSave;
+ const heldSave = new Promise(resolve => { releaseSave = resolve; });
+ let observeSave;
+ const saveStarted = new Promise(resolve => { observeSave = resolve; });
+ const errors=[];
+ page.on('pageerror', error=>errors.push(error.message));
+ try {
+  await page.goto('/library');
+  await page.getByText('Найдено: 110', { exact: true }).waitFor();
+
+  const putPattern = '**/api/v1/library/*';
+  await page.route(putPattern, async route => {
+   if (route.request().method() === 'PUT') {
+    observeSave();
+    await heldSave;
+   }
+   await route.continue();
+  });
+
+  const row = page.locator('.entry-controls').first();
+  const select = row.locator('select');
+  const checkbox = row.locator('input[type="checkbox"]');
+
+  await select.selectOption('planned');
+  await saveStarted;
+  assert.equal(await select.isDisabled(), true);
+  assert.equal(await checkbox.isDisabled(), true);
+  assert.equal(await row.getByRole('button', {name:'Убрать из списка',exact:true}).isDisabled(), true);
+  releaseSave();
+  await page.getByText('Сохранено', { exact: true }).waitFor();
+  await select.selectOption('completed');
+  await page.getByText('Сохранено', { exact: true }).waitFor();
+  await checkbox.check();
+
+  await page.getByText('Сохранено', { exact: true }).waitFor();
+
+  assert.equal(await page.locator('.conflict').count(), 0);
+  assert.equal(await page.getByText('На другом устройстве другой выбор. Какой оставить?', {exact:true}).count(), 0);
+  assert.deepEqual(errors,[]);
+
+  await page.unroute(putPattern);
+  await page.reload();
+  await page.getByText('Найдено: 110', { exact: true }).waitFor();
+  const reloadedRow = page.locator('.entry-controls').first();
+  assert.equal(await reloadedRow.locator('select').inputValue(), 'completed');
+  assert.equal(await reloadedRow.locator('input[type="checkbox"]').isChecked(), true);
+ } finally {
+  releaseSave();
+  await page.close();
+ }
 });

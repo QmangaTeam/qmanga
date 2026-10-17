@@ -16,5 +16,5 @@ export const load:PageServerLoad=async({fetch,params,url})=>{
  }catch{error(503,'unavailable');}
  const next=new URLSearchParams(url.searchParams);
  if(chapters.nextCursor)next.set('cursor',chapters.nextCursor);
- return {title,chapters,firstChapter:firstChapter||null,chapterFilter,nextURL:chapters.nextCursor?'/titles/'+encodeURIComponent(params.slug)+'?'+next+'#chapters':null};
+ return {tab:['about','chapters','comments','stats'].includes(url.searchParams.get('tab')||'')?url.searchParams.get('tab')!:'chapters',title,chapters,firstChapter:firstChapter||null,chapterFilter,nextURL:chapters.nextCursor?'/titles/'+encodeURIComponent(params.slug)+'?'+next+'#chapters':null};
 };

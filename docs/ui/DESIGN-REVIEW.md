@@ -2,6 +2,8 @@
 
 ## Owner correction — 18 October 2026
 
+Latest owner instruction: adopt Senkuro's palette as well as the title-page arrangement. This explicitly replaces the earlier requirement to retain green. Sampled from the supplied screenshot: background `#101014`, panel `#231A17`, orange `#FF873D`. The light theme uses a readable orange/brown counterpart. Title layout: cover/actions/metadata on the left at desktop; compact phone header, unified facts panel and URL-backed about/chapters/comments/statistics sections. Do not copy reference artwork, invented traffic numbers or an unsupported collectible-card feature.
+
 The owner rejected the text-first home and explicitly requested Senkuro's placement/UX, less text, more linked artwork and recognizable buttons. The active [layout contract](SENKURO-LAYOUT.md) supersedes the earlier home composition: compact search/navigation, first-screen horizontal cover shelf, real filter chips, picture-led continuation and compact illustrated updates. Keep both palettes. The previous implementation passing tests was not evidence of satisfactory visual design.
 
 Updated: 17 October 2026. Status: the owner approved the compact reading-library direction, the written [component-first specification](../superpowers/specs/2026-10-17-component-first-redesign-design.md) and [implementation plan](../superpowers/plans/2026-10-17-component-first-redesign.md). Components were implemented first, then screen assembly and Kazakh-first/Russian UI. The later instruction to complete needed functionality autonomously also authorized connected-reading additions. See [implementation evidence and limits](REDESIGN-VALIDATION.md); the historical baseline below is not a description of the current UI.

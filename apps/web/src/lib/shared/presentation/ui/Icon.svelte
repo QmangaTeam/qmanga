@@ -2,6 +2,13 @@
  import type { IconName } from './types';
  let { name, size = 20 }: { name: IconName; size?: number } = $props();
  const paths: Record<IconName, string> = {
+  copy:'M9 9h12v12H9Z M15 9V3H3v12h6',
+  link:'M10 13a5 5 0 0 0 7 0l4-4a5 5 0 0 0-7-7l-3 3 M14 11a5 5 0 0 0-7 0l-4 4a5 5 0 0 0 7 7l3-3',
+  share:'M8 11l8-5 M8 13l8 5 M8 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M22 4a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M22 20a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
+  message:'M3 3h18v14H9l-6 4Z M7 7h10 M7 11h7',
+  chart:'M4 20V10 M10 20V4 M16 20v-7 M22 20V7',
+  play:'m8 4 13 8-13 8Z',
+  eye:'M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12 M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0',
   users: 'M3 21v-2a5 5 0 0 1 10 0v2 M16 14a5 5 0 0 1 5 5v2 M11 7a3 3 0 1 1-6 0 3 3 0 0 1 6 0 M16 4a3 3 0 0 1 0 6',
   folder: 'M3 7V4h6l3 3h9v13H3Z',
   file: 'M5 3h9l5 5v13H5Z M14 3v6h5 M8 13h8 M8 17h6',

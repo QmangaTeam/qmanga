@@ -22,20 +22,34 @@
  const total=$derived.by(()=>{directoryVersion;return directory.total;});
  const loading=$derived.by(()=>{directoryVersion;return directory.loading;});
  const appliedCriteria=$derived.by(()=>{directoryVersion;return directory.appliedCriteria;});
+ const directoryError=$derived.by(()=>{directoryVersion;return directory.error;});
+ let searchGeneration=0;
+
+ async function loadTeams(generation:number){
+  try{
+   const next=await teamsGateway.list();
+   if(generation===searchGeneration){teams=next;error='';}
+  }catch(failure){
+   if(generation===searchGeneration)error=failureCode(failure);
+  }
+ }
 
  async function search(){
+  const generation=++searchGeneration;
   error='';
-  try{
-   await directory.search(query,team);
-   if(!teams.length){teams=await teamsGateway.list();}
-  }catch(failure){
-   error=failureCode(failure);
-  }
+  await directory.search(query,team);
+  if(generation===searchGeneration&&!teams.length)await loadTeams(generation);
+ }
+
+ async function retry(){
+  if(directory.error)await directory.retry();
+  if(error)await loadTeams(searchGeneration);
  }
 
  onMount(()=>{
   team=$page.url.searchParams.get('team')||'';
   if(user)void search();
+  return ()=>{searchGeneration++;};
  });
 </script>
 <svelte:head><title>{text($locale,'Аударма жобалары','Проекты переводов')} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>
@@ -43,13 +57,13 @@
 {#if !user}<div class="empty-state"><h2>{text($locale,'Аудармашы кабинеті','Кабинет переводчика')}</h2><p>{text($locale,'Аккаунтқа кіріп, командаңа қосыл немесе жаңа командаға өтінім бер.','Войди и присоединись к команде или подай заявку на создание новой.')}</p><a class="button primary" href="/login?returnTo=%2Fstudio%2Fprojects">{text($locale,'Кіру','Войти')}</a></div>
 {:else}
  {#if !user.verified}<div class="next-step"><h2>{text($locale,'Поштаңды раста','Подтверди почту')}</h2><p>{text($locale,'Командаға өтінім беру және файл жүктеу үшін пошта расталуы керек.','Для заявки команды и загрузки файлов нужна подтверждённая почта.')}</p><a class="button subtle" href="/settings">{text($locale,'Аккаунт баптаулары','Настройки аккаунта')}</a></div>{/if}
- {#if error}<p role="alert" class="form-message">{noticeText($locale,error)}</p><button class="button subtle" onclick={()=>search()}>{text($locale,'Қайталау','Повторить')}</button>{/if}
+ {#if error || directoryError}<p role="alert" class="form-message">{noticeText($locale,directoryError || error)}</p><button class="button subtle" disabled={loading} onclick={()=>retry()}>{text($locale,'Қайталау','Повторить')}</button>{/if}
  <a class="pending" href="/studio/requests">{text($locale,'Өтінімдерім','Мои заявки')} <span>→</span></a>
  <form class="project-search" onsubmit={event=>{event.preventDefault();void search();}}><label>{text($locale,'Жобадан іздеу','Поиск проектов')}<input type="search" bind:value={query} maxlength="80"/></label>{#if teams.length>1}<label>{text($locale,'Команда','Команда')}<select aria-label={text($locale,'Команда','Команда')} bind:value={team} onchange={()=>search()}><option value="">{text($locale,'Барлық командалар','Все команды')}</option>{#each teams as item}<option value={item.id}>{item.name}</option>{/each}</select></label>{/if}<button class="button subtle" type="submit">{text($locale,'Іздеу','Найти')}</button></form>
  {#if total!==undefined}<p class="muted">{text($locale,'Табылды: ','Найдено: ')}{total}</p>{/if}
  {#if loading&&!items.length}<p role="status">{text($locale,'Жобалар жүктелуде…','Загружаем проекты…')}</p>
- {:else if !items.length&&!error&&(appliedCriteria.teamId||appliedCriteria.query)}<p class="empty-state">{text($locale,'Жоба табылмады. Сұрау не команданы өзгерт.','Проекты не найдены. Измени запрос или команду.')}</p>
- {:else if !items.length&&!error}<div class="next-step"><h2>{teams.some(team=>team.approved)?text($locale,'Бірінші жобаңды сұра','Запроси первый проект'):text($locale,'Командадан баста','Начни с команды')}</h2><p>{teams.some(team=>team.approved)?text($locale,'Каталогтан тайтл таңда немесе жаңа шығарма ұсын. Мақұлданған жоба осында пайда болады.','Выбери тайтл из каталога или предложи новый. Одобренный проект появится здесь.'):text($locale,'Команда құруға өтінім бер. Мақұлдағаннан кейін тайтл сұрап, тараулар жүктей аласың.','Подай заявку на команду. После одобрения можно запросить тайтл и загружать главы.')}</p><div class="actions"><a class="button primary" href={teams.some(team=>team.approved)?'/studio/requests?new=1':'/studio/teams?new=1'}>{teams.some(team=>team.approved)?text($locale,'Өтінім жіберу','Подать заявку'):text($locale,'Командаларға өту','Перейти к командам')}</a><a class="button subtle" href="/studio/requests">{text($locale,'Өтінімдерім','Мои заявки')}</a></div></div>
+ {:else if !items.length&&!error&&!directoryError&&(appliedCriteria.teamId||appliedCriteria.query)}<p class="empty-state">{text($locale,'Жоба табылмады. Сұрау не команданы өзгерт.','Проекты не найдены. Измени запрос или команду.')}</p>
+ {:else if !items.length&&!error&&!directoryError}<div class="next-step"><h2>{teams.some(team=>team.approved)?text($locale,'Бірінші жобаңды сұра','Запроси первый проект'):text($locale,'Командадан баста','Начни с команды')}</h2><p>{teams.some(team=>team.approved)?text($locale,'Каталогтан тайтл таңда немесе жаңа шығарма ұсын. Мақұлданған жоба осында пайда болады.','Выбери тайтл из каталога или предложи новый. Одобренный проект появится здесь.'):text($locale,'Команда құруға өтінім бер. Мақұлдағаннан кейін тайтл сұрап, тараулар жүктей аласың.','Подай заявку на команду. После одобрения можно запросить тайтл и загружать главы.')}</p><div class="actions"><a class="button primary" href={teams.some(team=>team.approved)?'/studio/requests?new=1':'/studio/teams?new=1'}>{teams.some(team=>team.approved)?text($locale,'Өтінім жіберу','Подать заявку'):text($locale,'Командаларға өту','Перейти к командам')}</a><a class="button subtle" href="/studio/requests">{text($locale,'Өтінімдерім','Мои заявки')}</a></div></div>
  {:else}<div class="projects">{#each items as item}<article><div><h2><a href={'/studio/projects/'+item.id}>{item.titleName}</a></h2><p>{item.teamName}</p></div><a class="button subtle" href={'/studio/projects/'+item.id}>{text($locale,'Тарауларды басқару','Управлять главами')}</a></article>{/each}</div>{/if}
  {#if hasMore}<button class="button subtle" disabled={loading} onclick={()=>directory.more()}>{text($locale,'Тағы жобалар','Ещё проекты')}</button>{/if}
 {/if}

@@ -1,0 +1,1 @@
+ALTER TABLE titles ADD COLUMN publication JSONB NOT NULL DEFAULT '{}';

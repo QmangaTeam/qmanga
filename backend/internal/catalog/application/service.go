@@ -32,12 +32,14 @@ type Page struct {
 	Next  *Cursor
 }
 type Detail struct {
-	Title       domain.Title
-	CoverID     string
-	Score       float64
-	RatingCount int
-	Genres      []Genre
-	Projects    []Project
+	ChapterCount int
+	ReaderCount  int
+	Title        domain.Title
+	CoverID      string
+	Score        float64
+	RatingCount  int
+	Genres       []Genre
+	Projects     []Project
 }
 type Project struct{ ID, TitleID, TeamID, TitleName, TitleSlug, TeamName, TeamSlug, Status string }
 type ProjectFilter struct {

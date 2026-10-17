@@ -1,8 +1,15 @@
-import type { PublishingGateway, ProjectPage, ProjectFilter } from './publishing';
+import type { PublishingGateway } from './publishing';
 
 export interface AppliedProjectCriteria {
  query: string;
  teamId: string;
+}
+
+function failureCode(failure: unknown): string {
+ if (typeof failure === 'object' && failure !== null && 'code' in failure && typeof (failure as { code: unknown }).code === 'string') {
+  return (failure as { code: string }).code;
+ }
+ return 'unavailable';
 }
 
 export class ProjectDirectory {
@@ -11,6 +18,7 @@ export class ProjectDirectory {
  hasMore = false;
  total: number | undefined = undefined;
  loading = false;
+ error: string | null = null;
  appliedCriteria: AppliedProjectCriteria = { query: '', teamId: '' };
  private generation = 0;
 
@@ -23,12 +31,24 @@ export class ProjectDirectory {
   this.cursor = '';
   this.hasMore = false;
   this.total = undefined;
+  this.error = null;
   await this.fetchPage(false);
  }
 
  async more() {
   if (this.loading || !this.hasMore || !this.cursor) return;
+  this.error = null;
   await this.fetchPage(true);
+ }
+
+ async retry() {
+  if (this.loading) return;
+  this.error = null;
+  if (this.items.length > 0 && this.cursor && this.hasMore) {
+   await this.fetchPage(true);
+  } else {
+   await this.fetchPage(false);
+  }
  }
 
  private async fetchPage(append: boolean) {
@@ -44,6 +64,10 @@ export class ProjectDirectory {
    this.cursor = batch.nextCursor;
    this.hasMore = !!batch.nextCursor;
    this.total = batch.total;
+   this.error = null;
+  } catch (failure) {
+   if (generation !== this.generation) return;
+   this.error = failureCode(failure);
   } finally {
    if (generation === this.generation) {
     this.loading = false;
