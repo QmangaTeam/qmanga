@@ -1,0 +1,4 @@
+@import '../ui/actions.css';
+:root { color-scheme: dark; --bg: #0d1117; --panel: #161c25; --raised: #202835; --line: #29323e; --text: #edf2f5; --muted: #96a2b2; --accent: #b4ee69; --accent-ink: #17220d; --space-1: 4px; --space-2: 8px; --space-3: 12px; --space-4: 16px; --space-6: 24px; --space-8: 32px; --radius-cover: 6px; --radius-control: 8px; --radius-panel: 12px; font-family: ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+:root[data-theme='light'] { color-scheme: light; --bg: #f6f8f3; --panel: #fff; --raised: #edf1e8; --line: #d9dfd3; --text: #172217; --muted: #65715f; --accent: #486c1d; --accent-ink: #fff; }
+@media (prefers-color-scheme: light) { :root:not([data-theme]) { color-scheme: light; --bg: #f6f8f3; --panel: #fff; --raised: #edf1e8; --line: #d9dfd3; --text: #172217; --muted: #65715f; --accent: #486c1d; --accent-ink: #fff; } }

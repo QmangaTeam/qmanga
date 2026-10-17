@@ -1,6 +1,6 @@
 {
 	"extends": "./.svelte-kit/tsconfig.json",
-	"exclude": ["node_modules", "scripts", "**/*.test.ts"],
+	"exclude": ["node_modules", "scripts", "**/*.test.ts", "tests/ui/**/*.ts"],
 	"compilerOptions": {
 		"allowJs": true,
 		"checkJs": true,

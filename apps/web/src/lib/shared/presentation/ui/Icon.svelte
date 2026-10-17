@@ -1,0 +1,29 @@
+<script lang="ts">
+ import type { IconName } from './types';
+ let { name, size = 20 }: { name: IconName; size?: number } = $props();
+ const paths: Record<IconName, string> = {
+  home: 'M3 10 12 3l9 7v10H15v-7H9v7H3Z',
+  catalog: 'M3 3h7v7H3z M14 3h7v7h-7z M3 14h7v7H3z M14 14h7v7h-7z',
+  bookmark: 'M5 3h14v18l-7-5-7 5Z',
+  bell: 'M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9 M10 21h4',
+  menu: 'M4 6h16 M4 12h16 M4 18h16',
+  search: 'M21 21l-5-5 M18 10a8 8 0 1 1-16 0 8 8 0 0 1 16 0',
+  close: 'm6 6 12 12 M6 18 18 6',
+  left: 'm15 5-7 7 7 7',
+  right: 'm9 5 7 7-7 7',
+  down: 'm5 9 7 7 7-7',
+  up: 'm5 15 7-7 7 7',
+  settings: 'M4 7h16 M4 17h16 M8 4v6 M16 14v6',
+  check: 'm5 12 4 4L19 6',
+  download: 'M12 3v12 m-5-5 5 5 5-5 M4 16v5h16v-5',
+  upload: 'M12 16V3 m-5 5 5-5 5 5 M4 16v5h16v-5',
+  plus: 'M12 4v16 M4 12h16',
+  star: 'm12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.2-5.6-3-5.6 3 1.1-6.2L3 9.6l6.2-.9Z',
+  trash: 'M3 6h18 M9 6V3h6v3 M5 6l1 15h12l1-15 M10 10v7 M14 10v7',
+  user: 'M20 21v-2a7 7 0 0 0-14 0v2 M17 7a4 4 0 1 1-8 0 4 4 0 0 1 8 0'
+ };
+</script>
+
+<svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d={paths[name]}/></svg>
+
+<style>svg { flex: 0 0 auto; }</style>

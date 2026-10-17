@@ -8,7 +8,10 @@
     "build": "vite build",
     "preview": "vite preview",
     "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
-    "check:architecture": "bun scripts/check-boundaries.mjs"
+    "check:architecture": "bun scripts/check-boundaries.mjs",
+    "test:ui": "bun test --preload ./tests/ui/setup.ts ./tests/ui",
+    "ui:preview": "svelte-kit sync && vite --config vite.ui-preview.config.ts",
+    "check:ui-preview": "svelte-check --tsconfig ./tsconfig.ui-preview.json"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.12",
