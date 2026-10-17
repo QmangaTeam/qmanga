@@ -123,6 +123,7 @@ type projectDTO struct {
 	TitleID   string `json:"title_id"`
 	TeamID    string `json:"team_id"`
 	TitleName string `json:"title_name"`
+	TitleSlug string `json:"title_slug"`
 	TeamName  string `json:"team_name"`
 	TeamSlug  string `json:"team_slug"`
 	Status    string `json:"status"`
@@ -131,7 +132,7 @@ type projectDTO struct {
 func projectViews(projects []application.Project) []projectDTO {
 	items := make([]projectDTO, 0, len(projects))
 	for _, item := range projects {
-		items = append(items, projectDTO{item.ID, item.TitleID, item.TeamID, item.TitleName, item.TeamName, item.TeamSlug, item.Status})
+		items = append(items, projectDTO{item.ID, item.TitleID, item.TeamID, item.TitleName, item.TitleSlug, item.TeamName, item.TeamSlug, item.Status})
 	}
 	return items
 }

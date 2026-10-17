@@ -216,7 +216,7 @@ func (repository *Repository) Team(ctx context.Context, slug string) (applicatio
 }
 
 func (repository *Repository) projects(ctx context.Context, condition string, arguments ...any) ([]application.Project, error) {
-	rows, failure := repository.pool.Query(ctx, `SELECT outer_project.id,outer_project.title_id,outer_project.team_id,title.name_kk,team.name,team.slug,outer_project.status FROM projects outer_project JOIN titles title ON title.id=outer_project.title_id JOIN teams team ON team.id=outer_project.team_id WHERE `+condition+` ORDER BY title.name_kk,team.name LIMIT 100`, arguments...)
+	rows, failure := repository.pool.Query(ctx, `SELECT outer_project.id,outer_project.title_id,outer_project.team_id,title.name_kk,title.slug,team.name,team.slug,outer_project.status FROM projects outer_project JOIN titles title ON title.id=outer_project.title_id JOIN teams team ON team.id=outer_project.team_id WHERE `+condition+` ORDER BY title.name_kk,team.name LIMIT 100`, arguments...)
 	if failure != nil {
 		return nil, failure
 	}
@@ -224,7 +224,7 @@ func (repository *Repository) projects(ctx context.Context, condition string, ar
 	items := []application.Project{}
 	for rows.Next() {
 		var item application.Project
-		if failure = rows.Scan(&item.ID, &item.TitleID, &item.TeamID, &item.TitleName, &item.TeamName, &item.TeamSlug, &item.Status); failure != nil {
+		if failure = rows.Scan(&item.ID, &item.TitleID, &item.TeamID, &item.TitleName, &item.TitleSlug, &item.TeamName, &item.TeamSlug, &item.Status); failure != nil {
 			return nil, failure
 		}
 		items = append(items, item)

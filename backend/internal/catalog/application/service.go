@@ -37,7 +37,7 @@ type Detail struct {
 	Genres      []Genre
 	Projects    []Project
 }
-type Project struct{ ID, TitleID, TeamID, TitleName, TeamName, TeamSlug, Status string }
+type Project struct{ ID, TitleID, TeamID, TitleName, TitleSlug, TeamName, TeamSlug, Status string }
 type Release struct {
 	ID, ProjectID, TeamID, TeamName, TeamSlug string
 	PublishedAt                               time.Time

@@ -1,4 +1,7 @@
 function object(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null; }
+export class ApiFailure extends Error {
+ constructor(readonly status: number, message: string) { super(message); this.name = 'ApiFailure'; }
+}
 export class ApiClient {
  private csrf = '';
  constructor(private request: typeof fetch) {}
@@ -19,7 +22,7 @@ export class ApiClient {
   if (!response.ok) {
    if (response.status === 403) this.csrf = '';
    const message = object(value) && object(value.error) && typeof value.error.message === 'string' ? value.error.message : 'Сұрауды орындау мүмкін болмады';
-   throw new Error(message);
+   throw new ApiFailure(response.status, message);
   }
   return value;
  }

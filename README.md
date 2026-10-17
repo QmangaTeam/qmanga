@@ -4,7 +4,9 @@
 
 ## Current development state
 
-The Alpine stack, Kazakh mobile shell, accounts and approved-team workflows run. Gin handles HTTP; accounts support email verification, session cookies, CSRF and password recovery. Teams have owner/editor/member access, invitations and admin approval. Catalogue, publishing, reader, offline and community remain in development; this is not yet the full MVP.
+The Alpine stack, Kazakh mobile shell, accounts and approved-team workflows run. Gin handles HTTP; accounts support email verification, session cookies, CSRF and password recovery. Teams have owner/editor/member access, invitations and admin approval. Public catalogue search/filters, title/chapter lists and approved-team pages are connected to Go through separate application ports and HTTP adapters. Administrator APIs create metadata, genres, ordered chapters and translation projects. Catalogue management UI/editing, publishing, reader, offline and community remain in development; this is not yet the full MVP.
+
+The catalogue deliberately remains empty until actual releases are published. Test fixtures live in isolated schemas, not the public catalogue. The final visual redesign is deferred until functionality is complete; green stays per the owner's instruction. See docs/ui/DESIGN-REVIEW.md.
 
 ## Local start
 
