@@ -121,7 +121,7 @@ try {
     Write-Output "Publishing smoke passed: $($files.Count) local pages, private source, actual WebP in all three profiles, worker, moderation and Go media."
     Write-Output "Reader: $AppUrl/read/$($draft.release_id)"
     if ($ResultFile) {
-        $result = @{ app_url=$AppUrl; admin_email=$adminEmail; admin_password=$adminPassword; owner_email=$ownerEmail; owner_password=$ownerPassword; title_id=$title.id; project_id=$project.id; release_id=$draft.release_id }
+        $result = @{ app_url=$AppUrl; admin_email=$adminEmail; admin_password=$adminPassword; owner_email=$ownerEmail; owner_password=$ownerPassword; title_id=$title.id; project_id=$project.id; release_id=$draft.release_id; env_file=[IO.Path]::GetFullPath($EnvFile); project_name=$ProjectName }
         [IO.File]::WriteAllText([IO.Path]::GetFullPath($ResultFile), ($result | ConvertTo-Json), [Text.UTF8Encoding]::new($false))
     }
 } finally { foreach ($client in $clients) { $client.Dispose() } }

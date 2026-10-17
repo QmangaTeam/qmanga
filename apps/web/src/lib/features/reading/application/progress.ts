@@ -2,15 +2,29 @@ import type {Manifest,Timer} from './reader';
 import type {Position} from '../domain/policies';
 export interface Progress extends Position {titleId:string;releaseId:string;revisionId:string;version:number;furthestOrder:number;deviceId:string;sequence:number}
 export interface ProgressEvent {id:string;deviceId:string;sequence:number;baseVersion:number;titleId:string;releaseId:string;revisionId:string;pageId:string;fraction:number;completed:boolean}
-export interface LocalProgress {scope:string;titleId:string;name:string;slug:string;progress:Progress;pending:ProgressEvent|null;conflict:Progress|null}
+export interface LocalProgress {scope:string;titleId:string;name:string;slug:string;progress:Progress;pending:ProgressEvent|null;conflict:Progress|null;updatedAt?:number;coverURL?:string;chapterLabel?:string;pagePosition?:number}
 export interface LibraryEntry {version?:number;removed?:boolean;titleId:string;name:string;slug:string;status:string;favorite:boolean;preferredTeamId:string;notify:boolean;unseen:number;progress:Progress}
 export interface Selection {version?:number;removed?:boolean;titleId:string;status:string;favorite:boolean;preferredTeamId:string;notify:boolean}
-export interface ReadingGateway {account():Promise<string|null>;selection(accountId:string,titleId:string):Promise<LibraryEntry|null>;progress(accountId:string,titleId:string):Promise<Progress>;advance(accountId:string,event:ProgressEvent):Promise<{outcome:string;progress:Progress}>;list(accountId:string,after?:string):Promise<{items:LibraryEntry[];hasMore:boolean}>;save(accountId:string,input:Selection):Promise<void>;remove(accountId:string,titleId:string):Promise<void>}
-export interface ProgressStorage {read(scope:string,titleId:string):Promise<LocalProgress|null>;write(value:LocalProgress):Promise<void>;list(scope:string):Promise<LocalProgress[]>;clearAccounts():Promise<void>;identity():{deviceId:string;sequence:number;id:string};watchAccountChange(callback:()=>void):()=>void}
+export interface LibraryFilter {query?:string;status?:string;favorite?:boolean}
+export interface LibraryPage {items:LibraryEntry[];hasMore:boolean;nextCursor?:string;total?:number;partial?:boolean}
+export interface ReadReference {titleId:string;name:string;slug:string;coverURL:string;releaseId:string;revisionId:string;chapterLabel:string}
+export interface RecentReading extends ReadReference {progress:Progress;updatedAt:number;pagePosition:number;availability:'available'|'updated'|'withdrawn'|'last-known'}
+export interface ReadingGateway {
+ account():Promise<string|null>;
+ selection(accountId:string,titleId:string):Promise<LibraryEntry|null>;
+ progress(accountId:string,titleId:string):Promise<Progress>;
+ advance(accountId:string,event:ProgressEvent):Promise<{outcome:string;progress:Progress}>;
+ list(accountId:string,after?:string,filter?:LibraryFilter):Promise<LibraryPage>;
+ recent(accountId:string,limit?:number):Promise<RecentReading[]>;
+ references(releases:string[]):Promise<ReadReference[]>;
+ save(accountId:string,input:Selection):Promise<void>;
+ remove(accountId:string,titleId:string):Promise<void>;
+}
+export interface ProgressStorage {read(scope:string,titleId:string):Promise<LocalProgress|null>;write(value:LocalProgress):Promise<void>;list(scope:string):Promise<LocalProgress[]>;recent(scope:string,limit:number):Promise<LocalProgress[]>;clearAccounts():Promise<void>;identity():{deviceId:string;sequence:number;id:string};watchAccountChange(callback:()=>void):()=>void}
 export class ReadingSession {
  row:LocalProgress|null=null;
  notice='';private saving=false;private stopped=false;private cancelTimer:(()=>void)|undefined;private stopWatch:(()=>void)|undefined;
- constructor(private gateway:ReadingGateway,private storage:ProgressStorage,private timer:Timer,private changed:()=>void){}
+ constructor(private gateway:ReadingGateway,private storage:ProgressStorage,private timer:Timer,private changed:()=>void,private now:()=>number=Date.now){}
  async start(manifest:Manifest,guestOnly=false):Promise<Progress|null>{
   this.stopWatch=this.storage.watchAccountChange(()=>{this.close();this.row=null;this.notice="account_changed";this.changed();});
   try{const account=guestOnly?null:await this.gateway.account(),scope=account||'guest',local=await this.storage.read(scope,manifest.titleId);
@@ -24,6 +38,7 @@ export class ReadingSession {
  async record(manifest:Manifest,position:Position,completed=false){
   if(!this.row||this.stopped)return;const identity=this.storage.identity(),baseVersion=this.row.progress.version;
   this.row.progress={...this.row.progress,...position,releaseId:manifest.releaseId,revisionId:manifest.revisionId,deviceId:identity.deviceId,sequence:identity.sequence};
+  this.row.updatedAt=this.now();this.row.name=manifest.titleName;this.row.slug=manifest.titleSlug;this.row.coverURL=manifest.coverURL||'';this.row.chapterLabel=manifest.chapterLabel;this.row.pagePosition=Math.max(1,manifest.pages.findIndex(page=>page.id===position.pageId)+1);
   if(this.row.scope!=='guest')this.row.pending={...identity,baseVersion,titleId:manifest.titleId,releaseId:manifest.releaseId,revisionId:manifest.revisionId,...position,completed};
   try{await this.storage.write(this.row);this.notice=this.row.conflict?"progress_conflict":this.row.scope==='guest'?"progress_local_saved":"progress_pending";this.changed();if(completed)void this.flush();else if(!this.cancelTimer)this.cancelTimer=this.timer.later(()=>{this.cancelTimer=undefined;void this.flush();},15000);}catch{this.notice="storage_unavailable";this.changed();}
  }

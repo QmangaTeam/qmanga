@@ -10,9 +10,10 @@ export function fragmentFrom(value: unknown): Fragment {
 }
 export function manifestFrom(value: unknown): Manifest {
  const item=record(value),team=record(item.team);
+ const coverURL=typeof item.cover_url==='string'?item.cover_url:'';if(coverURL&&!/^\/api\/v1\/media\/[A-Za-z0-9_-]+$/.test(coverURL))throw new Error('Invalid cover');
  if(!Array.isArray(item.pages)||!item.pages.length)throw new Error('Тарауда дайын беттер жоқ');
  const pages=item.pages.map(value=>{const page=record(value),variants=record(page.variants),mapped={} as Record<Tier,Fragment[]>;for(const tier of ['eco','standard','high'] as Tier[]){if(!Array.isArray(variants[tier])||!variants[tier].length)throw new Error('Сурет сапасы дайын емес');mapped[tier]=(variants[tier] as unknown[]).map(fragmentFrom);}return {id:text(page.id),position:number(page.position),width:number(page.width),height:number(page.height),variants:mapped};});
- return {source:typeof item.source_note==='string'?item.source_note:'',credits:typeof item.credits==='string'?item.credits:'',releaseId:text(item.release_id),revisionId:text(item.revision_id),titleId:text(item.title_id),titleSlug:text(item.title_slug),titleName:text(item.title_name),chapterLabel:text(item.chapter_label),chapterOrder:number(item.chapter_order),projectId:text(item.project_id),kind:text(item.kind),direction:item.direction==='rtl'?'rtl':'ltr',team:{id:text(team.id),name:text(team.name)},previousId:text(item.previous_release_id),nextId:text(item.next_release_id),pages};
+ return {coverURL,source:typeof item.source_note==='string'?item.source_note:'',credits:typeof item.credits==='string'?item.credits:'',releaseId:text(item.release_id),revisionId:text(item.revision_id),titleId:text(item.title_id),titleSlug:text(item.title_slug),titleName:text(item.title_name),chapterLabel:text(item.chapter_label),chapterOrder:number(item.chapter_order),projectId:text(item.project_id),kind:text(item.kind),direction:item.direction==='rtl'?'rtl':'ltr',team:{id:text(team.id),name:text(team.name)},previousId:text(item.previous_release_id),nextId:text(item.next_release_id),pages};
 }
 export class HttpReaderGateway implements ReaderGateway {
  constructor(private api: ApiClient) {}

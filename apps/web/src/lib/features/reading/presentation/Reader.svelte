@@ -15,6 +15,7 @@
  import Discussion from '../../community/presentation/Discussion.svelte';
  import ReportForm from '../../community/presentation/ReportForm.svelte';
  import {ThrottledSave} from '../application/throttled-save';
+ import {ChapterDirectory} from '../application/chapter-directory';
  import type {Position} from '../domain/policies';
  let {manifest,preview='',offlineTier,downloads,readingGateway,progressStorage,community,gateway,catalogue,platform,images,timer}:{manifest:Manifest;preview?:string;offlineTier?:Tier;downloads?:Downloads;readingGateway?:ReadingGateway;progressStorage?:ProgressStorage;community?:CommunityGateway;gateway:ReaderGateway;catalogue:CatalogGateway;platform:ReaderPlatform;images:(first?:HTMLImageElement)=>ImageLoader;timer:Timer}=$props();
  let preferences=$state<ReaderPreferences>({quality:'auto',mode:untrack(()=>manifest.kind)==='manga'?'pages':'strip',theme:'dark',fit:'width',maxWidth:1024,brightness:100,numbers:true,direction:'auto'});
@@ -23,7 +24,9 @@
  let userNavigated=false;
  let queue:ImageQueue|undefined,version=$state(0),mounted=$state(false),switching=$state(false),message=$state(''),panel=$state<''|'settings'|'chapters'>('');
  let closePanel:(()=>void)|undefined,saver:ThrottledSave<{manifest:Manifest;position:Position;completed:boolean}>|undefined;
- let chapters=$state<Chapter[]>([]),cursor=$state<string|null>(null),chapterBusy=$state(false),query=$state(''),reverse=$state(false),original=$state<{url:string;bytes:number}|null>(null);
+ let chapterVersion=$state(0),query=$state(''),reverse=$state(false),original=$state<{url:string;bytes:number}|null>(null);
+ const chapterDirectory=new ChapterDirectory(untrack(()=>catalogue),untrack(()=>manifest.titleSlug),()=>chapterVersion++);
+ const chapters=$derived.by(()=>{chapterVersion;return chapterDirectory.items;}),cursor=$derived.by(()=>{chapterVersion;return chapterDirectory.nextCursor;}),chapterBusy=$derived.by(()=>{chapterVersion;return chapterDirectory.busy;}),chapterFailed=$derived.by(()=>{chapterVersion;return chapterDirectory.failed;});
  let download=$state<Download|null>(null),downloadBusy=$state(false),downloadController:AbortController|undefined;
  let session:ReadingSession|undefined,progressVersion=$state(0);
  const navigation=new PageNavigation(untrack(()=>manifest.pages.length));
@@ -36,7 +39,7 @@
  const direction=$derived(navigationDirection(preferences.mode,preferences.direction));
  const leftStep=$derived(pageStep('left',direction)),rightStep=$derived(pageStep('right',direction));
  const canStep=(delta:number)=>pageIndex+delta>=0&&pageIndex+delta<manifest.pages.length;
- const shownChapters=$derived(chapters.filter(chapter=>(chapter.label+' '+chapter.name).toLocaleLowerCase('kk').includes(query.toLocaleLowerCase('kk'))).sort((left,right)=>reverse?left.order-right.order:right.order-left.order));
+ const shownChapters=$derived(chapters);
  const qualityNames=$derived({auto:copy($locale,"Автоматты"),eco:copy($locale,"Үнемді"),standard:copy($locale,"Қалыпты"),high:copy($locale,"Жоғары")});
  $effect(()=>{if(!mounted||!queue||switching)return;const items=sheet.items;const wanted=[...items.slice(current.start,current.end+1),...items.slice(current.end+1,current.end+3),...items.slice(Math.max(0,current.start-1),current.start)];untrack(()=>queue?.want(wanted));});
  $effect(()=>{if(!mounted||!current.position.pageId||preview)return;const position=current.position,finished=current.pageIndex===manifest.pages.length-1&&viewport.top+viewport.height>=sheet.total*viewport.width-20;untrack(()=>saver?.offer({manifest,position:finished?{pageId:position.pageId,fraction:1}:position,completed:finished}));});
@@ -64,7 +67,7 @@
  async function navigate(request:PageRequest,fraction=0,persist=true){pageIndex=request.index;message='';const position={pageId:manifest.pages[request.index].id,fraction};await tick();if(!mounted||!navigation.current(request))return;platform.scroll(stage,anchorOffset(sheet.items,position,viewport.width));navigation.finish(request);if(persist&&!preview){saver?.offer({manifest,position,completed:false});void saver?.flush();}}
  async function openPanel(value:'settings'|'chapters') {panel=value;await tick();closePanel=platform.panel(dialog,()=>{panel='';closePanel=undefined;});if(value==='chapters'&&!chapters.length&&!preview)await loadChapters();}
  function dismiss() {const stop=closePanel;closePanel=undefined;panel='';stop?.();}
- async function loadChapters() {chapterBusy=true;try{const result=await catalogue.chapters(manifest.titleSlug,cursor||undefined);chapters=[...chapters,...result.items];cursor=result.nextCursor;}catch{message="chapters_failed";}finally{chapterBusy=false;}}
+ async function loadChapters(reset=false) {if(reset||!chapters.length)await chapterDirectory.search(query,reverse?'asc':'desc');else await chapterDirectory.more();}
  async function getOriginal() {original=null;message='';try{original=await gateway.original(manifest.releaseId,manifest.pages[current.pageIndex].id);}catch{message="original_unavailable";}}
  const releaseFor=(chapter:Chapter)=>chapter.releases.find(release=>release.projectId===manifest.projectId);
  async function saveOffline(){if(!downloads)return;downloadBusy=true;downloadController=new AbortController();try{await downloads.save(manifest,tier,downloadController.signal,value=>download=value);}catch(failure){message=failureCode(failure);}finally{downloadBusy=false;}}
@@ -122,7 +125,7 @@
   {:else if panel==='chapters'}
    <div class="drawer-body"><label>{copy($locale,"Бетке өту")}<select value={current.pageIndex} onchange={event=>{void goPage(Number(event.currentTarget.value));dismiss();}}>{#each manifest.pages as source,index}<option value={index}>{text($locale,(index+1)+'-бет','Страница '+(index+1))}</option>{/each}</select></label>
     <p class="hint">{text($locale,'Аударма командасы:','Команда перевода:')} {manifest.team.name}. {text($locale,'Басқа командаға автоматты ауыспайды.','Не переключается на другую команду автоматически.')}</p>
-    {#if !preview}<label>{copy($locale,"Тарауды іздеу")}<input type="search" bind:value={query} placeholder={copy($locale,"Тарау нөмірі немесе атауы")}/></label><button onclick={()=>reverse=!reverse}>{reverse?copy($locale,"Жаңасы алдымен ↓"):copy($locale,"Ескісі алдымен ↑")}</button><div class="chapter-list">{#each shownChapters as chapter}{@const release=releaseFor(chapter)}{#if release}<a class:current={release.id===manifest.releaseId} href={`/read/${release.id}`}><strong>{text($locale,chapter.label+'-тарау','Глава '+chapter.label)}</strong><span>{chapter.name}</span></a>{/if}{/each}</div>{#if chapterBusy}<p role="status">{copy($locale,"Жүктелуде…")}</p>{:else if cursor}<button onclick={loadChapters}>{copy($locale,"Тағы жүктеу")}</button>{/if}{/if}
+    {#if !preview}<form onsubmit={event=>{event.preventDefault();void loadChapters(true);}}><label>{copy($locale,"Тарауды іздеу")}<input type="search" bind:value={query} maxlength="80" placeholder={copy($locale,"Тарау нөмірі немесе атауы")}/></label><button type="submit">{text($locale,'Іздеу','Найти')}</button></form><button onclick={()=>{reverse=!reverse;void loadChapters(true);}}>{reverse?copy($locale,"Жаңасы алдымен ↓"):copy($locale,"Ескісі алдымен ↑")}</button><div class="chapter-list">{#each shownChapters as chapter}{@const release=releaseFor(chapter)}{#if release}<a class:current={release.id===manifest.releaseId} href={`/read/${release.id}`}><strong>{text($locale,chapter.label+'-тарау','Глава '+chapter.label)}</strong><span>{chapter.name}</span></a>{/if}{/each}</div>{#if chapterFailed}<p role="alert">{noticeText($locale,'chapters_failed')}</p><button onclick={()=>loadChapters(true)}>{text($locale,'Қайталау','Повторить')}</button>{:else if chapterBusy}<p role="status">{copy($locale,"Жүктелуде…")}</p>{:else if cursor}<button onclick={()=>loadChapters()}>{copy($locale,"Тағы жүктеу")}</button>{:else if !shownChapters.some(chapter=>releaseFor(chapter))}<p>{text($locale,'Бұл командада сәйкес тарау жоқ.','У этой команды нет подходящих глав.')}</p>{/if}{/if}
    </div>
   {/if}
  </dialog>

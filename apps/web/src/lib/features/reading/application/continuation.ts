@@ -1,26 +1,17 @@
-import type {ReadingGateway,ProgressStorage} from './progress';
+import type {ReadingGateway,ProgressStorage,RecentReading,ReadReference} from './progress';
 
-export interface Continuation {titleId:string;name:string;slug:string;releaseId:string}
+export type Continuation = RecentReading;
 
 export async function loadContinuation(gateway:ReadingGateway,storage:ProgressStorage,limit=4):Promise<Continuation[]> {
- if(limit<=0)return [];
+ limit=Math.min(12,Math.max(0,Math.floor(limit)));if(!limit)return [];
  const account=await gateway.account();
- if(!account)return (await storage.list('guest')).filter(row=>row.progress.releaseId).slice(0,limit).map(row=>({...row,releaseId:row.progress.releaseId}));
- const rows:Continuation[]=[];
- const seen=new Set<string>();
- let cursor:string|undefined;
- while(rows.length<limit){
-  const page=await gateway.list(account,cursor);
-  for(const item of page.items){
-   if(!item.removed&&item.status==='reading'&&item.progress.releaseId&&!seen.has(item.titleId)){
-    rows.push({titleId:item.titleId,name:item.name,slug:item.slug,releaseId:item.progress.releaseId});
-    seen.add(item.titleId);
-    if(rows.length===limit)return rows;
-   }
-  }
-  const next=page.items.at(-1)?.titleId;
-  if(!page.hasMore||!next||next===cursor)break;
-  cursor=next;
- }
- return rows;
+ if(account)return gateway.recent(account,limit);
+ const local=(await storage.recent('guest',limit)).filter(row=>row.progress.releaseId);
+ if(!local.length)return [];
+ let references:ReadReference[]|null=null;
+ try{references=await gateway.references([...new Set(local.map(row=>row.progress.releaseId))]);}catch{}
+ return local.map(row=>{
+  const reference=references?.find(item=>item.releaseId===row.progress.releaseId&&item.titleId===row.titleId);
+  return {titleId:row.titleId,name:row.name,slug:row.slug,coverURL:row.coverURL||'',releaseId:row.progress.releaseId,revisionId:row.progress.revisionId,chapterLabel:row.chapterLabel||'',...reference,progress:row.progress,updatedAt:row.updatedAt||0,pagePosition:row.pagePosition||1,availability:references===null?'last-known':!reference?'withdrawn':reference.revisionId!==row.progress.revisionId?'updated':'available'};
+ });
 }

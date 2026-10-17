@@ -1,4 +1,4 @@
-import type {LibraryEntry,ReadingGateway,Selection} from './progress';
+import type {LibraryEntry,ReadingGateway,Selection,LibraryFilter,LibraryPage} from './progress';
 import {AppFailure} from '$lib/shared/domain/failure';
 export interface LibraryLocal {changeId:string;account:string;selection:Selection;entry?:LibraryEntry;pending:boolean;conflict:Selection|null;error?:string}
 export interface LibraryStorage {replace(row:LibraryLocal,expected:string):Promise<boolean>;read(account:string,title:string):Promise<LibraryLocal|null>;write(row:LibraryLocal):Promise<void>;list(account:string):Promise<LibraryLocal[]>}
@@ -36,10 +36,21 @@ export class LibrarySync {
 export class CachedReadingGateway implements ReadingGateway {
  constructor(private remote:ReadingGateway,private sync:LibrarySync){}
  account(){return this.remote.account();}
+ recent(account:string,limit=4){return this.remote.recent(account,limit);}
+ references(releases:string[]){return this.remote.references(releases);}
  progress(account:string,title:string){return this.remote.progress(account,title);}
  advance(...args:Parameters<ReadingGateway['advance']>){return this.remote.advance(...args);}
  async selection(account:string,title:string){let cloud:LibraryEntry|null=null;try{cloud=await this.remote.selection(account,title);if(cloud)await this.sync.remember(account,cloud);}catch(failure){if(!(failure instanceof AppFailure)||!['network','unavailable'].includes(failure.code))throw failure;const row=await this.sync.state(account,title);if(!row?.entry)throw failure;cloud=row.entry;}const row=await this.sync.state(account,title);return row?.pending?{...(cloud||row.entry||{name:'',slug:'',unseen:0,progress:{releaseId:''}}),...row.selection} as LibraryEntry:cloud;}
- async list(account:string,after=''){let result:{items:LibraryEntry[];hasMore:boolean};try{result=await this.remote.list(account,after);for(const item of result.items)await this.sync.remember(account,item);}catch(failure){if(!(failure instanceof AppFailure)||!['network','unavailable'].includes(failure.code))throw failure;result={items:(await this.sync.rows(account)).filter(row=>row.entry).map(row=>row.entry!),hasMore:false};}return {...result,items:await Promise.all(result.items.map(async item=>{const row=await this.sync.state(account,item.titleId);return row?.pending?{...item,...row.selection}:item;}))};}
+ async list(account:string,after='',filter:LibraryFilter={}):Promise<LibraryPage>{
+  let result:LibraryPage;
+  const matches=(item:LibraryEntry,query=false)=>!item.removed&&(!filter.status||item.status===filter.status)&&(!filter.favorite||item.favorite)&&(!query||!filter.query||(item.name+' '+item.slug).toLocaleLowerCase('kk').includes(filter.query.trim().toLocaleLowerCase('kk')));
+  try{result=await this.remote.list(account,after,filter);for(const item of result.items)await this.sync.remember(account,item);}
+  catch(failure){if(!(failure instanceof AppFailure)||!['network','unavailable'].includes(failure.code))throw failure;const cached=(await this.sync.rows(account)).filter(row=>row.entry).map(row=>({...row.entry!,...row.selection})).filter(item=>matches(item,true)&&(!after||item.titleId<after)).sort((left,right)=>right.titleId.localeCompare(left.titleId));const items=cached.slice(0,100);return {items,hasMore:cached.length>100,nextCursor:cached.length>100?items.at(-1)!.titleId:'',partial:true};}
+  const pending=(await this.sync.rows(account)).filter(row=>row.pending),byTitle=new Map(pending.map(row=>[row.selection.titleId,row]));
+  const items=result.items.map(item=>({...item,...byTitle.get(item.titleId)?.selection})).filter(item=>matches(item));
+  if(!after)for(const row of pending)if(row.entry&&!items.some(item=>item.titleId===row.selection.titleId)){const item={...row.entry,...row.selection};if(matches(item,true))items.push(item);}
+  return {...result,items,total:pending.length?undefined:result.total,partial:pending.length>0};
+ }
  save(account:string,input:Selection){return this.sync.save(account,{...input,removed:input.removed===true});}
  async remove(account:string,title:string){const row=await this.selection(account,title);if(row)await this.sync.save(account,{...row,removed:true});}
 }

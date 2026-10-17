@@ -2,7 +2,7 @@ import type { QualityPreference, Position } from '../domain/policies';
 export type Tier = 'eco' | 'standard' | 'high';
 export interface Fragment { id: string; url: string; width: number; height: number; bytes: number; offset: number; mime: string; checksum: string }
 export interface SourcePage { id: string; position: number; width: number; height: number; variants: Record<Tier, Fragment[]> }
-export interface Manifest { source?:string;credits?:string; releaseId: string; revisionId: string; titleId: string; titleSlug: string; titleName: string; chapterLabel: string; chapterOrder: number; projectId: string; team: {id: string; name: string}; kind: string; direction: 'ltr' | 'rtl'; previousId: string; nextId: string; pages: SourcePage[] }
+export interface Manifest { source?:string;credits?:string;coverURL?:string; releaseId: string; revisionId: string; titleId: string; titleSlug: string; titleName: string; chapterLabel: string; chapterOrder: number; projectId: string; team: {id: string; name: string}; kind: string; direction: 'ltr' | 'rtl'; previousId: string; nextId: string; pages: SourcePage[] }
 export interface ReaderGateway { manifest(releaseId: string, preview?: string): Promise<Manifest>; original(releaseId: string, pageId: string): Promise<Fragment> }
 export interface ImageReference { url: string }
 export interface ImageTask { done: Promise<ImageReference>; cancel(): void }
