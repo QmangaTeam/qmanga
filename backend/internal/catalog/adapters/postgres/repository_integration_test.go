@@ -151,6 +151,20 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 	if failure != nil || len(chapterPage.Items) != 2 || chapterPage.Items[0].Label != "1.10" || chapterPage.NextOrder != nil {
 		testingTarget.Fatalf("fractional labels reordered or private revision exposed: %+v %v", chapterPage, failure)
 	}
+	searchPage, failure := service.Chapters(ctx, title.Slug, 0, 1, application.ChapterFilter{Query: "1.1", Sort: "desc"})
+	if failure != nil || len(searchPage.Items) != 1 || searchPage.Items[0].Label != "1.10" || searchPage.NextOrder == nil {
+		testingTarget.Fatalf("descending chapter search failed: %+v %v", searchPage, failure)
+	}
+	searchPage, failure = service.Chapters(ctx, title.Slug, *searchPage.NextOrder, 1, application.ChapterFilter{Query: "1.1", Sort: "desc"})
+	if failure != nil || len(searchPage.Items) != 1 || searchPage.Items[0].Label != "1.1" || searchPage.NextOrder != nil {
+		testingTarget.Fatalf("descending chapter cursor failed: %+v %v", searchPage, failure)
+	}
+	for _, query := range []string{"%", "_", "Арнайы"} {
+		searchPage, failure = service.Chapters(ctx, title.Slug, 0, 50, application.ChapterFilter{Query: query})
+		if failure != nil || len(searchPage.Items) != 0 {
+			testingTarget.Fatalf("wildcard or private chapter exposed: %q %+v %v", query, searchPage, failure)
+		}
+	}
 	for _, actorID := range []string{"reader", "foreign"} {
 		projects, failure := service.StudioProjects(ctx, actorID)
 		expected := 1

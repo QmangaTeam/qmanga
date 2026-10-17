@@ -1,0 +1,2 @@
+import type {Locale} from '$lib/features/preferences/domain/locale';
+export function reportCategories(locale:Locale):Record<string,string>{return locale==='ru'?{image:'Ошибка изображения',translation:'Ошибка перевода',spoiler:'Спойлер',abuse:'Оскорбительное содержание',rights:'Авторские права',other:'Другая проблема'}:{image:'Сурет қатесі',translation:'Аударма қатесі',spoiler:'Спойлер',abuse:'Әдепсіз мазмұн',rights:'Құқық мәселесі',other:'Басқа мәселе'};}

@@ -8,7 +8,7 @@ export interface ImageReference { url: string }
 export interface ImageTask { done: Promise<ImageReference>; cancel(): void }
 export interface ImageLoader { load(fragment: Fragment): ImageTask; release(image: ImageReference): void }
 export interface Timer { later(callback: () => void, milliseconds: number): () => void }
-export class MediaFailure extends Error { constructor(message: string, readonly terminal = false, readonly retryAfter = 0) { super(message); } }
+export class MediaFailure extends Error { constructor(message: string, readonly terminal = false, readonly retryAfter = 0, readonly code='media_unavailable') { super(message); } }
 export interface ReaderPreferences { quality: Exclude<QualityPreference,'original'>; mode: 'pages' | 'strip'; theme: 'dark' | 'light' | 'system'; fit: 'width' | 'height'; maxWidth: number; brightness: number; numbers: boolean; direction: 'auto' | 'ltr' | 'rtl' }
 export interface Viewport { width: number; height: number; top: number }
 export interface ReaderPlatform {

@@ -8,5 +8,8 @@
  import type { PageData } from './$types';
  let { data }: { data: PageData } = $props();
 </script>
-<Title title={data.title} chapters={data.chapters} nextURL={data.nextURL}>{#snippet library()}<LibrarySelection title={data.title} readingGateway={reading.readingGateway}/>{/snippet}</Title>
+{#key data.title.id}
+<Title title={data.title} chapters={data.chapters} nextURL={data.nextURL} firstChapter={data.firstChapter} chapterFilter={data.chapterFilter}>{#snippet library()}<LibrarySelection title={data.title} readingGateway={reading.readingGateway}/>{/snippet}</Title>
 <Discussion titleId={data.title.id} gateway={community}/>
+
+{/key}

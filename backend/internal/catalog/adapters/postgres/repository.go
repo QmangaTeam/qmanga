@@ -199,14 +199,20 @@ func (repository *Repository) ApprovedTeams(ctx context.Context, actorID string)
 	return items, rows.Err()
 }
 
-func (repository *Repository) Chapters(ctx context.Context, slug string, after, limit int) (application.ChapterPage, error) {
+func (repository *Repository) Chapters(ctx context.Context, slug string, filter application.ChapterFilter) (application.ChapterPage, error) {
+	after, limit := filter.After, filter.Limit
 	page := application.ChapterPage{Items: []application.Chapter{}}
 	var titleID string
 	failure := repository.pool.QueryRow(ctx, `SELECT title.id FROM titles title WHERE title.slug=$1 AND `+titleVisible, slug).Scan(&titleID)
 	if failure != nil {
 		return page, translate(failure)
 	}
-	rows, failure := repository.pool.Query(ctx, `SELECT outer_chapter.id,outer_chapter.label,outer_chapter.volume,outer_chapter.title_kk,outer_chapter.order_num FROM chapters outer_chapter WHERE outer_chapter.title_id=$1 AND outer_chapter.order_num>$2 AND EXISTS(SELECT 1`+publicationJoins+`WHERE chapter.id=outer_chapter.id AND `+publicationVisible+`) ORDER BY outer_chapter.order_num LIMIT $3`, titleID, after, limit+1)
+	comparison, direction := ">", "ASC"
+	if filter.Sort == "desc" {
+		comparison, direction = "<", "DESC"
+	}
+	escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(filter.Query)
+	rows, failure := repository.pool.Query(ctx, `SELECT outer_chapter.id,outer_chapter.label,outer_chapter.volume,outer_chapter.title_kk,outer_chapter.order_num FROM chapters outer_chapter WHERE outer_chapter.title_id=$1 AND ($2=0 OR outer_chapter.order_num`+comparison+`$2) AND ($4='' OR lower(outer_chapter.label) LIKE $5 OR lower(outer_chapter.title_kk) LIKE $5) AND EXISTS(SELECT 1`+publicationJoins+`WHERE chapter.id=outer_chapter.id AND `+publicationVisible+`) ORDER BY outer_chapter.order_num `+direction+` LIMIT $3`, titleID, after, limit+1, filter.Query, "%"+escaped+"%")
 	if failure != nil {
 		return page, failure
 	}

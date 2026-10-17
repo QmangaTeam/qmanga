@@ -210,7 +210,7 @@ func (handler *CatalogHandler) chapters(request *gin.Context) {
 			return
 		}
 	}
-	page, failure := handler.service.Chapters(request.Request.Context(), request.Param("slug"), after, limit)
+	page, failure := handler.service.Chapters(request.Request.Context(), request.Param("slug"), after, limit, application.ChapterFilter{Query: request.Query("q"), Sort: request.DefaultQuery("sort", "asc")})
 	if failure != nil {
 		catalogError(request, failure)
 		return

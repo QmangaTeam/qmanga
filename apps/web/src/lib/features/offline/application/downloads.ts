@@ -1,5 +1,6 @@
+import {AppFailure} from '../../../shared/domain/failure';
 import type { Fragment, Manifest, Tier } from '../../reading/application/reader';
-export interface Download {id:string;manifest:Manifest;tier:Tier;status:'partial'|'ready'|'error';files:string[];bytes:number;total:number;message:string;updatedAt:number}
+export interface Download {id:string;manifest:Manifest;tier:Tier;status:'partial'|'ready'|'error';files:string[];bytes:number;total:number;message:string;notice?:string;updatedAt:number}
 export interface DownloadStorage {
  list():Promise<Download[]>;
  write(download:Download):Promise<void>;
@@ -18,15 +19,15 @@ export class Downloads {
   const files=expectedFiles(manifest,tier),id=[manifest.releaseId,manifest.revisionId,tier].join(':'),total=files.reduce((sum,file)=>sum+file.bytes,0),existing=await this.storage.list(),current=existing.find(item=>item.id===id);
   const used=existing.reduce((sum,item)=>sum+item.bytes,0),free=await this.storage.available();
   const ceiling=Math.min(200*1024*1024,free===null?200*1024*1024:used+Math.floor(free*.2));
-  if(used-(current?.bytes||0)+total>ceiling)throw new Error('Бос орын жеткіліксіз. Сақталған тарауларды өзіңіз өшіріңіз немесе үнемді сапаны таңдаңыз.');
-  const download:Download={id,manifest,tier,status:'partial',files:[],bytes:0,total,message:'',updatedAt:this.now()};
+  if(used-(current?.bytes||0)+total>ceiling)throw new AppFailure('storage_full');
+  const download:Download={id,manifest,tier,status:'partial',files:[],bytes:0,total,message:'',notice:'download_partial',updatedAt:this.now()};
   const persist=async()=>{download.updatedAt=this.now();await this.storage.write({...download,files:[...download.files]});changed({...download,files:[...download.files]});};
   await persist();
   try{
    await this.storage.install();
-   for(const fragment of files){if(signal.aborted)throw new Error('Жүктеу тоқтатылды. Дайын бөліктер сақталды.');if(!await this.storage.has(fragment))await this.storage.store(fragment,signal);if(!await this.storage.has(fragment))throw new Error('Сурет толық сақталмады');download.files.push(fragment.url);download.bytes+=fragment.bytes;await persist();}
-   download.status='ready';await persist();return download;
-  }catch(failure){download.status=signal.aborted?'partial':'error';download.message=failure instanceof Error?failure.message:'Сақтау мүмкін болмады';await persist();throw failure;}
+   for(const fragment of files){if(signal.aborted)throw new AppFailure('download_cancelled');if(!await this.storage.has(fragment))await this.storage.store(fragment,signal);if(!await this.storage.has(fragment))throw new AppFailure('download_incomplete');download.files.push(fragment.url);download.bytes+=fragment.bytes;await persist();}
+   download.status='ready';download.notice='none';await persist();return download;
+  }catch(failure){download.status=signal.aborted?'partial':'error';download.notice=signal.aborted?'download_partial':'download_failed';download.message='';await persist();throw failure;}
  }
  async reconcile(download:Download):Promise<Download> {
   const files=[];let bytes=0;for(const fragment of expectedFiles(download.manifest,download.tier)){if(await this.storage.has(fragment)){files.push(fragment.url);bytes+=fragment.bytes;}}

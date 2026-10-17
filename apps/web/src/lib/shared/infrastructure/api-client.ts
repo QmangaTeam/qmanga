@@ -1,6 +1,7 @@
 function object(value: unknown): value is Record<string, unknown> { return typeof value === 'object' && value !== null; }
-export class ApiFailure extends Error {
- constructor(readonly status: number, message: string,readonly payload?:unknown) { super(message); this.name = 'ApiFailure'; }
+import {AppFailure} from '../domain/failure';
+export class ApiFailure extends AppFailure {
+ constructor(readonly status: number, message: string,readonly payload?:unknown) { super(object(payload)&&object(payload.error)&&typeof payload.error.code==='string'?payload.error.code:status===0?'network':status===401?'unauthorized':'unavailable'); this.message=message; this.name = 'ApiFailure'; }
 }
 export class ApiClient {
  private csrf = '';

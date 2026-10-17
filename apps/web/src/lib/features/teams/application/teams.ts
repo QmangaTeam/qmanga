@@ -1,3 +1,4 @@
+import {AppFailure} from '../../../shared/domain/failure';
 import type { Team, Member, NewTeam, TeamRole } from '../domain/team';
 import { validTeam } from '../domain/team';
 export interface TeamsGateway {
@@ -11,6 +12,6 @@ export interface TeamsGateway {
  approve(teamId: string): Promise<void>;
 }
 export function requestTeam(gateway: TeamsGateway, input: NewTeam): Promise<Team> {
- if (!validTeam(input)) return Promise.reject(new Error('Атау 2–80 таңба, қысқа сілтеме латын әріптері мен дефистен тұруы керек.'));
+ if (!validTeam(input)) return Promise.reject(new AppFailure('team_validation'));
  return gateway.create({ ...input, name: input.name.trim(), description: input.description.trim() });
 }

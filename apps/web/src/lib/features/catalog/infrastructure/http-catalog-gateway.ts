@@ -1,6 +1,6 @@
 import { ApiFailure, type ApiClient } from '../../../shared/infrastructure/api-client';
 import { kinds, originalStatuses, translationStatuses } from '../domain/catalog';
-import type { CatalogGateway, CatalogFilter, Summary, Genre, Project, Release, Chapter, TitleDetail, ResultPage, PublicTeam } from '../application/catalog';
+import type { CatalogGateway, CatalogFilter, ChapterFilter, Summary, Genre, Project, Release, Chapter, TitleDetail, ResultPage, PublicTeam } from '../application/catalog';
 import type { CatalogManagementGateway } from '../application/management';
 import type { Metadata } from '../domain/metadata';
 
@@ -58,7 +58,14 @@ export class HttpCatalogGateway implements CatalogGateway {
   try { return detail(await this.api.call('/api/v1/titles/' + encodeURIComponent(slug))); }
   catch (failure) { if (failure instanceof ApiFailure && failure.status === 404) return null; throw failure; }
  }
- async chapters(slug: string, cursor?: string) { return page(await this.api.call('/api/v1/titles/' + encodeURIComponent(slug) + '/chapters' + (cursor ? '?cursor=' + encodeURIComponent(cursor) : '')), chapter); }
+ async chapters(slug: string, cursor?: string, filter:ChapterFilter={}) {
+  const query=new URLSearchParams();
+  if(cursor)query.set('cursor',cursor);
+  if(filter.query)query.set('q',filter.query);
+  if(filter.sort)query.set('sort',filter.sort);
+  if(filter.limit)query.set('limit',String(filter.limit));
+  return page(await this.api.call('/api/v1/titles/'+encodeURIComponent(slug)+'/chapters?'+query),chapter);
+ }
  async team(slug: string): Promise<PublicTeam | null> {
   try {
    const item = object(await this.api.call('/api/v1/teams/' + encodeURIComponent(slug)));

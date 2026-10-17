@@ -1,6 +1,7 @@
 import type { Kind, OriginalStatus, TranslationStatus } from '../domain/catalog';
 
 export interface CatalogFilter { query?: string; kind?: string; genre?: string; originalStatus?: string; translationStatus?: string; sort?: string }
+export interface ChapterFilter { query?:string; sort?:'asc'|'desc'; limit?:number }
 export interface Genre { id: string; name: string; slug: string }
 export interface Summary {
  id: string; slug: string; name: string; kind: Kind; originalStatus: OriginalStatus; translationStatus: TranslationStatus;
@@ -19,7 +20,7 @@ export interface CatalogGateway {
  list(filter: CatalogFilter, cursor?: string): Promise<ResultPage<Summary>>;
  genres(): Promise<Genre[]>;
  detail(slug: string): Promise<TitleDetail | null>;
- chapters(slug: string, cursor?: string): Promise<ResultPage<Chapter>>;
+ chapters(slug: string, cursor?: string, filter?:ChapterFilter): Promise<ResultPage<Chapter>>;
  team(slug: string): Promise<PublicTeam | null>;
 }
 export async function loadCatalogue(gateway: CatalogGateway, filter: CatalogFilter, cursor?: string) {

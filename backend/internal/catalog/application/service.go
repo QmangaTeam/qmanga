@@ -51,6 +51,10 @@ type ChapterPage struct {
 	Items     []Chapter
 	NextOrder *int
 }
+type ChapterFilter struct {
+	Query, Sort  string
+	After, Limit int
+}
 type Team struct {
 	ID, Slug, Name, Description string
 	Projects                    []Project
@@ -58,7 +62,7 @@ type Team struct {
 type Repository interface {
 	List(context.Context, Filter) (Page, error)
 	Detail(context.Context, string) (Detail, error)
-	Chapters(context.Context, string, int, int) (ChapterPage, error)
+	Chapters(context.Context, string, ChapterFilter) (ChapterPage, error)
 	Genres(context.Context) ([]Genre, error)
 	Team(context.Context, string) (Team, error)
 	IsAdmin(context.Context, string) (bool, error)
@@ -112,11 +116,24 @@ func (service *Service) List(ctx context.Context, filter Filter) (Page, error) {
 func (service *Service) Detail(ctx context.Context, slug string) (Detail, error) {
 	return service.repository.Detail(ctx, slug)
 }
-func (service *Service) Chapters(ctx context.Context, slug string, after, limit int) (ChapterPage, error) {
+func (service *Service) Chapters(ctx context.Context, slug string, after, limit int, options ...ChapterFilter) (ChapterPage, error) {
+	filter := ChapterFilter{}
+	if len(options) > 0 {
+		filter = options[0]
+	}
+	filter.Query = strings.ToLower(strings.TrimSpace(filter.Query))
+	if filter.Sort == "" {
+		filter.Sort = "asc"
+	}
+	if utf8.RuneCountInString(filter.Query) > 80 || (filter.Sort != "asc" && filter.Sort != "desc") {
+		return ChapterPage{}, domain.ErrInvalid
+	}
 	if limit == 0 {
 		limit = 50
 	}
-	return service.repository.Chapters(ctx, slug, max(after, 0), min(max(limit, 1), 100))
+	filter.After = max(after, 0)
+	filter.Limit = min(max(limit, 1), 100)
+	return service.repository.Chapters(ctx, slug, filter)
 }
 func (service *Service) Genres(ctx context.Context) ([]Genre, error) {
 	return service.repository.Genres(ctx)

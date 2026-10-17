@@ -1,0 +1,2 @@
+import type {Locale} from '$lib/features/preferences/domain/locale';
+export function publicationStates(locale:Locale):Record<string,string>{return locale==='ru'?{draft:'Черновик',processing:'Обработка',ready:'Готово к проверке',submitted:'На проверке',published:'Опубликовано',changes_requested:'Нужны исправления',uploading:'Загрузка',queued:'В очереди',failed:'Ошибка'}:{draft:'Қаралым',processing:'Өңделуде',ready:'Тексеруге дайын',submitted:'Тексерілуде',published:'Жарияланған',changes_requested:'Түзету қажет',uploading:'Жүктелуде',queued:'Кезекте',failed:'Қате'};}
