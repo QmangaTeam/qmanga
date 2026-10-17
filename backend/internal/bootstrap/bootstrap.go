@@ -7,6 +7,9 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/google/uuid"
+	catalogPostgres "qmanga/internal/catalog/adapters/postgres"
+	catalogApp "qmanga/internal/catalog/application"
 	identityCrypto "qmanga/internal/identity/adapters/crypto"
 	identityPostgres "qmanga/internal/identity/adapters/postgres"
 	identitySMTP "qmanga/internal/identity/adapters/smtp"
@@ -74,6 +77,8 @@ func Initialize(parentContext context.Context) (*Application, error) {
 	identityHandler.Register(httpRouter.Group("/api/v1"))
 	teamService := teamApp.New(teamPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)
 	transport.NewTeamHandler(teamService).Register(httpRouter.Group("/api/v1"), identityHandler)
+	catalogService := catalogApp.New(catalogPostgres.New(postgresClient.Pool()), uuid.NewString)
+	transport.NewCatalogHandler(catalogService).Register(httpRouter.Group("/api/v1"), identityHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf(":%s", appConfig.HTTPPort),

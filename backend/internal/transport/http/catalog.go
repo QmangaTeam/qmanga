@@ -1,0 +1,330 @@
+package http
+
+import (
+	"encoding/base64"
+	"encoding/json"
+	"errors"
+	"log"
+	"net/url"
+	"strconv"
+	"time"
+
+	"github.com/gin-gonic/gin"
+	"qmanga/internal/catalog/application"
+	"qmanga/internal/catalog/domain"
+)
+
+type CatalogHandler struct{ service *application.Service }
+
+func NewCatalogHandler(service *application.Service) *CatalogHandler {
+	return &CatalogHandler{service: service}
+}
+
+func (handler *CatalogHandler) Register(api *gin.RouterGroup, identity *IdentityHandler) {
+	api.GET("/titles", handler.list)
+	api.GET("/titles/:slug", handler.detail)
+	api.GET("/titles/:slug/chapters", handler.chapters)
+	api.GET("/genres", handler.genres)
+	api.GET("/teams/:slug", handler.team)
+	api.GET("/studio/projects", identity.RequireUser(), handler.studioProjects)
+	admin := api.Group("/admin", identity.RequireUser(), RequireRole("admin"))
+	admin.GET("/titles", handler.adminTitles)
+	admin.POST("/titles", handler.createTitle)
+	admin.POST("/genres", handler.createGenre)
+	admin.POST("/titles/:id/chapters", handler.createChapter)
+	admin.POST("/titles/:id/projects", handler.createProject)
+}
+
+type titleSummaryDTO struct {
+	ID                string    `json:"id"`
+	Slug              string    `json:"slug"`
+	Name              string    `json:"name"`
+	Kind              string    `json:"kind"`
+	OriginalStatus    string    `json:"original_status"`
+	TranslationStatus string    `json:"translation_status"`
+	CoverURL          string    `json:"cover_url"`
+	Demo              bool      `json:"demo"`
+	ChapterCount      int       `json:"chapter_count"`
+	RatingCount       int       `json:"rating_count"`
+	Score             float64   `json:"score"`
+	UpdatedAt         time.Time `json:"updated_at"`
+}
+
+func coverURL(id string) string {
+	if id == "" {
+		return ""
+	}
+	return "/api/v1/media/" + url.PathEscape(id)
+}
+func summaryView(item application.Summary) titleSummaryDTO {
+	return titleSummaryDTO{ID: item.ID, Slug: item.Slug, Name: item.Name, Kind: item.Kind, OriginalStatus: item.OriginalStatus, TranslationStatus: item.TranslationStatus, CoverURL: coverURL(item.CoverID), Demo: item.Demo, ChapterCount: item.ChapterCount, RatingCount: item.RatingCount, Score: item.Score, UpdatedAt: item.UpdatedAt}
+}
+
+type catalogueCursor struct {
+	Version  int                `json:"version"`
+	Sort     string             `json:"sort"`
+	Position application.Cursor `json:"position"`
+}
+
+func nextCursor(cursor *application.Cursor, sort string) *string {
+	if cursor == nil {
+		return nil
+	}
+	encoded, _ := json.Marshal(catalogueCursor{Version: 1, Sort: sort, Position: *cursor})
+	value := base64.RawURLEncoding.EncodeToString(encoded)
+	return &value
+}
+func queryInteger(request *gin.Context, key string, fallback, maximum int) (int, bool) {
+	value := request.Query(key)
+	if value == "" {
+		return fallback, true
+	}
+	parsed, failure := strconv.Atoi(value)
+	if failure != nil || parsed < 1 || parsed > maximum {
+		Error(request, 400, "invalid_query", "Сұрау параметрін тексеріңіз")
+		return 0, false
+	}
+	return parsed, true
+}
+func (handler *CatalogHandler) list(request *gin.Context) {
+	limit, valid := queryInteger(request, "limit", 24, 48)
+	if !valid {
+		return
+	}
+	filter := application.Filter{Query: request.Query("q"), Kind: request.Query("kind"), Genre: request.Query("genre"), OriginalStatus: request.Query("original_status"), TranslationStatus: request.Query("translation_status"), Sort: request.DefaultQuery("sort", "updated"), Limit: limit}
+	if raw := request.Query("cursor"); raw != "" {
+		decoded, failure := base64.RawURLEncoding.DecodeString(raw)
+		var cursor catalogueCursor
+		if len(raw) > 2048 || failure != nil || json.Unmarshal(decoded, &cursor) != nil || cursor.Version != 1 || cursor.Sort != filter.Sort {
+			Error(request, 400, "invalid_cursor", "Тізім сілтемесі жарамсыз")
+			return
+		}
+		filter.After = &cursor.Position
+	}
+	page, failure := handler.service.List(request.Request.Context(), filter)
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	items := make([]titleSummaryDTO, 0, len(page.Items))
+	for _, item := range page.Items {
+		items = append(items, summaryView(item))
+	}
+	request.JSON(200, gin.H{"items": items, "next_cursor": nextCursor(page.Next, filter.Sort)})
+}
+
+type genreDTO struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
+	Slug string `json:"slug"`
+}
+type projectDTO struct {
+	ID        string `json:"id"`
+	TitleID   string `json:"title_id"`
+	TeamID    string `json:"team_id"`
+	TitleName string `json:"title_name"`
+	TeamName  string `json:"team_name"`
+	TeamSlug  string `json:"team_slug"`
+	Status    string `json:"status"`
+}
+
+func projectViews(projects []application.Project) []projectDTO {
+	items := make([]projectDTO, 0, len(projects))
+	for _, item := range projects {
+		items = append(items, projectDTO{item.ID, item.TitleID, item.TeamID, item.TitleName, item.TeamName, item.TeamSlug, item.Status})
+	}
+	return items
+}
+func genreViews(genres []application.Genre) []genreDTO {
+	items := make([]genreDTO, 0, len(genres))
+	for _, item := range genres {
+		items = append(items, genreDTO{item.ID, item.Name, item.Slug})
+	}
+	return items
+}
+func (handler *CatalogHandler) detail(request *gin.Context) {
+	detail, failure := handler.service.Detail(request.Request.Context(), request.Param("slug"))
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	title := detail.Title
+	request.JSON(200, gin.H{"id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "aliases": title.Aliases, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)})
+}
+
+type releaseDTO struct {
+	ID          string    `json:"id"`
+	ProjectID   string    `json:"project_id"`
+	TeamID      string    `json:"team_id"`
+	TeamName    string    `json:"team_name"`
+	TeamSlug    string    `json:"team_slug"`
+	PublishedAt time.Time `json:"published_at"`
+}
+type chapterDTO struct {
+	ID       string       `json:"id"`
+	Label    string       `json:"label"`
+	Volume   string       `json:"volume"`
+	Name     string       `json:"name"`
+	Order    int          `json:"order"`
+	Releases []releaseDTO `json:"releases"`
+}
+
+func (handler *CatalogHandler) chapters(request *gin.Context) {
+	limit, valid := queryInteger(request, "limit", 50, 100)
+	if !valid {
+		return
+	}
+	after := 0
+	if request.Query("cursor") != "" {
+		after, valid = queryInteger(request, "cursor", 0, 1000000)
+		if !valid {
+			return
+		}
+	}
+	page, failure := handler.service.Chapters(request.Request.Context(), request.Param("slug"), after, limit)
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	items := make([]chapterDTO, 0, len(page.Items))
+	for _, chapter := range page.Items {
+		view := chapterDTO{ID: chapter.ID, Label: chapter.Label, Volume: chapter.Volume, Name: chapter.Name, Order: chapter.Order, Releases: []releaseDTO{}}
+		for _, release := range chapter.Releases {
+			view.Releases = append(view.Releases, releaseDTO{release.ID, release.ProjectID, release.TeamID, release.TeamName, release.TeamSlug, release.PublishedAt})
+		}
+		items = append(items, view)
+	}
+	var next *string
+	if page.NextOrder != nil {
+		value := strconv.Itoa(*page.NextOrder)
+		next = &value
+	}
+	request.JSON(200, gin.H{"items": items, "next_cursor": next})
+}
+func (handler *CatalogHandler) genres(request *gin.Context) {
+	items, failure := handler.service.Genres(request.Request.Context())
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	request.JSON(200, gin.H{"items": genreViews(items), "next_cursor": nil})
+}
+func (handler *CatalogHandler) team(request *gin.Context) {
+	team, failure := handler.service.Team(request.Request.Context(), request.Param("slug"))
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	request.JSON(200, gin.H{"id": team.ID, "slug": team.Slug, "name": team.Name, "description": team.Description, "projects": projectViews(team.Projects)})
+}
+func (handler *CatalogHandler) studioProjects(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	items, failure := handler.service.StudioProjects(request.Request.Context(), account.ID)
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	request.JSON(200, gin.H{"items": projectViews(items), "next_cursor": nil})
+}
+func (handler *CatalogHandler) adminTitles(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	items, failure := handler.service.AdminTitles(request.Request.Context(), account.ID)
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	views := make([]titleSummaryDTO, 0, len(items))
+	for _, item := range items {
+		views = append(views, summaryView(item))
+	}
+	request.JSON(200, gin.H{"items": views, "next_cursor": nil})
+}
+func (handler *CatalogHandler) createTitle(request *gin.Context) {
+	var input struct {
+		Slug              string   `json:"slug"`
+		Name              string   `json:"name"`
+		OriginalName      string   `json:"original_name"`
+		Kind              string   `json:"kind"`
+		OriginalStatus    string   `json:"original_status"`
+		TranslationStatus string   `json:"translation_status"`
+		Description       string   `json:"description"`
+		Direction         string   `json:"direction"`
+		Aliases           []string `json:"aliases"`
+		GenreIDs          []string `json:"genre_ids"`
+		Demo              bool     `json:"demo"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	account, _ := CurrentAccount(request)
+	title, failure := handler.service.CreateTitle(request.Request.Context(), account.ID, domain.Metadata{Slug: input.Slug, Name: input.Name, OriginalName: input.OriginalName, Kind: input.Kind, OriginalStatus: input.OriginalStatus, TranslationStatus: input.TranslationStatus, Description: input.Description, Direction: input.Direction, Aliases: input.Aliases, GenreIDs: input.GenreIDs, Demo: input.Demo})
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	request.JSON(201, gin.H{"id": title.ID, "slug": title.Slug})
+}
+func (handler *CatalogHandler) createGenre(request *gin.Context) {
+	var input struct {
+		Name string `json:"name"`
+		Slug string `json:"slug"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	account, _ := CurrentAccount(request)
+	item, failure := handler.service.CreateGenre(request.Request.Context(), account.ID, input.Name, input.Slug)
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	request.JSON(201, genreDTO{item.ID, item.Name, item.Slug})
+}
+func (handler *CatalogHandler) createChapter(request *gin.Context) {
+	var input struct {
+		Label  string `json:"label"`
+		Volume string `json:"volume"`
+		Name   string `json:"name"`
+		Order  int    `json:"order"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	account, _ := CurrentAccount(request)
+	id, failure := handler.service.CreateChapter(request.Request.Context(), account.ID, request.Param("id"), input.Label, input.Volume, input.Name, input.Order)
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	request.JSON(201, gin.H{"id": id})
+}
+func (handler *CatalogHandler) createProject(request *gin.Context) {
+	var input struct {
+		TeamID string `json:"team_id"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	account, _ := CurrentAccount(request)
+	id, failure := handler.service.CreateProject(request.Request.Context(), account.ID, request.Param("id"), input.TeamID)
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	request.JSON(201, gin.H{"id": id})
+}
+func catalogError(request *gin.Context, failure error) {
+	switch {
+	case errors.Is(failure, domain.ErrInvalid):
+		Error(request, 422, "validation", "Тайтл деректерін тексеріңіз")
+	case errors.Is(failure, domain.ErrForbidden):
+		Error(request, 403, "forbidden", "Бұл әрекетке рұқсат жоқ")
+	case errors.Is(failure, domain.ErrNotFound):
+		Error(request, 404, "not_found", "Тайтл немесе команда табылмады")
+	case errors.Is(failure, domain.ErrConflict):
+		Error(request, 409, "conflict", "Атауы немесе тарау реті бос емес")
+	default:
+		log.Printf("catalogue failure: %T", failure)
+		Error(request, 503, "unavailable", "Каталог уақытша қолжетімсіз")
+	}
+}

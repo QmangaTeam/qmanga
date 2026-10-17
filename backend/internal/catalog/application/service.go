@@ -88,8 +88,20 @@ func (service *Service) List(ctx context.Context, filter Filter) (Page, error) {
 	if filter.Sort != "updated" && filter.Sort != "name" {
 		return Page{}, domain.ErrInvalid
 	}
+	if filter.Limit == 0 {
+		filter.Limit = 24
+	}
 	filter.Limit = min(max(filter.Limit, 1), 48)
 	if filter.Kind != "" && filter.Kind != "manga" && filter.Kind != "manhwa" && filter.Kind != "manhua" {
+		return Page{}, domain.ErrInvalid
+	}
+	if filter.OriginalStatus != "" && filter.OriginalStatus != "ongoing" && filter.OriginalStatus != "completed" && filter.OriginalStatus != "hiatus" && filter.OriginalStatus != "cancelled" {
+		return Page{}, domain.ErrInvalid
+	}
+	if filter.TranslationStatus != "" && filter.TranslationStatus != "ongoing" && filter.TranslationStatus != "completed" && filter.TranslationStatus != "paused" && filter.TranslationStatus != "stopped" {
+		return Page{}, domain.ErrInvalid
+	}
+	if len(filter.Genre) > 64 || (filter.After != nil && (filter.After.ID == "" || len(filter.After.ID) > 36 || utf8.RuneCountInString(filter.After.Name) > 200 || filter.After.UpdatedAt.IsZero())) {
 		return Page{}, domain.ErrInvalid
 	}
 	return service.repository.List(ctx, filter)
@@ -98,6 +110,9 @@ func (service *Service) Detail(ctx context.Context, slug string) (Detail, error)
 	return service.repository.Detail(ctx, slug)
 }
 func (service *Service) Chapters(ctx context.Context, slug string, after, limit int) (ChapterPage, error) {
+	if limit == 0 {
+		limit = 50
+	}
 	return service.repository.Chapters(ctx, slug, max(after, 0), min(max(limit, 1), 100))
 }
 func (service *Service) Genres(ctx context.Context) ([]Genre, error) {
@@ -142,6 +157,9 @@ func (service *Service) CreateChapter(ctx context.Context, actorID, titleID, lab
 	}
 	if failure := domain.ValidateChapter(label, order); failure != nil {
 		return "", failure
+	}
+	if utf8.RuneCountInString(volume) > 32 || utf8.RuneCountInString(name) > 200 {
+		return "", domain.ErrInvalid
 	}
 	return service.repository.CreateChapter(ctx, actorID, titleID, strings.TrimSpace(label), volume, name, order)
 }
