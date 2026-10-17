@@ -38,6 +38,9 @@ func (service *Service) CancelProjectRequest(ctx context.Context, actor, id stri
 func (service *Service) StudioProject(ctx context.Context, actor, id string) (StudioProject, error) {
 	return service.repository.StudioProject(ctx, actor, id)
 }
+func (service *Service) AdminProject(ctx context.Context, actor, id string) (Project, error) {
+	return service.repository.AdminProject(ctx, actor, id)
+}
 func (service *Service) CreateStudioChapter(ctx context.Context, actor, project, label, volume, name string, order int) (string, error) {
 	label = strings.TrimSpace(label)
 	volume = strings.TrimSpace(volume)

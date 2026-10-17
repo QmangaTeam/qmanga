@@ -2,6 +2,7 @@ package http
 
 import (
 	"github.com/gin-gonic/gin"
+	"qmanga/internal/catalog/application"
 	"qmanga/internal/catalog/domain"
 )
 
@@ -77,6 +78,15 @@ func (handler *CatalogHandler) studioProject(request *gin.Context) {
 		return
 	}
 	request.JSON(200, gin.H{"id": item.Project.ID, "title_id": item.Project.TitleID, "title_name": item.Project.TitleName, "team_id": item.Project.TeamID, "team_name": item.Project.TeamName, "role": item.Role, "approved": item.Approved, "status": item.Project.Status})
+}
+func (handler *CatalogHandler) adminProject(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	item, failure := handler.service.AdminProject(request.Request.Context(), account.ID, request.Param("id"))
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	request.JSON(200, projectViews([]application.Project{item})[0])
 }
 func (handler *CatalogHandler) studioCreateChapter(request *gin.Context) {
 	var input struct {

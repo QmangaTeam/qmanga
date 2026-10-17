@@ -11,6 +11,7 @@
     "check:architecture": "bun scripts/check-boundaries.mjs",
     "check:ui-contrast": "bun scripts/check-ui-contrast.mjs",
     "test:ui": "bun test --preload ./tests/ui/setup.ts ./tests/ui",
+    "test:browser": "node --test tests/browser/*.test.mjs",
     "ui:preview": "svelte-kit sync && vite --config vite.ui-preview.config.ts",
     "check:ui-preview": "svelte-check --tsconfig ./tsconfig.ui-preview.json"
   },
@@ -20,6 +21,7 @@
     "@sveltejs/vite-plugin-svelte": "^4.0.4",
     "autoprefixer": "^10.4.20",
     "postcss": "^8.4.49",
+    "playwright": "1.62.1",
     "svelte": "^5.2.7",
     "svelte-check": "^4.1.4",
     "tailwindcss": "^3.4.17",

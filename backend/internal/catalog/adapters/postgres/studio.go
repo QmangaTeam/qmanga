@@ -200,6 +200,15 @@ func (repository *Repository) StudioProject(ctx context.Context, actor, id strin
 	}
 	return item, failure
 }
+func (repository *Repository) AdminProject(ctx context.Context, actor, id string) (application.Project, error) {
+	var item application.Project
+	failure := repository.withAdmin(ctx, actor, func(transaction pgx.Tx) error {
+		return transaction.QueryRow(ctx, `SELECT project.id,project.title_id,project.team_id,title.name_kk,title.slug,team.name,team.slug,project.status
+		 FROM projects project JOIN titles title ON title.id=project.title_id JOIN teams team ON team.id=project.team_id WHERE project.id=$1`, id).
+			Scan(&item.ID, &item.TitleID, &item.TeamID, &item.TitleName, &item.TitleSlug, &item.TeamName, &item.TeamSlug, &item.Status)
+	})
+	return item, failure
+}
 func (repository *Repository) CreateStudioChapter(ctx context.Context, actor, project, label, volume, name string, order int) (string, error) {
 	transaction, failure := repository.pool.Begin(ctx)
 	if failure != nil {

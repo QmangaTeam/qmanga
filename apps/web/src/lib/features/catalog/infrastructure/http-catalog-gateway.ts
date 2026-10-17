@@ -12,6 +12,7 @@ export class HttpCatalogManagementGateway implements CatalogManagementGateway {
  constructor(private api: ApiClient) {}
  async titles(offset=0) { return page(await this.api.call('/api/v1/admin/titles?offset='+offset), summary).items; }
  async detail(id: string) { return detail(await this.api.call('/api/v1/admin/titles/' + encodeURIComponent(id))); }
+ async project(id: string) { return project(await this.api.call('/api/v1/admin/projects/' + encodeURIComponent(id))); }
  async genres() { return page(await this.api.call('/api/v1/genres'), genre).items; }
  async teams(offset=0) { return page(await this.api.call('/api/v1/admin/catalog-teams?offset='+offset), value => { const item = object(value); return { id: text(item.id), name: text(item.name) }; }).items; }
  async save(input: Metadata, id?: string) {

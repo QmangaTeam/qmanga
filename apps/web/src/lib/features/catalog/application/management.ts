@@ -1,8 +1,9 @@
 import type { Metadata } from '../domain/metadata';
-import type { Genre, Summary, TitleDetail } from './catalog';
+import type { Genre, Summary, TitleDetail, Project } from './catalog';
 export interface CatalogManagementGateway {
  titles(offset?:number): Promise<Summary[]>;
  detail(id: string): Promise<TitleDetail>;
+ project(id: string): Promise<Project>;
  genres(): Promise<Genre[]>;
  teams(offset?:number): Promise<{ id: string; name: string }[]>;
  save(input: Metadata, id?: string): Promise<string>;

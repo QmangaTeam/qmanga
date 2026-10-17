@@ -65,4 +65,4 @@ The original MinIO upload sources remain private. Reader original quality is an 
 
 ## Product specification
 
-The [development plan](docs/DEVELOPMENT-PLAN-2026-10-18.md) is the active post-audit backlog. QMANGA-PLAN.md, QMANGA-READER.md, QMANGA-ROADMAP.md and docs/PROGRESS.md preserve the original specifications and historical milestones, not a claim that the current beta/public-launch gates passed.
+The [development plan](docs/DEVELOPMENT-PLAN-2026-10-18.md) is the active post-audit backlog; [first-package evidence and remaining gates](docs/STAGE1-VALIDATION-2026-10-18.md) distinguish local checks from unverified acceptance. QMANGA-PLAN.md, QMANGA-READER.md, QMANGA-ROADMAP.md and docs/PROGRESS.md preserve the original specifications and historical milestones, not a claim that the current beta/public-launch gates passed.

@@ -75,6 +75,38 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 	if failure != nil {
 		testingTarget.Fatal(failure)
 	}
+	testingTarget.Run("administrative project is read only and does not grant studio membership", func(testingTarget *testing.T) {
+		execute("INSERT INTO users(id,email,password_hash,role,is_verified,is_blocked) VALUES('owner','owner@example.test','test','reader',true,false),('member','member@example.test','test','reader',true,false),('moderator','moderator@example.test','test','moderator',true,false),('blocked-admin','blocked-admin@example.test','test','admin',true,true)")
+		execute("INSERT INTO team_memberships(id,team_id,user_id,role) VALUES('owner-membership','team','owner','owner'),('member-membership','team','member','member')")
+		defer execute("DELETE FROM users WHERE id IN ('owner','member','moderator','blocked-admin')")
+		defer execute("DELETE FROM team_memberships WHERE id IN ('owner-membership','member-membership')")
+		item, failure := service.AdminProject(ctx, "admin", projectID)
+		if failure != nil || item.ID != projectID || item.TitleName != "Дала үні" || item.TeamName != "Дала" || item.Status != "active" {
+			testingTarget.Fatalf("admin project context: %+v %v", item, failure)
+		}
+		for _, actor := range []string{"reader", "owner", "member", "moderator", "blocked-admin", "foreign"} {
+			if _, failure := service.AdminProject(ctx, actor, projectID); !errors.Is(failure, domain.ErrForbidden) {
+				testingTarget.Fatalf("%s administrative access: %v", actor, failure)
+			}
+		}
+		for _, actor := range []string{"admin", "moderator", "blocked-admin", "foreign"} {
+			if _, failure := service.StudioProject(ctx, actor, projectID); !errors.Is(failure, domain.ErrForbidden) {
+				testingTarget.Fatalf("%s acquired studio membership: %v", actor, failure)
+			}
+		}
+		for actor, role := range map[string]string{"owner": "owner", "reader": "editor", "member": "member"} {
+			item, failure := service.StudioProject(ctx, actor, projectID)
+			if failure != nil || item.Role != role {
+				testingTarget.Fatalf("%s studio role changed: %+v %v", actor, item, failure)
+			}
+		}
+		if _, failure := service.CreateStudioChapter(ctx, "member", projectID, "member-forbidden", "", "", 0); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatalf("member gained editor permission: %v", failure)
+		}
+		if _, failure := service.AdminProject(ctx, "admin", "missing"); !errors.Is(failure, domain.ErrNotFound) {
+			testingTarget.Fatalf("missing project: %v", failure)
+		}
+	})
 	input.Description = "Жаңартылған сипаттама"
 	input.Authors = []string{"Қаламгер"}
 	input.Featured = true

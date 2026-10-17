@@ -37,6 +37,7 @@ func (handler *CatalogHandler) Register(api *gin.RouterGroup, identity *Identity
 	admin := api.Group("/admin", identity.RequireUser(), RequireRole("admin"))
 	admin.GET("/titles", handler.adminTitles)
 	admin.GET("/titles/:id", handler.adminDetail)
+	admin.GET("/projects/:id", handler.adminProject)
 	admin.PUT("/titles/:id", handler.createTitle)
 	admin.GET("/catalog-teams", handler.approvedTeams)
 	admin.POST("/titles", handler.createTitle)

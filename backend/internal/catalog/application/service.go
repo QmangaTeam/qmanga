@@ -79,6 +79,7 @@ type Repository interface {
 	ReviewProjectRequest(context.Context, string, string, string, string, string) (domain.ProjectRequest, error)
 	CancelProjectRequest(context.Context, string, string) error
 	StudioProject(context.Context, string, string) (StudioProject, error)
+	AdminProject(context.Context, string, string) (Project, error)
 	CreateStudioChapter(context.Context, string, string, string, string, string, int) (string, error)
 	Updates(context.Context, string, string, int) (UpdatePage, error)
 	List(context.Context, Filter) (Page, error)
