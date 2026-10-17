@@ -122,6 +122,8 @@ func TestLoad_RejectsPlaceholders(testingTarget *testing.T) {
 }
 
 func TestLoad_ValidConfigurationLoadsCorrectly(testingTarget *testing.T) {
+	testingTarget.Setenv("SMTP_ADDRESS", "smtp.example.com:587")
+	testingTarget.Setenv("SMTP_FROM", "no-reply@example.com")
 	testingTarget.Setenv("APP_ENV", "production")
 	testingTarget.Setenv("PORT", "8080")
 	testingTarget.Setenv("DATABASE_URL", "postgres://qmanga:supersecretpass@postgres:5432/qmanga?sslmode=disable")

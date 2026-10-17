@@ -36,12 +36,13 @@ backend/
     config/
     postgres/          # pool and migration runner, not business queries
     s3/                # private streaming storage adapter
-    httpserver/        # cross-cutting transport concerns only
+    readiness/         # technical dependency checks
+  internal/transport/http/
+                       # Gin router, middleware, handlers and transport DTOs
   internal/<context>/
     domain/            # entities, value types, state transitions, domain errors
     application/       # use cases, commands/read models and required ports
     adapters/
-      http/            # transport DTOs, validation, status/error mapping
       postgres/        # repository implementations and transactional SQL
       smtp/            # identity mail delivery, when applicable
   migrations/
@@ -89,4 +90,4 @@ apps/web/src/
 
 ## Immediate migration
 
-The unaccepted WIP scaffold has flat `internal/config`, `store`, `storage`, `httpapi`. AGY must move infrastructure into platform packages and move transport/composition out of business logic before further feature integration. The pending identity task is re-scoped to domain/application/adapters before implementation. Existing product documents remain the functional acceptance checklist.
+The initial flat scaffold has been replaced by platform adapters, a Gin HTTP transport and explicit composition. Publication state and media limits live in a pure Go domain; reader quality, position and offline completeness policies live in pure TypeScript. Application scenarios consume ports; concrete persistence/network adapters are wired at the composition roots. Existing product documents remain the functional acceptance checklist.

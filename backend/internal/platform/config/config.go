@@ -2,6 +2,8 @@ package config
 
 import (
 	"fmt"
+	"net"
+	"net/mail"
 	"net/url"
 	"os"
 	"strconv"
@@ -21,6 +23,10 @@ type Config struct {
 	SessionSecret  string
 	CSRFSecret     string
 	AppOrigin      string
+	SMTPAddress    string
+	SMTPFrom       string
+	SMTPUsername   string
+	SMTPPassword   string
 }
 
 func Load() (Config, error) {
@@ -36,8 +42,22 @@ func Load() (Config, error) {
 	sessionSecret := strings.TrimSpace(os.Getenv("SESSION_SECRET"))
 	csrfSecret := strings.TrimSpace(os.Getenv("CSRF_SECRET"))
 	appOrigin := strings.TrimSpace(os.Getenv("APP_ORIGIN"))
+	smtpAddress := strings.TrimSpace(os.Getenv("SMTP_ADDRESS"))
+	smtpFrom := strings.TrimSpace(os.Getenv("SMTP_FROM"))
+	if smtpAddress == "" && environment != "production" {
+		smtpAddress = "mailpit:1025"
+	}
+	if smtpFrom == "" && environment != "production" {
+		smtpFrom = "no-reply@qmanga.local"
+	}
 
 	var validationErrors []string
+	if _, _, parseError := net.SplitHostPort(smtpAddress); parseError != nil {
+		validationErrors = append(validationErrors, "SMTP_ADDRESS must be host:port")
+	}
+	if parsed, parseError := mail.ParseAddress(smtpFrom); parseError != nil || parsed.Address != smtpFrom {
+		validationErrors = append(validationErrors, "SMTP_FROM must be an email address")
+	}
 
 	if environment != "development" && environment != "test" && environment != "production" {
 		validationErrors = append(validationErrors, "APP_ENV must be explicitly set to 'development', 'test', or 'production'")
@@ -149,6 +169,10 @@ func Load() (Config, error) {
 		SessionSecret:  sessionSecret,
 		CSRFSecret:     csrfSecret,
 		AppOrigin:      appOrigin,
+		SMTPAddress:    smtpAddress,
+		SMTPFrom:       smtpFrom,
+		SMTPUsername:   os.Getenv("SMTP_USERNAME"),
+		SMTPPassword:   os.Getenv("SMTP_PASSWORD"),
 	}
 
 	if len(validationErrors) > 0 {

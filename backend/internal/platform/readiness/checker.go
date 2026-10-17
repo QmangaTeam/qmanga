@@ -1,4 +1,4 @@
-package application
+package readiness
 
 import (
 	"context"

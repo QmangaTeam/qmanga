@@ -3,15 +3,19 @@ package bootstrap
 import (
 	"context"
 	"fmt"
+	"net"
 	"net/http"
 	"time"
 
-	healthHttp "qmanga/internal/health/adapters/http"
-	healthApp "qmanga/internal/health/application"
+	identityCrypto "qmanga/internal/identity/adapters/crypto"
+	identityPostgres "qmanga/internal/identity/adapters/postgres"
+	identitySMTP "qmanga/internal/identity/adapters/smtp"
+	identityApp "qmanga/internal/identity/application"
 	"qmanga/internal/platform/config"
-	"qmanga/internal/platform/httpserver"
 	"qmanga/internal/platform/postgres"
+	"qmanga/internal/platform/readiness"
 	"qmanga/internal/platform/s3"
+	transport "qmanga/internal/transport/http"
 )
 
 type Application struct {
@@ -59,10 +63,13 @@ func Initialize(parentContext context.Context) (*Application, error) {
 		return nil, fmt.Errorf("ensuring required s3 storage buckets: %w", bucketError)
 	}
 
-	healthUseCase := healthApp.NewCheckHealthUseCase("0.1.0", postgresClient, storageClient)
-	healthHandler := healthHttp.NewHandler(healthUseCase)
-	mediaHandler := httpserver.NewMediaHandler()
-	httpRouter := httpserver.NewRouter(healthHandler, mediaHandler)
+	readinessCheck := readiness.NewCheckHealthUseCase("0.1.0", postgresClient, storageClient)
+	httpRouter := transport.NewRouter(readinessCheck)
+	smtpHost, _, _ := net.SplitHostPort(appConfig.SMTPAddress)
+	mailer := identitySMTP.New(identitySMTP.Config{Address: appConfig.SMTPAddress, Host: smtpHost, From: appConfig.SMTPFrom, Username: appConfig.SMTPUsername, Password: appConfig.SMTPPassword, RequireTLS: appConfig.Environment == "production"})
+	identityService := identityApp.New(identityPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)
+	identityHandler := transport.NewIdentityHandler(identityService, appConfig.AppOrigin, appConfig.Environment == "production")
+	identityHandler.Register(httpRouter.Group("/api/v1"))
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf(":%s", appConfig.HTTPPort),

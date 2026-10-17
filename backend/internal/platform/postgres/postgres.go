@@ -25,6 +25,8 @@ type Client struct {
 	pool *pgxpool.Pool
 }
 
+func (clientInstance *Client) Pool() *pgxpool.Pool { return clientInstance.pool }
+
 func New(contextInstance context.Context, databaseURL string) (*Client, error) {
 	poolConfig, parseError := pgxpool.ParseConfig(databaseURL)
 	if parseError != nil {
