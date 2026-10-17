@@ -1,0 +1,11 @@
+.git
+.codex-agent-runs
+.env
+.env.*
+**/node_modules
+**/.svelte-kit
+**/build
+**/coverage
+.superpowers
+tmp
+
