@@ -68,6 +68,9 @@ type Repository interface {
 	CreateProject(context.Context, string, string, string, string) error
 	StudioProjects(context.Context, string) ([]Project, error)
 	AdminTitles(context.Context, string) ([]Summary, error)
+	AdminDetail(context.Context, string, string) (Detail, error)
+	UpdateTitle(context.Context, string, domain.Title) error
+	ApprovedTeams(context.Context, string) ([]Team, error)
 }
 type Service struct {
 	repository Repository
@@ -178,4 +181,27 @@ func (service *Service) AdminTitles(ctx context.Context, actorID string) ([]Summ
 		return nil, failure
 	}
 	return service.repository.AdminTitles(ctx, actorID)
+}
+
+func (service *Service) AdminDetail(ctx context.Context, actorID, id string) (Detail, error) {
+	if failure := service.admin(ctx, actorID); failure != nil {
+		return Detail{}, failure
+	}
+	return service.repository.AdminDetail(ctx, actorID, id)
+}
+func (service *Service) UpdateTitle(ctx context.Context, actorID, id string, input domain.Metadata) (domain.Title, error) {
+	if failure := service.admin(ctx, actorID); failure != nil {
+		return domain.Title{}, failure
+	}
+	title, failure := domain.NewTitle(id, input)
+	if failure != nil {
+		return title, failure
+	}
+	return title, service.repository.UpdateTitle(ctx, actorID, title)
+}
+func (service *Service) ApprovedTeams(ctx context.Context, actorID string) ([]Team, error) {
+	if failure := service.admin(ctx, actorID); failure != nil {
+		return nil, failure
+	}
+	return service.repository.ApprovedTeams(ctx, actorID)
 }

@@ -31,7 +31,7 @@ services:
     build:
       context: .
       dockerfile: infra/api.Dockerfile
-    environment:
+    environment: &api-environment
       APP_ENV: ${APP_ENV:-development}
       APP_ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
       PORT: "8080"
@@ -73,6 +73,23 @@ services:
       timeout: 4s
       retries: 10
     restart: unless-stopped
+  worker:
+    image: qmanga-api:latest
+    environment: *api-environment
+    entrypoint: ["/usr/local/bin/qmanga-worker"]
+    depends_on:
+      api: {condition: service_healthy}
+    volumes: [worker-temp:/tmp]
+    mem_limit: 768m
+    cpus: 1
+    pids_limit: 64
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    restart: unless-stopped
+    stop_grace_period: 15s
   mailpit:
     image: axllent/mailpit@sha256:b68349e3a014b90c5610bfb26b2ae36f3892d7b8cf25ee140c6c71c98d2fcf48
     user: "1000:1000"
@@ -80,7 +97,9 @@ services:
     restart: unless-stopped
   go-tests:
     profiles: ["tools"]
-    image: golang@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+    build:
+      context: .
+      dockerfile: infra/tests.Dockerfile
     working_dir: /src
     volumes: ["./backend:/src", "go-modules:/go/pkg/mod", "go-cache:/root/.cache/go-build"]
     environment:
@@ -102,6 +121,7 @@ services:
       retries: 10
     restart: unless-stopped
 volumes:
+  worker-temp:
   postgres-data:
   minio-data:
   go-modules:

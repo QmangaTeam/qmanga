@@ -9,6 +9,10 @@ var (
 	ErrImmutable    = errors.New("revision is immutable")
 	ErrTransition   = errors.New("invalid publication transition")
 	ErrInvalidImage = errors.New("image exceeds upload limits")
+	ErrForbidden    = errors.New("publication access denied")
+	ErrNotFound     = errors.New("publication not found")
+	ErrConflict     = errors.New("publication version conflict")
+	ErrWithdrawn    = errors.New("publication withdrawn")
 )
 
 type State string
@@ -34,6 +38,20 @@ type Revision struct {
 
 func NewRevision(id, releaseID string) Revision {
 	return Revision{id: id, releaseID: releaseID, state: Draft, version: 1}
+}
+func RestoreRevision(id, releaseID string, state State, version int64, pages, ready int, bytes int64) (Revision, error) {
+	if id == "" || releaseID == "" || version < 1 || pages < 0 || pages > 300 || ready < 0 || ready > pages || bytes < 0 || bytes > 500<<20 {
+		return Revision{}, ErrTransition
+	}
+	switch state {
+	case Draft, Processing, Ready, Submitted, Published, ChangesRequested:
+	default:
+		return Revision{}, ErrTransition
+	}
+	if (state == Ready || state == Submitted || state == Published) && (pages == 0 || ready != pages) {
+		return Revision{}, ErrTransition
+	}
+	return Revision{id: id, releaseID: releaseID, state: state, version: version, pageCount: pages, readyCount: ready, bytes: bytes}, nil
 }
 func (revision Revision) ID() string        { return revision.id }
 func (revision Revision) ReleaseID() string { return revision.releaseID }

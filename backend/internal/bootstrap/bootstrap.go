@@ -18,6 +18,9 @@ import (
 	"qmanga/internal/platform/postgres"
 	"qmanga/internal/platform/readiness"
 	"qmanga/internal/platform/s3"
+	"qmanga/internal/publishing/adapters/imagemagick"
+	publicationPostgres "qmanga/internal/publishing/adapters/postgres"
+	publicationApp "qmanga/internal/publishing/application"
 	teamPostgres "qmanga/internal/teams/adapters/postgres"
 	teamApp "qmanga/internal/teams/application"
 	transport "qmanga/internal/transport/http"
@@ -27,6 +30,10 @@ type Application struct {
 	Config         config.Config
 	Server         *http.Server
 	PostgresClient *postgres.Client
+	Publishing     *publicationApp.Service
+	Worker         *publicationApp.Worker
+	Catalogue      *catalogApp.Service
+	Teams          *teamApp.Service
 }
 
 func Initialize(parentContext context.Context) (*Application, error) {
@@ -79,6 +86,9 @@ func Initialize(parentContext context.Context) (*Application, error) {
 	transport.NewTeamHandler(teamService).Register(httpRouter.Group("/api/v1"), identityHandler)
 	catalogService := catalogApp.New(catalogPostgres.New(postgresClient.Pool()), uuid.NewString)
 	transport.NewCatalogHandler(catalogService).Register(httpRouter.Group("/api/v1"), identityHandler)
+	publicationRepository := publicationPostgres.New(postgresClient.Pool())
+	publicationService := publicationApp.New(publicationRepository, storageClient, uuid.NewString)
+	transport.NewPublishingHandler(publicationService).Register(httpRouter, identityHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf(":%s", appConfig.HTTPPort),
@@ -91,6 +101,10 @@ func Initialize(parentContext context.Context) (*Application, error) {
 		Config:         appConfig,
 		Server:         httpServer,
 		PostgresClient: postgresClient,
+		Publishing:     publicationService,
+		Worker:         publicationApp.NewWorker(publicationRepository, storageClient, imagemagick.New(), uuid.NewString),
+		Catalogue:      catalogService,
+		Teams:          teamService,
 	}
 
 	return appInstance, nil

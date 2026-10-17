@@ -75,6 +75,17 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 	if failure != nil {
 		testingTarget.Fatal(failure)
 	}
+	input.Description = "Жаңартылған сипаттама"
+	if _, failure = service.UpdateTitle(ctx, "reader", title.ID, input); !errors.Is(failure, domain.ErrForbidden) {
+		testingTarget.Fatal("reader edited metadata")
+	}
+	if _, failure = service.UpdateTitle(ctx, "admin", title.ID, input); failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	privateDetail, failure := service.AdminDetail(ctx, "admin", title.ID)
+	if failure != nil || privateDetail.Title.Description != input.Description {
+		testingTarget.Fatal("metadata editing failed", failure)
+	}
 	chapters := make([]string, 0)
 	for position, label := range []string{"1", "1.1", "1.10", "2", "Арнайы"} {
 		chapterID, failure := service.CreateChapter(ctx, "admin", title.ID, label, "1", "", position+1)

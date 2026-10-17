@@ -107,10 +107,23 @@ func (repository *Repository) List(ctx context.Context, filter application.Filte
 }
 
 func (repository *Repository) Detail(ctx context.Context, slug string) (application.Detail, error) {
+	return repository.detail(ctx, "title.slug=$1 AND "+titleVisible, slug, true)
+}
+func (repository *Repository) AdminDetail(ctx context.Context, actorID, id string) (application.Detail, error) {
+	allowed, failure := repository.IsAdmin(ctx, actorID)
+	if failure != nil {
+		return application.Detail{}, failure
+	}
+	if !allowed {
+		return application.Detail{}, domain.ErrForbidden
+	}
+	return repository.detail(ctx, "title.id=$1", id, false)
+}
+func (repository *Repository) detail(ctx context.Context, condition, id string, public bool) (application.Detail, error) {
 	detail := application.Detail{Genres: []application.Genre{}, Projects: []application.Project{}}
 	title := &detail.Title
 	failure := repository.pool.QueryRow(ctx, `SELECT title.id,title.slug,title.name_kk,title.name_original,title.aliases,title.type,title.status_original,title.status_translation,title.description_kk,title.direction,title.is_demo,title.cover_asset_id,
- coalesce((SELECT avg(score)::float8 FROM ratings WHERE title_id=title.id),0),(SELECT count(*) FROM ratings WHERE title_id=title.id) FROM titles title WHERE title.slug=$1 AND `+titleVisible, slug).Scan(&title.ID, &title.Slug, &title.Name, &title.OriginalName, &title.Aliases, &title.Kind, &title.OriginalStatus, &title.TranslationStatus, &title.Description, &title.Direction, &title.Demo, &detail.CoverID, &detail.Score, &detail.RatingCount)
+ coalesce((SELECT avg(score)::float8 FROM ratings WHERE title_id=title.id),0),(SELECT count(*) FROM ratings WHERE title_id=title.id) FROM titles title WHERE `+condition, id).Scan(&title.ID, &title.Slug, &title.Name, &title.OriginalName, &title.Aliases, &title.Kind, &title.OriginalStatus, &title.TranslationStatus, &title.Description, &title.Direction, &title.Demo, &detail.CoverID, &detail.Score, &detail.RatingCount)
 	if failure != nil {
 		return detail, translate(failure)
 	}
@@ -132,8 +145,58 @@ func (repository *Repository) Detail(ctx context.Context, slug string) (applicat
 	if failure != nil {
 		return detail, failure
 	}
-	detail.Projects, failure = repository.projects(ctx, `outer_project.title_id=$1 AND EXISTS(SELECT 1`+publicationJoins+` WHERE publication.project_id=outer_project.id AND `+publicationVisible+`)`, title.ID)
+	projectCondition := `outer_project.title_id=$1`
+	if public {
+		projectCondition += ` AND EXISTS(SELECT 1` + publicationJoins + ` WHERE publication.project_id=outer_project.id AND ` + publicationVisible + `)`
+	}
+	detail.Projects, failure = repository.projects(ctx, projectCondition, title.ID)
 	return detail, failure
+}
+
+func (repository *Repository) UpdateTitle(ctx context.Context, actorID string, title domain.Title) error {
+	return repository.withAdmin(ctx, actorID, func(transaction pgx.Tx) error {
+		search := strings.ToLower(title.Name + " " + title.OriginalName + " " + strings.Join(title.Aliases, " "))
+		result, failure := transaction.Exec(ctx, `UPDATE titles SET slug=$2,name_kk=$3,name_original=$4,aliases=$5,type=$6,status_original=$7,status_translation=$8,description_kk=$9,direction=$10,is_demo=$11,search_text=$12,updated_at=now() WHERE id=$1`, title.ID, title.Slug, title.Name, title.OriginalName, title.Aliases, title.Kind, title.OriginalStatus, title.TranslationStatus, title.Description, title.Direction, title.Demo, search)
+		if failure != nil {
+			return failure
+		}
+		if result.RowsAffected() != 1 {
+			return domain.ErrNotFound
+		}
+		if _, failure = transaction.Exec(ctx, "DELETE FROM title_genres WHERE title_id=$1", title.ID); failure != nil {
+			return failure
+		}
+		for _, genreID := range title.GenreIDs {
+			if _, failure = transaction.Exec(ctx, "INSERT INTO title_genres(title_id,genre_id) VALUES($1,$2)", title.ID, genreID); failure != nil {
+				return failure
+			}
+		}
+		_, failure = transaction.Exec(ctx, "INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id) VALUES($1,$2,'update','title',$3)", uuid.NewString(), actorID, title.ID)
+		return failure
+	})
+}
+func (repository *Repository) ApprovedTeams(ctx context.Context, actorID string) ([]application.Team, error) {
+	allowed, failure := repository.IsAdmin(ctx, actorID)
+	if failure != nil {
+		return nil, failure
+	}
+	if !allowed {
+		return nil, domain.ErrForbidden
+	}
+	rows, failure := repository.pool.Query(ctx, "SELECT id,name,slug,description FROM teams WHERE is_approved ORDER BY name LIMIT 100")
+	if failure != nil {
+		return nil, failure
+	}
+	defer rows.Close()
+	items := []application.Team{}
+	for rows.Next() {
+		var item application.Team
+		if failure = rows.Scan(&item.ID, &item.Name, &item.Slug, &item.Description); failure != nil {
+			return nil, failure
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
 }
 
 func (repository *Repository) Chapters(ctx context.Context, slug string, after, limit int) (application.ChapterPage, error) {

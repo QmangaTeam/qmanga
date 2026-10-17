@@ -29,6 +29,9 @@ func (handler *CatalogHandler) Register(api *gin.RouterGroup, identity *Identity
 	api.GET("/studio/projects", identity.RequireUser(), handler.studioProjects)
 	admin := api.Group("/admin", identity.RequireUser(), RequireRole("admin"))
 	admin.GET("/titles", handler.adminTitles)
+	admin.GET("/titles/:id", handler.adminDetail)
+	admin.PUT("/titles/:id", handler.createTitle)
+	admin.GET("/catalog-teams", handler.approvedTeams)
 	admin.POST("/titles", handler.createTitle)
 	admin.POST("/genres", handler.createGenre)
 	admin.POST("/titles/:id/chapters", handler.createChapter)
@@ -149,8 +152,33 @@ func (handler *CatalogHandler) detail(request *gin.Context) {
 		catalogError(request, failure)
 		return
 	}
+	request.JSON(200, detailView(detail))
+}
+func detailView(detail application.Detail) gin.H {
 	title := detail.Title
-	request.JSON(200, gin.H{"id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "aliases": title.Aliases, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)})
+	return gin.H{"id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "aliases": title.Aliases, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
+}
+func (handler *CatalogHandler) adminDetail(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	detail, failure := handler.service.AdminDetail(request.Request.Context(), account.ID, request.Param("id"))
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	request.JSON(200, detailView(detail))
+}
+func (handler *CatalogHandler) approvedTeams(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	items, failure := handler.service.ApprovedTeams(request.Request.Context(), account.ID)
+	if failure != nil {
+		catalogError(request, failure)
+		return
+	}
+	views := []gin.H{}
+	for _, item := range items {
+		views = append(views, gin.H{"id": item.ID, "name": item.Name, "slug": item.Slug})
+	}
+	request.JSON(200, gin.H{"items": views, "next_cursor": nil})
 }
 
 type releaseDTO struct {
@@ -258,12 +286,23 @@ func (handler *CatalogHandler) createTitle(request *gin.Context) {
 		return
 	}
 	account, _ := CurrentAccount(request)
-	title, failure := handler.service.CreateTitle(request.Request.Context(), account.ID, domain.Metadata{Slug: input.Slug, Name: input.Name, OriginalName: input.OriginalName, Kind: input.Kind, OriginalStatus: input.OriginalStatus, TranslationStatus: input.TranslationStatus, Description: input.Description, Direction: input.Direction, Aliases: input.Aliases, GenreIDs: input.GenreIDs, Demo: input.Demo})
+	metadata := domain.Metadata{Slug: input.Slug, Name: input.Name, OriginalName: input.OriginalName, Kind: input.Kind, OriginalStatus: input.OriginalStatus, TranslationStatus: input.TranslationStatus, Description: input.Description, Direction: input.Direction, Aliases: input.Aliases, GenreIDs: input.GenreIDs, Demo: input.Demo}
+	var title domain.Title
+	var failure error
+	if request.Request.Method == "PUT" {
+		title, failure = handler.service.UpdateTitle(request.Request.Context(), account.ID, request.Param("id"), metadata)
+	} else {
+		title, failure = handler.service.CreateTitle(request.Request.Context(), account.ID, metadata)
+	}
 	if failure != nil {
 		catalogError(request, failure)
 		return
 	}
-	request.JSON(201, gin.H{"id": title.ID, "slug": title.Slug})
+	status := 201
+	if request.Request.Method == "PUT" {
+		status = 200
+	}
+	request.JSON(status, gin.H{"id": title.ID, "slug": title.Slug})
 }
 func (handler *CatalogHandler) createGenre(request *gin.Context) {
 	var input struct {
