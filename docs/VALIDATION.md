@@ -41,13 +41,15 @@ The local five-page JPEG chapter opens through the Go manifest/media gateway. At
 
 ## Reader navigation and codec regression follow-up
 
-The owner reported right-edge taps, buttons and arrow keys not advancing. Reproduced missing image tap targets, arrow suppression after button focus, strip mode inheriting title RTL, and a fractional CSS-pixel boundary that left the first visible page/counter on the previous source page. Navigation now has a shared application cursor with latest-request fencing; rounding within1px is accepted at boundaries. Disabled edge controls identify chapter limits. Page-mode RTL remains explicit/title-driven and consistent across all inputs.
+The owner reported right-edge taps, buttons and arrow keys not advancing. Reproduced missing image tap targets, arrow suppression after button focus, strip mode inheriting title RTL, and a fractional CSS-pixel boundary that left the first visible page/counter on the previous source page. Navigation now has a shared application cursor with latest-request fencing; rounding within1px is accepted at boundaries. Disabled edge controls identify chapter limits. Owner correction: title RTL must not mirror controls for the local audience. Default/legacy auto now means right-next and left-previous in both modes, independently of title metadata. Reverse page controls require the explicit manual setting, labeled as controls rather than source reading direction.
 
 Fresh checks:22 Bun tests/113 assertions; frontend boundaries, Svelte0 errors/warnings and production build; full Go/PostgreSQL/real-codec suite. Real JPEG/PNG/WebP inputs produce decodable WebP in all reading profiles and PNG originals; MIME, dimensions, actual byte counts and hashes are checked. A PNG masquerading as WebP is rejected. A fresh one-page upload from the owner's local test folder passed upload → worker → publication → actual RIFF/WEBP bytes, image/webp HTTP headers and SHA-256 for every eco/standard/high fragment through Go.
 
 Browser: the original five-page chapter was exercised at320/360px in both themes, in pages and strip modes. Tested a physical right-edge coordinate click, toolbar previous/next, ArrowLeft/ArrowRight after button focus, two rapid turns from1/5 to3/5, end-of-chapter disabled controls and RTL's consistent reversed sides. No horizontal overflow at320/360px; mobile toolbar targets remain44px. These are desktop-browser checks, not physical Android acceptance.
 
 ## Before a public launch
+
+Navigation policy correction verification:22 Bun tests/115 assertions, architecture and production build pass, Svelte0 errors/warnings. At360px, right-edge tap advanced3→4, toolbar next4→5, ArrowLeft5→4. The control preference offers normal and explicitly reversed page controls, with no title-driven option. No horizontal overflow at320px. The viewport override was reset after review.
 
 - Test a physical weak Android, real network interruptions, long webtoons, app backgrounding, quota/eviction and service-worker updates across browser restarts. Emulation does not establish device performance.
 - Obtain authorized content and have Kazakh UI/content terminology reviewed. No copyrighted sample pages are distributed with the repository.

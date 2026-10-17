@@ -1,7 +1,7 @@
 import type {ReaderPreferences} from './reader';
 
-export function readingDirection(mode:ReaderPreferences['mode'],preference:ReaderPreferences['direction'],source:'ltr'|'rtl'):'ltr'|'rtl' {
- return mode==='strip'?'ltr':preference==='auto'?source:preference;
+export function navigationDirection(mode:ReaderPreferences['mode'],preference:ReaderPreferences['direction']):'ltr'|'rtl' {
+ return mode==='pages'&&preference==='rtl'?'rtl':'ltr';
 }
 
 export function pageStep(side:'left'|'right',direction:'ltr'|'rtl'):number {

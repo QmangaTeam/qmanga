@@ -2,7 +2,7 @@
  import { onMount, tick, untrack } from 'svelte';
  import { anchorOffset, layout, visible, type ImageLoader, type Manifest, type ReaderGateway, type ReaderPlatform, type ReaderPreferences, type Tier, type Timer, type Viewport } from '../application/reader';
  import { ImageQueue } from '../application/scheduler';
- import {PageNavigation,readingDirection,pageStep,type PageRequest} from '../application/navigation';
+ import {PageNavigation,navigationDirection,pageStep,type PageRequest} from '../application/navigation';
  import { chooseQuality } from '../domain/policies';
  import type { CatalogGateway, Chapter } from '../../catalog/application/catalog';
  import type {Download,Downloads} from '../../offline/application/downloads';
@@ -28,7 +28,7 @@
  const current=$derived(visible(sheet.items,viewport));
  const start=$derived(Math.max(0,current.start-1)),end=$derived(Math.min(sheet.items.length,current.end+2));
  const painted=$derived.by(()=>{version;return sheet.items.slice(start,end+1).map(item=>({item,state:queue?.entries.get(item.id)}));});
- const direction=$derived(readingDirection(preferences.mode,preferences.direction,manifest.direction));
+ const direction=$derived(navigationDirection(preferences.mode,preferences.direction));
  const leftStep=$derived(pageStep('left',direction)),rightStep=$derived(pageStep('right',direction));
  const canStep=(delta:number)=>pageIndex+delta>=0&&pageIndex+delta<manifest.pages.length;
  const shownChapters=$derived(chapters.filter(chapter=>(chapter.label+' '+chapter.name).toLocaleLowerCase('kk').includes(query.toLocaleLowerCase('kk'))).sort((left,right)=>reverse?left.order-right.order:right.order-left.order));
@@ -104,8 +104,8 @@
     {#if switching}<p role="status">Жаңа сапа жүктелуде. Ескі сурет сақталады…</p>{/if}
     <label>Тақырып<select bind:value={preferences.theme}><option value="dark">Қараңғы</option><option value="light">Ашық</option><option value="system">Жүйедегідей</option></select></label>
     <label>Суретті сыйдыру<select bind:value={preferences.fit}><option value="width">Ені бойынша</option><option value="height">Биіктігі бойынша</option></select></label>
-    <label>Оқу бағыты<select bind:value={preferences.direction}><option value="auto">Тайтлға сәйкес</option><option value="ltr">Солдан оңға</option><option value="rtl">Оңнан солға</option></select></label>
-    <p class="hint">Лентада: оң жақ — келесі бет, сол жақ — алдыңғы бет. Беттер режимінде бағыт жоғарыдағы таңдауға сәйкес.</p>
+    <label>Беттерді басқару<select value={preferences.direction==='rtl'?'rtl':'ltr'} onchange={event=>preferences={...preferences,direction:event.currentTarget.value as 'ltr'|'rtl'}}><option value="ltr">Оң жақ — келесі бет</option><option value="rtl">Кері: сол жақ — келесі бет</option></select></label>
+    <p class="hint">Әдетте оң жақ — келесі бет, сол жақ — алдыңғы бет. Манганың бағыты басқаруды өзгертпейді. Кері басқару тек беттер режимінде, өз таңдауыңызбен қосылады.</p>
     <label class="range">Ең үлкен ені · {preferences.maxWidth}px<input type="range" min="320" max="1600" step="20" bind:value={preferences.maxWidth}/></label>
     <label class="range">Жарықтық · {preferences.brightness}%<input type="range" min="40" max="100" step="5" bind:value={preferences.brightness}/></label>
     <label class="check"><input type="checkbox" bind:checked={preferences.numbers}/>Бет нөмірін көрсету</label>

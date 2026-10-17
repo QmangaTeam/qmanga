@@ -8,6 +8,7 @@ Updated: 17 October 2026. Status: redesign deferred until functional MVP, by exp
 - Complete functionality first, redesign at the end. Do not interrupt catalogue, publishing or reader implementation with a cosmetic rewrite.
 - Preserve mobile-first behavior, Kazakh language and familiar reading-site navigation. Senkuro is a workflow/density reference, not permission to copy its assets, branding or private account data.
 - Use the reusable design-product-ui skill when the final presentation pass begins.
+- Reader control correction: default right-next/left-previous for this audience, including RTL manga. Title reading direction must not mirror mobile or desktop controls; reverse page controls require an explicit manual preference.
 
 ## Observed baseline
 

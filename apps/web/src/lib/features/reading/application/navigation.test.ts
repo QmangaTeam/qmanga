@@ -1,10 +1,12 @@
 import {expect,test} from 'bun:test';
-import {PageNavigation,readingDirection,pageStep} from './navigation';
+import {PageNavigation,navigationDirection,pageStep} from './navigation';
 
-test('strip controls advance on the right even for an RTL title',()=>{
- expect(readingDirection('strip','auto','rtl')).toBe('ltr');
- expect(readingDirection('pages','auto','rtl')).toBe('rtl');
- expect(readingDirection('pages','ltr','rtl')).toBe('ltr');
+test('title RTL never mirrors default controls; reverse page controls require an explicit choice',()=>{
+ expect(navigationDirection('strip','auto')).toBe('ltr');
+ expect(navigationDirection('pages','auto')).toBe('ltr');
+ expect(navigationDirection('pages','ltr')).toBe('ltr');
+ expect(navigationDirection('pages','rtl')).toBe('rtl');
+ expect(navigationDirection('strip','rtl')).toBe('ltr');
  expect(pageStep('right','ltr')).toBe(1);
  expect(pageStep('left','ltr')).toBe(-1);
  expect(pageStep('right','rtl')).toBe(-1);
