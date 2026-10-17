@@ -1,4 +1,6 @@
 import {HttpRightsGateway} from '$lib/features/community/infrastructure/http-rights-gateway';
+import {HttpProjectRequestsGateway} from '$lib/features/publishing/infrastructure/http-project-requests-gateway';
+export function createProjectRequests(){return new HttpProjectRequestsGateway(new ApiClient(globalThis.fetch.bind(globalThis)));}
 import {HttpManagementGateway} from '$lib/features/identity/infrastructure/http-management-gateway';
 export function createAccountManagement(){const {api,scope}=scopedApi();return new HttpManagementGateway(api,scope);}
 export function createRights(){return new HttpRightsGateway(globalThis.fetch.bind(globalThis));}

@@ -1,63 +1,53 @@
 <script lang="ts">
+ import {onMount} from 'svelte';
+ import {page} from '$app/stores';
+ import type {TeamsGateway} from '../application/teams';
+ import {requestTeam} from '../application/teams';
+ import {canManage,type Team,type Member} from '../domain/team';
+ import type {Account} from '$lib/features/identity/domain/account';
+ import SectionHeading from '$lib/shared/presentation/ui/SectionHeading.svelte';
+ import RequestStatus from '$lib/features/publishing/presentation/RequestStatus.svelte';
  import {useLocale,text} from '$lib/shared/presentation/locale';
- import {copy,noticeText,failureCode} from '$lib/shared/presentation/copy';
- const {locale,change:changeLanguage}=useLocale();
- import { onMount } from 'svelte';
- import type { TeamsGateway } from '../application/teams';
- import { requestTeam } from '../application/teams';
- import { canManage } from '../domain/team';
- import type { Team, Member } from '../domain/team';
- import type { Account } from '$lib/features/identity/domain/account';
- let { user, gateway }: { user: Account | null; gateway: TeamsGateway } = $props();
- let teams = $state<Team[]>([]);
- let selected = $state('');
- let moreTeams = $state(false); let moreMembers = $state(false);
- let teamOffset = $state(0); let memberOffset = $state(0);
- let members = $state<Member[]>([]);
- let name = $state(''); let slug = $state(''); let description = $state('');
- let email = $state(''); let role = $state<'member' | 'editor'>('member');
- let busy = $state(false); let error = $state(''); let notice = $state('');
- const labels = $derived({ owner: copy($locale,"Иесі"), editor: copy($locale,"Редактор"), member: copy($locale,"Қатысушы") });
- let active = $derived(teams.find(team => team.id === selected));
- function message(failure: unknown) { error = failureCode(failure); }
- async function load(append=false) { const batch = await gateway.list(append ? teamOffset : 0); moreTeams=batch.length===100; teamOffset=(append ? teamOffset : 0)+batch.length; teams=append ? [...teams,...batch.filter(team=>!teams.some(existing=>existing.id===team.id))] : batch; if (!selected && teams.length) selected = teams[0].id; if (!append) await loadMembers(); }
- async function loadMembers(append=false) { const team=active; if (!append) { members=[]; memberOffset=0; moreMembers=false; } if (!team || !canManage(team)) return; const batch=await gateway.members(team.id,append ? memberOffset : 0); if (selected!==team.id) return; moreMembers=batch.length===100; memberOffset=(append ? memberOffset : 0)+batch.length; members=append ? [...members,...batch.filter(member=>!members.some(existing=>existing.userId===member.userId))] : batch; }
- async function loadMore(kind:'teams'|'members') { busy=true; error=''; try { if(kind==='teams') await load(true); else await loadMembers(true); } catch(failure) { message(failure); } finally { busy=false; } }
- onMount(() => { if (user) load().catch(message); });
- async function create(event: SubmitEvent) {
-  event.preventDefault(); busy = true; error = ''; notice = '';
-  try { const team = await requestTeam(gateway, { name, slug, description }); teams=[team,...teams]; selected = team.id; await loadMembers(); name = ''; slug = ''; description = ''; notice = "team_requested"; } catch (failure) { message(failure); } finally { busy = false; }
- }
- async function invite(event: SubmitEvent) {
-  event.preventDefault(); if (!active) return; busy = true; error = '';
-  try { await gateway.invite(active.id, email, role); notice = "invite_sent"; email = ''; } catch (failure) { message(failure); } finally { busy = false; }
- }
- async function remove(userId: string) {
-  if (!active) return; busy = true;
-  try { await gateway.remove(active.id, userId); await loadMembers(); } catch (failure) { message(failure); } finally { busy = false; }
- }
+ import {failureCode,noticeText} from '$lib/shared/presentation/copy';
+ let {user,gateway}:{user:Account|null;gateway:TeamsGateway}=$props();const {locale}=useLocale();
+ let teams=$state<Team[]>([]),selected=$state(''),members=$state<Member[]>([]),moreTeams=$state(false),moreMembers=$state(false),teamOffset=0,memberOffset=0,loading=$state(true),busy=$state(false),error=$state(''),notice=$state('');
+ let form=$state<'new'|'edit'|null>(null),name=$state(''),slug=$state(''),description=$state(''),email=$state(''),role=$state<'member'|'editor'>('member'),removeID=$state('');
+ const active=$derived(teams.find(team=>team.id===selected));
+ const roles=$derived({owner:text($locale,'Иесі','Владелец'),editor:text($locale,'Редактор','Редактор'),member:text($locale,'Қатысушы','Участник')});
+ function open(mode:'new'|'edit'){form=mode;error='';notice='';name=mode==='edit'?active?.name||'':'';slug=mode==='edit'?active?.slug||'':'team-'+crypto.randomUUID().slice(0,8);description=mode==='edit'?active?.description||'':'';}
+ async function load(append=false){const batch=await gateway.list(append?teamOffset:0);teamOffset=(append?teamOffset:0)+batch.length;moreTeams=batch.length===100;teams=append?[...teams,...batch.filter(team=>!teams.some(old=>old.id===team.id))]:batch;if(!selected&&teams.length)selected=teams[0].id;if(!append)await loadMembers();}
+ async function loadMembers(append=false){const current=active;if(!append){members=[];memberOffset=0;moreMembers=false;removeID='';}if(!current||!canManage(current))return;const batch=await gateway.members(current.id,append?memberOffset:0);if(selected!==current.id)return;memberOffset=(append?memberOffset:0)+batch.length;moreMembers=batch.length===100;members=append?[...members,...batch]:batch;}
+ async function run(action:()=>Promise<void>){if(busy)return;busy=true;error='';notice='';try{await action();}catch(failure){error=failureCode(failure);}finally{busy=false;}}
+ onMount(()=>{if(!user){loading=false;return;}void(async()=>{try{await load();if(!teams.length||$page.url.searchParams.has('new'))open('new');}catch(failure){error=failureCode(failure);}finally{loading=false;}})();});
+ async function save(event:SubmitEvent){event.preventDefault();await run(async()=>{if(form==='edit'&&active){await gateway.update(active.id,{name,slug,description});await load();notice=text($locale,'Өзгерістер сақталды.','Изменения сохранены.');}else{const team=await requestTeam(gateway,{name,slug,description});teams=[team,...teams];selected=team.id;await loadMembers();notice=text($locale,'Команда өтінімі жіберілді. Мақұлдауды осы жерден бақыла.','Заявка команды отправлена. Здесь появится решение.');}form=null;});}
 </script>
-<svelte:head><title>{copy($locale,"Аудармашы кабинеті — Qmanga")}</title><meta name="robots" content="noindex"/></svelte:head>
-<div class="section-heading"><div><h1>{copy($locale,"Аудармашы кабинеті")}</h1></div></div>
-<a class="auth-link" href="/studio/projects">{copy($locale,"Аударма жобаларым")}</a>
-{#if !user}<div class="empty-state"><h2>{copy($locale,"Алдымен есептікжазбаңа кір")}</h2><p>{copy($locale,"Команда құру және аударма жүктеу үшін поштаң расталуы керек.")}</p><a href="/login" class="button primary">{copy($locale,"Кіру")}</a></div>
+<svelte:head><title>{text($locale,'Командаларым','Мои команды')} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>
+<SectionHeading level={1} title={text($locale,'Командалар','Команды')} description={text($locale,'Командаға өтінім бер, қатысушылар шақыр және жобаларға рұқсат ал.','Подай заявку на команду, пригласи участников и получи доступ к проектам.')}>{#snippet actions()}{#if user&&form!=='new'}<button class="button primary" onclick={()=>open('new')}>{text($locale,'Команда құру','Создать команду')}</button>{/if}{/snippet}</SectionHeading>
+{#if !user}<div class="empty-state"><h2>{text($locale,'Алдымен аккаунтқа кір','Войди в аккаунт')}</h2><p>{text($locale,'Командаға өтінім аккаунтыңа байланысады.','Заявка команды будет связана с твоим аккаунтом.')}</p><a class="button primary" href="/login?returnTo=%2Fstudio%2Fteams">{text($locale,'Кіру','Войти')}</a></div>
 {:else}
- {#if !user.verified}<p class="form-message">{copy($locale,"Поштаңды растау қажет. ")}<a href="/settings">{copy($locale,"Растау хатын қайта жіберу →")}</a></p>{/if}
- {#if error}<p class="form-message" role="alert">{noticeText($locale,error)}</p>{/if}{#if notice}<p class="form-message success" role="status">{noticeText($locale,notice)}</p>{/if}
- <div class="workspace-grid">
-  <section class="panel"><h2>{copy($locale,"Менің командаларым")}</h2>
-   {#if teams.length}<label>{copy($locale,"Команда")}<select disabled={busy} bind:value={selected} onchange={() => loadMembers().catch(message)}>{#each teams as team}<option value={team.id}>{team.name}</option>{/each}</select></label>
-   {:else}<p class="muted">{copy($locale,"Әлі командаға қосылмадың. Жаңа командаға өтінім бере аласың.")}</p>{/if}
-   {#if moreTeams}<button class="button subtle" disabled={busy} onclick={()=>loadMore('teams')}>{text($locale,'Тағы көрсету','Показать ещё')}</button>{/if}
-   {#if active}<div class="team-state"><span class:approved={active.approved} class="status-badge">{active.approved ? copy($locale,"Мақұлданған") : copy($locale,"Мақұлдау күтілуде")}</span><span>{active.role ? labels[active.role] : ''}</span></div><p class="muted">{active.description}</p>
-    {#if canManage(active)}
-     <h3>{copy($locale,"Қатысушылар")}</h3>
-     {#each members as member}<div class="member-row"><div><strong>{member.email}</strong><small>{labels[member.role]}</small></div>{#if member.role !== 'owner'}<button class="button subtle" disabled={busy} onclick={() => remove(member.userId)}>{copy($locale,"Шығару")}</button>{/if}</div>{/each}
-     {#if moreMembers}<button class="button subtle" disabled={busy} onclick={()=>loadMore('members')}>{text($locale,'Тағы көрсету','Показать ещё')}</button>{/if}
-     <form onsubmit={invite}><h3>{copy($locale,"Шақыру жіберу")}</h3><label>{copy($locale,"Пошта")}<input type="email" bind:value={email} required autocomplete="off"/></label><label>{copy($locale,"Рөл")}<select bind:value={role}><option value="member">{copy($locale,"Қатысушы")}</option><option value="editor">{copy($locale,"Редактор")}</option></select></label><button class="button primary" disabled={busy}>{copy($locale,"Шақыру")}</button></form>
-    {/if}
-   {/if}
-  </section>
-  <section class="panel"><h2>{copy($locale,"Жаңа команда")}</h2><form onsubmit={create}><label>{copy($locale,"Команда атауы")}<input bind:value={name} minlength="2" maxlength="80" required placeholder={copy($locale,"Дала тобы")}/></label><label>{copy($locale,"Қысқа сілтеме")}<input bind:value={slug} pattern="[a-z0-9]+(-[a-z0-9]+)*" minlength="3" maxlength="64" required placeholder="dala-team" autocomplete="off"/></label><label>{copy($locale,"Команда туралы")}<textarea bind:value={description} maxlength="2000" rows="4"></textarea></label><button class="button primary" disabled={busy || !user.verified}>{copy($locale,"Өтінім жіберу")}</button></form></section>
- </div>
+ {#if error}<p class="form-message" role="alert">{noticeText($locale,error)}</p>{/if}{#if notice}<p class="form-message success" role="status">{notice}</p>{/if}
+ {#if !user.verified}<div class="form-message"><strong>{text($locale,'Алдымен поштаңды раста','Сначала подтверди почту')}</strong><p>{text($locale,'Осыдан кейін командаға өтінім жібере аласың.','После этого сможешь отправить заявку команды.')}</p><a class="button subtle" href="/settings">{text($locale,'Растау хатын жіберу','Отправить письмо подтверждения')}</a></div>{/if}
+ {#if loading}<p role="status">{text($locale,'Командалар жүктелуде…','Загружаем команды…')}</p>{:else}
+ {#if form}<section class="team-form"><div class="form-heading"><h2>{form==='new'?text($locale,'Жаңа командаға өтінім','Заявка на новую команду'):text($locale,'Команда деректері','Данные команды')}</h2><button type="button" class="button subtle" disabled={busy} onclick={()=>form=null}>{text($locale,'Жабу','Закрыть')}</button></div><form onsubmit={save}>
+  <label>{text($locale,'Команда атауы','Название команды')}<input bind:value={name} required minlength="2" maxlength="80" placeholder={text($locale,'Мысалы, Дала тобы','Например, Дала тобы')}/></label>
+  <label>{text($locale,'Команда туралы','О команде')}<textarea bind:value={description} maxlength="2000" rows="4" placeholder={text($locale,'Не аударасыңдар, кім қатысады, қандай тәжірибе бар?','Что переводите, кто участвует, какой есть опыт?')}></textarea></label>
+  <details><summary>{text($locale,'Команда сілтемесі','Адрес команды')}</summary><label>{text($locale,'Сілтемедегі атау','Название в ссылке')}<input bind:value={slug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" minlength="3" maxlength="64" autocomplete="off"/></label><p class="muted">/teams/{slug}</p></details>
+  {#if form==='new'}<p class="muted">{text($locale,'Сен команда иесі боласың. Әкімші мақұлдағаннан кейін жобалар сұрай аласың.','Ты станешь владельцем команды. После одобрения администратором сможешь запрашивать проекты.')}</p>{/if}
+  <button class="button primary" disabled={busy||!user.verified}>{busy?text($locale,'Сақталуда…','Сохраняем…'):form==='new'?text($locale,'Өтінімді жіберу','Отправить заявку'):active?.reviewStatus==='rejected'?text($locale,'Қайта қарауға жіберу','Отправить на повторное рассмотрение'):text($locale,'Сақтау','Сохранить')}</button>
+ </form></section>{/if}
+ {#if teams.length}<label class="team-select">{text($locale,'Команда','Команда')}<select bind:value={selected} disabled={busy} onchange={()=>{form=null;void run(()=>loadMembers());}}>{#each teams as team}<option value={team.id}>{team.name}</option>{/each}</select></label>{/if}
+ {#if moreTeams}<button class="button subtle" disabled={busy} onclick={()=>run(()=>load(true))}>{text($locale,'Тағы командалар','Ещё команды')}</button>{/if}
+ {#if active}<section class="team"><div class="team-heading"><div><h2>{active.name}</h2><p class="muted">{active.role?roles[active.role]:''}</p></div><RequestStatus status={active.approved?'approved':active.reviewStatus||'pending'}/></div><p class="description">{active.description}</p>
+  {#if !active.approved}<div class="review-note"><h3>{active.reviewStatus==='rejected'?text($locale,'Өтінімді түзету керек','Заявку нужно исправить'):text($locale,'Өтінім қаралуда','Заявка на рассмотрении')}</h3><p>{active.reviewNote||text($locale,'Әкімші команданы тексереді. Мақұлданған соң жобаларға өтінім беруге болады.','Администратор проверит команду. После одобрения можно подавать заявки на проекты.')}</p><div class="actions"><button class="button subtle" disabled={busy} onclick={()=>run(()=>load())}>{text($locale,'Күйін жаңарту','Обновить статус')}</button>{#if canManage(active)}<button class="button subtle" onclick={()=>open('edit')}>{active.reviewStatus==='rejected'?text($locale,'Өтінімді түзету','Исправить заявку'):text($locale,'Деректерді өңдеу','Изменить данные')}</button>{/if}</div></div>
+  {:else}<div class="actions"><a class="button primary" href={'/studio/projects?team='+active.id}>{text($locale,'Команда жобалары','Проекты команды')}</a>{#if active.role==='owner'||active.role==='editor'}<a class="button subtle" href="/studio/requests?new=1">{text($locale,'Жоба сұрау','Запросить проект')}</a>{/if}{#if canManage(active)}<button class="button subtle" onclick={()=>open('edit')}>{text($locale,'Команданы өңдеу','Изменить команду')}</button>{/if}</div>{/if}
+  {#if canManage(active)}<details class="management"><summary>{text($locale,'Қатысушылар және шақырулар','Участники и приглашения')}</summary>
+   {#each members as member}<div class="member-row"><div><strong>{member.email}</strong><small>{roles[member.role]}</small></div>{#if member.role!=='owner'}<button class="button subtle" disabled={busy} onclick={()=>removeID=member.userId}>{text($locale,'Шығару','Удалить из команды')}</button>{/if}</div>{#if removeID===member.userId}<div class="review-note"><p>{text($locale,'Қатысушы команда жобаларына кіре алмайды. Қайтару үшін жаңа шақыру керек.','Участник потеряет доступ к проектам команды. Для возвращения понадобится новое приглашение.')}</p><div class="actions"><button class="button primary" disabled={busy} onclick={()=>run(async()=>{await gateway.remove(active!.id,member.userId);await loadMembers();})}>{text($locale,'Шығаруды растау','Подтвердить удаление')}</button><button class="button subtle" onclick={()=>removeID=''}>{text($locale,'Бас тарту','Отмена')}</button></div></div>{/if}{/each}
+   {#if moreMembers}<button class="button subtle" disabled={busy} onclick={()=>run(()=>loadMembers(true))}>{text($locale,'Тағы қатысушылар','Ещё участники')}</button>{/if}
+   <form onsubmit={event=>{event.preventDefault();void run(async()=>{await gateway.invite(active!.id,email,role);email='';notice=text($locale,'Шақыру поштаға жіберілді.','Приглашение отправлено на почту.');});}}><h3>{text($locale,'Қатысушы шақыру','Пригласить участника')}</h3><label>{text($locale,'Пошта','Почта')}<input type="email" bind:value={email} required autocomplete="off"/></label><label>{text($locale,'Рөл','Роль')}<select bind:value={role}><option value="member">{text($locale,'Қатысушы — файл жүктейді','Участник — загружает файлы')}</option><option value="editor">{text($locale,'Редактор — тарау қосады және тексеруге жібереді','Редактор — добавляет главы и отправляет на проверку')}</option></select></label><button class="button primary" disabled={busy||!user.verified}>{text($locale,'Шақыру жіберу','Отправить приглашение')}</button></form>
+  </details>{/if}
+ </section>{:else if !form&&!error}<p>{text($locale,'Әлі командаға қосылмадың. Жаңа командаға өтінім бер немесе иесінен поштаға шақыру сұра.','Ты пока не в команде. Подай заявку на новую или попроси владельца пригласить тебя по почте.')}</p>{/if}
+ {/if}
 {/if}
+<style>
+ .team-form{max-width:720px;border:1px solid var(--line);padding:20px;margin-bottom:28px}.form-heading,.team-heading{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}h2{font-size:20px;margin:0;overflow-wrap:anywhere}h3{font-size:16px;margin:0 0 8px}form{display:grid;gap:16px;margin-top:20px;max-width:640px}form .button{justify-self:start}label{display:grid;gap:8px;font-size:14px;min-width:0}.muted,small{font-size:14px;color:var(--muted)}.team-select{max-width:420px;margin:24px 0}.team{max-width:900px;padding:20px 0}.description{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:16px}.review-note{border-left:2px solid var(--line);padding:12px 16px;margin:20px 0}.review-note p{line-height:1.6;white-space:pre-wrap;overflow-wrap:anywhere}summary{display:flex;align-items:center;min-height:48px;cursor:pointer;font-size:14px}.management{border-top:1px solid var(--line);margin-top:28px;padding-top:8px}.member-row{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 0;border-bottom:1px solid var(--line)}.member-row>div{min-width:0;overflow-wrap:anywhere}small{display:block;margin-top:4px}@media(max-width:420px){.team-form{padding:16px 12px}.member-row{align-items:start;flex-direction:column}}
+</style>

@@ -12,7 +12,9 @@ function revision(value: unknown): Revision {
 export class HttpPublishingGateway implements PublishingGateway {
  constructor(private api: ApiClient) {}
  private async items<Item>(path: string, map: (value: unknown) => Item) { return array(object(await this.api.call(path)).items, map); }
- async projects(offset=0) { return this.items('/api/v1/studio/projects?offset='+offset, value => { const item = object(value); return { id: text(item.id), titleName: text(item.title_name), teamName: text(item.team_name) }; }); }
+ async project(id:string){const item=object(await this.api.call('/api/v1/studio/projects/'+encodeURIComponent(id)));return {id:text(item.id),titleId:text(item.title_id),titleName:text(item.title_name),teamId:text(item.team_id),teamName:text(item.team_name),role:text(item.role),approved:item.approved===true,status:text(item.status)};}
+ async createChapter(id:string,input:{label:string;volume:string;name:string;order:number}){return text(object(await this.api.call('/api/v1/studio/projects/'+encodeURIComponent(id)+'/chapters','POST',input)).id);}
+ async projects(offset=0) { return this.items('/api/v1/studio/projects?offset='+offset, value => { const item = object(value); return { id: text(item.id), titleName: text(item.title_name), teamName: text(item.team_name),teamId:text(item.team_id) }; }); }
  async chapters(id: string,offset=0) { return this.items('/api/v1/studio/projects/' + encodeURIComponent(id) + '/chapters?offset='+offset, value => { const item = object(value); return { id: text(item.id), label: text(item.label), name: text(item.name), order: number(item.order) }; }); }
  async revisions(id: string,offset=0) { return this.items('/api/v1/studio/projects/' + encodeURIComponent(id) + '/revisions?offset='+offset, revision); }
  async revision(id: string) { return revision(await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id))); }

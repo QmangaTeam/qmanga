@@ -5,11 +5,13 @@ function object(value: unknown): value is Record<string, unknown> { return typeo
 function team(value: unknown): Team {
  if (!object(value) || typeof value.id !== 'string' || typeof value.name !== 'string' || typeof value.slug !== 'string' || typeof value.description !== 'string' || typeof value.approved !== 'boolean') throw new Error('Сервер жауабы дұрыс емес');
  const role = value.my_role;
- return { id: value.id, name: value.name, slug: value.slug, description: value.description, approved: value.approved, ...(role === 'owner' || role === 'editor' || role === 'member' ? { role } : {}) };
+ return { id: value.id, name: value.name, slug: value.slug, description: value.description, approved: value.approved,reviewStatus:typeof value.review_status==='string'?value.review_status:(value.approved?'approved':'pending'),reviewNote:typeof value.review_note==='string'?value.review_note:'', ...(role === 'owner' || role === 'editor' || role === 'member' ? { role } : {}) };
 }
 function items(value: unknown): unknown[] { if (!object(value) || !Array.isArray(value.items)) throw new Error('Сервер жауабы дұрыс емес'); return value.items; }
 export class HttpTeamsGateway implements TeamsGateway {
  constructor(private api: ApiClient) {}
+ async reject(id:string,reason:string){await this.api.call('/api/v1/admin/teams/'+encodeURIComponent(id)+'/reject','POST',{reason});}
+ async update(id:string,input:NewTeam){await this.api.call('/api/v1/studio/teams/'+encodeURIComponent(id),'PUT',input);}
  async list(offset=0) { return items(await this.api.call('/api/v1/studio/teams?offset='+offset)).map(team); }
  async pending(offset=0) { return items(await this.api.call('/api/v1/admin/teams/pending?offset='+offset)).map(team); }
  async create(input: NewTeam) { return team(await this.api.call('/api/v1/studio/teams', 'POST', input)); }

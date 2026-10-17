@@ -5,8 +5,11 @@ export interface Revision { source?:string;credits?:string;rightsConfirmed?:bool
 export interface ChapterChoice { id: string; label: string; name: string; order: number }
 export interface UploadSource { name: string; size: number; key: string; content: unknown }
 export interface UploadTask { done: Promise<void>; cancel(): void }
+export interface StudioProject {id:string;titleId:string;titleName:string;teamId:string;teamName:string;role:string;approved:boolean;status:string}
 export interface PublishingGateway {
- projects(offset?:number): Promise<{id: string; titleName: string; teamName: string}[]>;
+ project(id:string):Promise<StudioProject>;
+ createChapter(projectId:string,input:{label:string;volume:string;name:string;order:number}):Promise<string>;
+ projects(offset?:number): Promise<{id: string; titleName: string; teamName: string;teamId?:string}[]>;
  chapters(projectId: string,offset?:number): Promise<ChapterChoice[]>;
  revisions(projectId: string,offset?:number): Promise<Revision[]>;
  revision(id: string): Promise<Revision>;

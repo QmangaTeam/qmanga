@@ -9,6 +9,7 @@
  import AppHeader from '$lib/shared/presentation/ui/AppHeader.svelte';
  import MobileNavigation from '$lib/shared/presentation/ui/MobileNavigation.svelte';
  import type {NavigationItem} from '$lib/shared/presentation/ui/types';
+ import {safeReturnPath} from '$lib/features/identity/domain/return-path';
  let {children,data}=$props();
  const localeStore=createLocalePreferences();
  const {locale}=provideLocale(untrack(()=>data.locale),value=>changeLocale(localeStore,value));
@@ -19,15 +20,16 @@
   {label:'Каталог',href:'/catalog',icon:'catalog'},
   {label:text($locale,'Кітапхана','Библиотека'),href:'/library',icon:'bookmark'},
   {label:text($locale,'Хабарлар','Уведомления'),href:'/notifications',icon:'bell'},
-  {label:text($locale,'Мәзір','Меню'),href:'/settings',icon:'menu'}
+  {label:text($locale,'Мәзір','Меню'),href:'/menu',icon:'menu'}
  ]);
+ const loginReturn=$derived(safeReturnPath(/^\/(login|register|forgot-password|reset-password|verify-email)(\/|$)/.test($page.url.pathname)?$page.url.searchParams.get('returnTo'):$page.url.pathname+$page.url.search));
 </script>
 <a class="skip-link" href="#content">{text($locale,'Мазмұнға өту','К содержимому')}</a>
 {#if $page.url.pathname.startsWith('/read/') || $page.url.pathname==='/offline-reader'}
  <main id="content">{@render children()}</main>
 {:else}
- <AppHeader items={navigation.slice(0,4)} currentPath={$page.url.pathname} accountHref={data.user?'/settings':'/login?returnTo='+encodeURIComponent($page.url.pathname+$page.url.search)} accountLabel={data.user?'Аккаунт':text($locale,'Кіру','Войти')} homeLabel={text($locale,'Qmanga басты бет','Qmanga — главная')} navigationLabel={text($locale,'Негізгі','Основная навигация')}/>
+ <AppHeader items={navigation.slice(0,4)} currentPath={$page.url.pathname} accountHref={data.user?'/menu':'/login?returnTo='+encodeURIComponent(loginReturn)} accountLabel={data.user?'Аккаунт':text($locale,'Кіру','Войти')} homeLabel={text($locale,'Qmanga басты бет','Qmanga — главная')} navigationLabel={text($locale,'Негізгі','Основная навигация')}/>
  <main id="content" class="page-container">{@render children()}</main>
- <footer class="site-footer"><a href="/help">{text($locale,'Көмек және ережелер','Помощь и правила')}</a><a href="/settings">{text($locale,'Қазақша · Баптаулар','Русский · Настройки')}</a></footer>
+ <footer class="site-footer"><a href="/studio">{text($locale,'Аудармашыларға','Переводчикам')}</a><a href="/help">{text($locale,'Көмек және ережелер','Помощь и правила')}</a><a href="/settings">{text($locale,'Қазақша · Баптаулар','Русский · Настройки')}</a></footer>
  <MobileNavigation items={navigation} currentPath={$page.url.pathname} label={text($locale,'Мобильді навигация','Мобильная навигация')}/>
 {/if}
