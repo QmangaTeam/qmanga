@@ -41,7 +41,7 @@ func (repository *Repository) Selection(ctx context.Context, actor, title string
 	return &items[0], nil
 }
 func (repository *Repository) list(ctx context.Context, actor, after, title string) ([]application.Entry, error) {
-	rows, failure := repository.pool.Query(ctx, `SELECT library.title_id,title.name_kk,title.slug,library.status,COALESCE(library.preferred_team_id,''),library.is_favorite,library.notify_new_releases,library.updated_at,(SELECT COUNT(DISTINCT chapter.id) FROM chapters chapter JOIN releases release ON release.chapter_id=chapter.id JOIN revisions revision ON revision.id=release.current_revision_id AND revision.status='published' WHERE chapter.title_id=title.id AND release.status='published' AND chapter.order_num>COALESCE(progress.furthest_chapter_order,0) AND (library.preferred_team_id IS NULL OR release.team_id=library.preferred_team_id)) FROM library_entries library JOIN titles title ON title.id=library.title_id LEFT JOIN reading_progress progress ON progress.user_id=library.user_id AND progress.title_id=library.title_id WHERE library.user_id=$1 AND ($2='' OR library.title_id<$2) AND ($3='' OR library.title_id=$3) ORDER BY library.title_id DESC LIMIT 100`, actor, after, title)
+	rows, failure := repository.pool.Query(ctx, `SELECT library.title_id,title.name_kk,title.slug,library.status,COALESCE(library.preferred_team_id,''),library.is_favorite,library.notify_new_releases,library.updated_at,library.selection_version,library.is_removed,(SELECT COUNT(DISTINCT chapter.id) FROM chapters chapter JOIN releases release ON release.chapter_id=chapter.id JOIN revisions revision ON revision.id=release.current_revision_id AND revision.status='published' WHERE chapter.title_id=title.id AND release.status='published' AND chapter.order_num>COALESCE(progress.furthest_chapter_order,0) AND (library.preferred_team_id IS NULL OR release.team_id=library.preferred_team_id)) FROM library_entries library JOIN titles title ON title.id=library.title_id LEFT JOIN reading_progress progress ON progress.user_id=library.user_id AND progress.title_id=library.title_id WHERE library.user_id=$1 AND (NOT library.is_removed OR $3<>'') AND ($2='' OR library.title_id<$2) AND ($3='' OR library.title_id=$3) ORDER BY library.title_id DESC LIMIT 100`, actor, after, title)
 	if failure != nil {
 		return nil, failure
 	}
@@ -49,7 +49,7 @@ func (repository *Repository) list(ctx context.Context, actor, after, title stri
 	items := []application.Entry{}
 	for rows.Next() {
 		var item application.Entry
-		if failure = rows.Scan(&item.TitleID, &item.Name, &item.Slug, &item.Status, &item.PreferredTeamID, &item.Favorite, &item.Notify, &item.UpdatedAt, &item.Unseen); failure != nil {
+		if failure = rows.Scan(&item.TitleID, &item.Name, &item.Slug, &item.Status, &item.PreferredTeamID, &item.Favorite, &item.Notify, &item.UpdatedAt, &item.Version, &item.Removed, &item.Unseen); failure != nil {
 			return nil, failure
 		}
 		items = append(items, item)
@@ -67,14 +67,37 @@ func (repository *Repository) list(ctx context.Context, actor, after, title stri
 	return items, nil
 }
 func (repository *Repository) Save(ctx context.Context, actor string, input application.Selection) error {
-	result, failure := repository.pool.Exec(ctx, `INSERT INTO library_entries(id,user_id,title_id,status,is_favorite,preferred_team_id,notify_new_releases) SELECT $1::varchar,$2::varchar,title.id,$4::varchar,$5::boolean,NULLIF($6::varchar,''),$7::boolean FROM titles title WHERE title.id=$3 AND EXISTS(SELECT 1 FROM users WHERE id=$2::varchar) AND ($6::varchar='' OR EXISTS(SELECT 1 FROM projects WHERE title_id=title.id AND team_id=$6::varchar)) ON CONFLICT(user_id,title_id)DO UPDATE SET status=EXCLUDED.status,is_favorite=EXCLUDED.is_favorite,preferred_team_id=EXCLUDED.preferred_team_id,notify_new_releases=EXCLUDED.notify_new_releases,updated_at=now()`, uuid.NewString(), actor, input.TitleID, input.Status, input.Favorite, input.PreferredTeamID, input.Notify)
-	if failure == nil && result.RowsAffected() == 0 {
+	transaction, failure := repository.pool.Begin(ctx)
+	if failure != nil {
+		return failure
+	}
+	defer transaction.Rollback(ctx)
+	var locked string
+	if failure = transaction.QueryRow(ctx, "SELECT id FROM users WHERE id=$1 AND NOT is_blocked FOR UPDATE", actor).Scan(&locked); failure != nil {
+		return domain.ErrForbidden
+	}
+	current := application.Selection{}
+	failure = transaction.QueryRow(ctx, "SELECT status,is_favorite,coalesce(preferred_team_id,''),notify_new_releases,selection_version,is_removed FROM library_entries WHERE user_id=$1 AND title_id=$2 FOR UPDATE", actor, input.TitleID).Scan(&current.Status, &current.Favorite, &current.PreferredTeamID, &current.Notify, &current.Version, &current.Removed)
+	if failure != nil && !errors.Is(failure, pgx.ErrNoRows) {
+		return failure
+	}
+	if current.Version > 0 && current.Status == input.Status && current.Favorite == input.Favorite && current.PreferredTeamID == input.PreferredTeamID && current.Notify == input.Notify && current.Removed == input.Removed {
+		return nil
+	}
+	if current.Version != input.Version {
+		return domain.ErrConflict
+	}
+	result, failure := transaction.Exec(ctx, `INSERT INTO library_entries(id,user_id,title_id,status,is_favorite,preferred_team_id,notify_new_releases,selection_version,is_removed) SELECT $1::varchar,$2::varchar,title.id,$4::varchar,$5::boolean,NULLIF($6::varchar,''),$7::boolean,1,$8::boolean FROM titles title WHERE title.id=$3 AND ($6::varchar='' OR EXISTS(SELECT 1 FROM projects WHERE title_id=title.id AND team_id=$6::varchar)) ON CONFLICT(user_id,title_id) DO UPDATE SET status=EXCLUDED.status,is_favorite=EXCLUDED.is_favorite,preferred_team_id=EXCLUDED.preferred_team_id,notify_new_releases=EXCLUDED.notify_new_releases,is_removed=EXCLUDED.is_removed,selection_version=library_entries.selection_version+1,updated_at=now()`, uuid.NewString(), actor, input.TitleID, input.Status, input.Favorite, input.PreferredTeamID, input.Notify, input.Removed)
+	if failure != nil {
+		return failure
+	}
+	if result.RowsAffected() == 0 {
 		return domain.ErrNotFound
 	}
-	return failure
+	return transaction.Commit(ctx)
 }
 func (repository *Repository) Remove(ctx context.Context, actor, title string) error {
-	_, failure := repository.pool.Exec(ctx, `DELETE FROM library_entries WHERE user_id=$1 AND title_id=$2`, actor, title)
+	_, failure := repository.pool.Exec(ctx, "UPDATE library_entries SET is_removed=true,selection_version=selection_version+1,updated_at=now() WHERE user_id=$1 AND title_id=$2 AND NOT is_removed", actor, title)
 	return failure
 }
 func (repository *Repository) Advance(ctx context.Context, actor string, event domain.Event) (application.Result, error) {
@@ -84,7 +107,7 @@ func (repository *Repository) Advance(ctx context.Context, actor string, event d
 	}
 	defer transaction.Rollback(ctx)
 	var locked string
-	if failure = transaction.QueryRow(ctx, `SELECT id FROM users WHERE id=$1 FOR UPDATE`, actor).Scan(&locked); failure != nil {
+	if failure = transaction.QueryRow(ctx, `SELECT id FROM users WHERE id=$1 AND NOT is_blocked FOR UPDATE`, actor).Scan(&locked); failure != nil {
 		return application.Result{}, domain.ErrForbidden
 	}
 	current, failure := scan(transaction.QueryRow(ctx, `SELECT `+progressColumns+` FROM reading_progress WHERE user_id=$1 AND title_id=$2 FOR UPDATE`, actor, event.TitleID))

@@ -4,6 +4,7 @@ export async function importGuest(gateway:ReadingGateway,storage:ProgressStorage
  if(confirmedVersion===undefined&&cloud.version>0)return cloud;
  const result=await gateway.advance(account,{...storage.identity(),titleId:guest.titleId,releaseId:guest.progress.releaseId,revisionId:guest.progress.revisionId,pageId:guest.progress.pageId,fraction:guest.progress.fraction,baseVersion:confirmedVersion??cloud.version,completed:false});
  if(result.outcome==='conflict'||result.outcome==='stale')return result.progress;
- if(!await gateway.selection(account,guest.titleId))await gateway.save(account,{titleId:guest.titleId,status:'reading',favorite:false,preferredTeamId:'',notify:true});
+ const selection=await gateway.selection(account,guest.titleId);
+ if(!selection||selection.removed)await gateway.save(account,{version:selection?.version||0,titleId:guest.titleId,status:'reading',favorite:false,preferredTeamId:'',notify:true});
  return null;
 }

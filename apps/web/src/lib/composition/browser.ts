@@ -1,4 +1,6 @@
 import {HttpRightsGateway} from '$lib/features/community/infrastructure/http-rights-gateway';
+import {HttpManagementGateway} from '$lib/features/identity/infrastructure/http-management-gateway';
+export function createAccountManagement(){const {api,scope}=scopedApi();return new HttpManagementGateway(api,scope);}
 export function createRights(){return new HttpRightsGateway(globalThis.fetch.bind(globalThis));}
 import { HttpAuthGateway } from '$lib/features/identity/infrastructure/http-auth-gateway';
 import { BrowserLocaleStore } from '$lib/features/preferences/infrastructure/browser-locale-store';
@@ -16,7 +18,9 @@ import {HttpAccountScope} from '$lib/features/identity/infrastructure/http-accou
 function scopedApi(){const api=new ApiClient(globalThis.fetch.bind(globalThis));return {api,scope:new HttpAccountScope(api)};}
 export function createCommunity(){const {api,scope}=scopedApi();return new HttpCommunityGateway(api,scope);}
 export function createNotifications(){const {api,scope}=scopedApi();return new HttpNotificationsGateway(api,scope);}
-export function createReading(){const {api,scope}=scopedApi();return {readingGateway:new HttpReadingGateway(api,scope),progressStorage:new BrowserProgressStorage()};}
+import {LibrarySync,CachedReadingGateway} from '$lib/features/reading/application/library-sync';
+import {BrowserLibraryStorage} from '$lib/features/reading/infrastructure/browser-library-storage';
+export function createReading(){const {api,scope}=scopedApi();const remote=new HttpReadingGateway(api,scope),librarySync=new LibrarySync(remote,new BrowserLibraryStorage());return {readingGateway:new CachedReadingGateway(remote,librarySync),librarySync,progressStorage:new BrowserProgressStorage()};}
 export function createDownloads(){return new Downloads(new BrowserDownloadStorage(),()=>Date.now());}
 import { HttpCatalogGateway } from '$lib/features/catalog/infrastructure/http-catalog-gateway';
 import { BrowserReaderPlatform } from '$lib/features/reading/infrastructure/browser-reader-platform';
@@ -36,4 +40,4 @@ import type { CatalogManagementGateway } from '$lib/features/catalog/application
 export function createCatalogueManagement(): CatalogManagementGateway { return new HttpCatalogManagementGateway(new ApiClient(globalThis.fetch.bind(globalThis))); }
 export function createPreferences(): ThemeStore { return new BrowserThemeStore(); }
 export function createTeams(): TeamsGateway { return new HttpTeamsGateway(new ApiClient(globalThis.fetch.bind(globalThis))); }
-export function createAuth(): AuthGateway { return new HttpAuthGateway('', globalThis.fetch.bind(globalThis),'',()=>new BrowserProgressStorage().clearAccounts()); }
+export function createAuth(): AuthGateway { return new HttpAuthGateway('', globalThis.fetch.bind(globalThis),'',async()=>{await new BrowserProgressStorage().clearAccounts();await new BrowserLibraryStorage().clear();}); }

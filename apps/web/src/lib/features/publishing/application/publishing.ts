@@ -6,9 +6,9 @@ export interface ChapterChoice { id: string; label: string; name: string; order:
 export interface UploadSource { name: string; size: number; key: string; content: unknown }
 export interface UploadTask { done: Promise<void>; cancel(): void }
 export interface PublishingGateway {
- projects(): Promise<{id: string; titleName: string; teamName: string}[]>;
- chapters(projectId: string): Promise<ChapterChoice[]>;
- revisions(projectId: string): Promise<Revision[]>;
+ projects(offset?:number): Promise<{id: string; titleName: string; teamName: string}[]>;
+ chapters(projectId: string,offset?:number): Promise<ChapterChoice[]>;
+ revisions(projectId: string,offset?:number): Promise<Revision[]>;
  revision(id: string): Promise<Revision>;
  create(projectId: string, chapterId: string): Promise<Revision>;
  prepare(files: unknown[]): Promise<UploadSource[]>;
@@ -17,7 +17,7 @@ export interface PublishingGateway {
  remove(id: string, pageId: string): Promise<void>;
  attribution(id:string,version:number,source:string,credits:string,confirmed:boolean):Promise<void>;
  submit(id: string, version: number): Promise<void>;
- pending(): Promise<Revision[]>;
+ pending(offset?:number): Promise<Revision[]>;
  review(id: string, decision: 'publish' | 'reject', reason: string): Promise<void>;
  withdraw(releaseId: string, reason: string): Promise<void>;
 }

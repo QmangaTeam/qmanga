@@ -170,7 +170,7 @@ func (handler *CatalogHandler) adminDetail(request *gin.Context) {
 }
 func (handler *CatalogHandler) approvedTeams(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.ApprovedTeams(request.Request.Context(), account.ID)
+	items, failure := handler.service.ApprovedTeams(request.Request.Context(), account.ID, requestOffset(request))
 	if failure != nil {
 		catalogError(request, failure)
 		return
@@ -253,7 +253,7 @@ func (handler *CatalogHandler) team(request *gin.Context) {
 }
 func (handler *CatalogHandler) studioProjects(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.StudioProjects(request.Request.Context(), account.ID)
+	items, failure := handler.service.StudioProjects(request.Request.Context(), account.ID, requestOffset(request))
 	if failure != nil {
 		catalogError(request, failure)
 		return
@@ -262,7 +262,7 @@ func (handler *CatalogHandler) studioProjects(request *gin.Context) {
 }
 func (handler *CatalogHandler) adminTitles(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.AdminTitles(request.Request.Context(), account.ID)
+	items, failure := handler.service.AdminTitles(request.Request.Context(), account.ID, requestOffset(request))
 	if failure != nil {
 		catalogError(request, failure)
 		return

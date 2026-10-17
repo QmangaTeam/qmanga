@@ -134,7 +134,7 @@ func (repository *Repository) detail(ctx context.Context, condition, id string, 
 	detail := application.Detail{Genres: []application.Genre{}, Projects: []application.Project{}}
 	title := &detail.Title
 	failure := repository.pool.QueryRow(ctx, `SELECT title.id,title.slug,title.name_kk,title.name_original,title.aliases,title.type,title.status_original,title.status_translation,title.description_kk,title.direction,title.is_demo,title.authors,title.is_featured,title.cover_asset_id,
- coalesce((SELECT avg(score)::float8 FROM ratings WHERE title_id=title.id),0),(SELECT count(*) FROM ratings WHERE title_id=title.id) FROM titles title WHERE `+condition, id).Scan(&title.ID, &title.Slug, &title.Name, &title.OriginalName, &title.Aliases, &title.Kind, &title.OriginalStatus, &title.TranslationStatus, &title.Description, &title.Direction, &title.Demo, &title.Authors, &title.Featured, &detail.CoverID, &detail.Score, &detail.RatingCount)
+ coalesce((SELECT avg(score)::float8 FROM ratings JOIN users rating_user ON rating_user.id=ratings.user_id AND NOT rating_user.is_blocked WHERE title_id=title.id),0),(SELECT count(*) FROM ratings JOIN users rating_user ON rating_user.id=ratings.user_id AND NOT rating_user.is_blocked WHERE title_id=title.id) FROM titles title WHERE `+condition, id).Scan(&title.ID, &title.Slug, &title.Name, &title.OriginalName, &title.Aliases, &title.Kind, &title.OriginalStatus, &title.TranslationStatus, &title.Description, &title.Direction, &title.Demo, &title.Authors, &title.Featured, &detail.CoverID, &detail.Score, &detail.RatingCount)
 	if failure != nil {
 		return detail, translate(failure)
 	}
@@ -160,7 +160,7 @@ func (repository *Repository) detail(ctx context.Context, condition, id string, 
 	if public {
 		projectCondition += ` AND EXISTS(SELECT 1` + publicationJoins + ` WHERE publication.project_id=outer_project.id AND ` + publicationVisible + `)`
 	}
-	detail.Projects, failure = repository.projects(ctx, projectCondition, title.ID)
+	detail.Projects, failure = repository.projects(ctx, 0, projectCondition, title.ID)
 	return detail, failure
 }
 
@@ -186,7 +186,7 @@ func (repository *Repository) UpdateTitle(ctx context.Context, actorID string, t
 		return failure
 	})
 }
-func (repository *Repository) ApprovedTeams(ctx context.Context, actorID string) ([]application.Team, error) {
+func (repository *Repository) ApprovedTeams(ctx context.Context, actorID string, offset ...int) ([]application.Team, error) {
 	allowed, failure := repository.IsAdmin(ctx, actorID)
 	if failure != nil {
 		return nil, failure
@@ -194,7 +194,7 @@ func (repository *Repository) ApprovedTeams(ctx context.Context, actorID string)
 	if !allowed {
 		return nil, domain.ErrForbidden
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT id,name,slug,description FROM teams WHERE is_approved ORDER BY name LIMIT 100")
+	rows, failure := repository.pool.Query(ctx, "SELECT id,name,slug,description FROM teams WHERE is_approved ORDER BY name,id LIMIT 100 OFFSET "+pageOffset(offset))
 	if failure != nil {
 		return nil, failure
 	}
@@ -309,12 +309,12 @@ func (repository *Repository) Team(ctx context.Context, slug string) (applicatio
 	if failure != nil {
 		return team, failure
 	}
-	team.Projects, failure = repository.projects(ctx, `outer_project.team_id=$1 AND EXISTS(SELECT 1`+publicationJoins+` WHERE publication.project_id=outer_project.id AND `+publicationVisible+`)`, team.ID)
+	team.Projects, failure = repository.projects(ctx, 0, `outer_project.team_id=$1 AND EXISTS(SELECT 1`+publicationJoins+` WHERE publication.project_id=outer_project.id AND `+publicationVisible+`)`, team.ID)
 	return team, failure
 }
 
-func (repository *Repository) projects(ctx context.Context, condition string, arguments ...any) ([]application.Project, error) {
-	rows, failure := repository.pool.Query(ctx, `SELECT outer_project.id,outer_project.title_id,outer_project.team_id,title.name_kk,title.slug,team.name,team.slug,outer_project.status FROM projects outer_project JOIN titles title ON title.id=outer_project.title_id JOIN teams team ON team.id=outer_project.team_id WHERE `+condition+` ORDER BY title.name_kk,team.name LIMIT 100`, arguments...)
+func (repository *Repository) projects(ctx context.Context, offset int, condition string, arguments ...any) ([]application.Project, error) {
+	rows, failure := repository.pool.Query(ctx, `SELECT outer_project.id,outer_project.title_id,outer_project.team_id,title.name_kk,title.slug,team.name,team.slug,outer_project.status FROM projects outer_project JOIN titles title ON title.id=outer_project.title_id JOIN teams team ON team.id=outer_project.team_id WHERE `+condition+` ORDER BY title.name_kk,team.name,outer_project.id LIMIT 100 OFFSET `+pageOffset([]int{offset}), arguments...)
 	if failure != nil {
 		return nil, failure
 	}
@@ -330,13 +330,13 @@ func (repository *Repository) projects(ctx context.Context, condition string, ar
 	return items, rows.Err()
 }
 
-func (repository *Repository) StudioProjects(ctx context.Context, actorID string) ([]application.Project, error) {
-	return repository.projects(ctx, `EXISTS(SELECT 1 FROM team_memberships membership JOIN users account ON account.id=membership.user_id WHERE membership.team_id=outer_project.team_id AND account.id=$1 AND account.is_verified)`, actorID)
+func (repository *Repository) StudioProjects(ctx context.Context, actorID string, offset ...int) ([]application.Project, error) {
+	return repository.projects(ctx, offsetValue(offset), `EXISTS(SELECT 1 FROM team_memberships membership JOIN users account ON account.id=membership.user_id WHERE membership.team_id=outer_project.team_id AND account.id=$1 AND account.is_verified AND NOT account.is_blocked)`, actorID)
 }
 
 func (repository *Repository) IsAdmin(ctx context.Context, actorID string) (bool, error) {
 	var allowed bool
-	failure := repository.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND role='admin' AND is_verified)", actorID).Scan(&allowed)
+	failure := repository.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND role='admin' AND is_verified AND NOT is_blocked)", actorID).Scan(&allowed)
 	return allowed, failure
 }
 
@@ -347,7 +347,7 @@ func (repository *Repository) withAdmin(ctx context.Context, actorID string, mut
 	}
 	defer transaction.Rollback(ctx)
 	var allowed bool
-	failure = transaction.QueryRow(ctx, "SELECT role='admin' AND is_verified FROM users WHERE id=$1 FOR SHARE", actorID).Scan(&allowed)
+	failure = transaction.QueryRow(ctx, "SELECT role='admin' AND is_verified AND NOT is_blocked FROM users WHERE id=$1 FOR SHARE", actorID).Scan(&allowed)
 	if errors.Is(failure, pgx.ErrNoRows) || (failure == nil && !allowed) {
 		return domain.ErrForbidden
 	}
@@ -418,7 +418,7 @@ func (repository *Repository) CreateProject(ctx context.Context, actorID, id, ti
 	})
 }
 
-func (repository *Repository) AdminTitles(ctx context.Context, actorID string) ([]application.Summary, error) {
+func (repository *Repository) AdminTitles(ctx context.Context, actorID string, offset ...int) ([]application.Summary, error) {
 	allowed, failure := repository.IsAdmin(ctx, actorID)
 	if failure != nil {
 		return nil, failure
@@ -426,7 +426,7 @@ func (repository *Repository) AdminTitles(ctx context.Context, actorID string) (
 	if !allowed {
 		return nil, domain.ErrForbidden
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT "+summaryColumns+" FROM titles title ORDER BY title.updated_at DESC,title.id DESC LIMIT 100")
+	rows, failure := repository.pool.Query(ctx, "SELECT "+summaryColumns+" FROM titles title ORDER BY title.updated_at DESC,title.id DESC LIMIT 100 OFFSET "+pageOffset(offset))
 	if failure != nil {
 		return nil, failure
 	}

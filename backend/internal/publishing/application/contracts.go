@@ -72,8 +72,8 @@ type Batch struct {
 type Repository interface {
 	CreateDraft(context.Context, string, string, string, string) (StudioRevision, error)
 	Revision(context.Context, string, string) (StudioRevision, error)
-	ProjectChapters(context.Context, string, string) ([]ChapterChoice, error)
-	ProjectRevisions(context.Context, string, string) ([]StudioRevision, error)
+	ProjectChapters(context.Context, string, string, ...int) ([]ChapterChoice, error)
+	ProjectRevisions(context.Context, string, string, ...int) ([]StudioRevision, error)
 	Reserve(context.Context, string, Upload, string) (Reservation, error)
 	Uploaded(context.Context, string, string, string) error
 	UploadFailed(context.Context, string, string) error
@@ -83,7 +83,7 @@ type Repository interface {
 	Submit(context.Context, string, string, int64) error
 	Review(context.Context, string, string, string, string) error
 	Withdraw(context.Context, string, string, string) error
-	ModerationQueue(context.Context, string) ([]StudioRevision, error)
+	ModerationQueue(context.Context, string, ...int) ([]StudioRevision, error)
 	LeaseJob(context.Context, string) (Job, bool, error)
 	CompleteJob(context.Context, Job, []Variant) error
 	FailJob(context.Context, Job, string) error

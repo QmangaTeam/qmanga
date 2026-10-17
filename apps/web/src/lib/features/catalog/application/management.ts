@@ -1,10 +1,10 @@
 import type { Metadata } from '../domain/metadata';
 import type { Genre, Summary, TitleDetail } from './catalog';
 export interface CatalogManagementGateway {
- titles(): Promise<Summary[]>;
+ titles(offset?:number): Promise<Summary[]>;
  detail(id: string): Promise<TitleDetail>;
  genres(): Promise<Genre[]>;
- teams(): Promise<{ id: string; name: string }[]>;
+ teams(offset?:number): Promise<{ id: string; name: string }[]>;
  save(input: Metadata, id?: string): Promise<string>;
  createGenre(name: string, slug: string): Promise<void>;
  createChapter(titleId: string, label: string, order: number, volume: string, name: string): Promise<void>;

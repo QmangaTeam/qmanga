@@ -10,10 +10,10 @@ function object(value: unknown): Record<string, unknown> {
 }
 export class HttpCatalogManagementGateway implements CatalogManagementGateway {
  constructor(private api: ApiClient) {}
- async titles() { return page(await this.api.call('/api/v1/admin/titles'), summary).items; }
+ async titles(offset=0) { return page(await this.api.call('/api/v1/admin/titles?offset='+offset), summary).items; }
  async detail(id: string) { return detail(await this.api.call('/api/v1/admin/titles/' + encodeURIComponent(id))); }
  async genres() { return page(await this.api.call('/api/v1/genres'), genre).items; }
- async teams() { return page(await this.api.call('/api/v1/admin/catalog-teams'), value => { const item = object(value); return { id: text(item.id), name: text(item.name) }; }).items; }
+ async teams(offset=0) { return page(await this.api.call('/api/v1/admin/catalog-teams?offset='+offset), value => { const item = object(value); return { id: text(item.id), name: text(item.name) }; }).items; }
  async save(input: Metadata, id?: string) {
   const result = object(await this.api.call('/api/v1/admin/titles' + (id ? '/' + encodeURIComponent(id) : ''), id ? 'PUT' : 'POST', {authors:input.authors||[],featured:input.featured||false,slug: input.slug, name: input.name, original_name: input.originalName, aliases: input.aliases, kind: input.kind, original_status: input.originalStatus, translation_status: input.translationStatus, description: input.description, direction: input.direction, genre_ids: input.genreIds, demo: input.demo }));
   return text(result.id);

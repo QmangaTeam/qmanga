@@ -79,7 +79,7 @@ func revisionView(item application.StudioRevision) gin.H {
 	return gin.H{"source_note": item.Source, "credits": item.Credits, "rights_confirmed": item.RightsConfirmed, "confirmed_by": item.ConfirmedBy, "id": item.ID, "release_id": item.ReleaseID, "project_id": item.ProjectID, "chapter_id": item.ChapterID, "title_id": item.TitleID, "title_name": item.TitleName, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "state": item.State, "note": item.Note, "version": item.Version, "pages": pages}
 }
 func (handler *PublishingHandler) projectChapters(request *gin.Context) {
-	items, failure := handler.service.ProjectChapters(request.Request.Context(), handler.actor(request), request.Param("id"))
+	items, failure := handler.service.ProjectChapters(request.Request.Context(), handler.actor(request), request.Param("id"), requestOffset(request))
 	if failure != nil {
 		publicationError(request, failure)
 		return
@@ -91,7 +91,7 @@ func (handler *PublishingHandler) projectChapters(request *gin.Context) {
 	request.JSON(200, gin.H{"items": views, "next_cursor": nil})
 }
 func (handler *PublishingHandler) projectRevisions(request *gin.Context) {
-	items, failure := handler.service.ProjectRevisions(request.Request.Context(), handler.actor(request), request.Param("id"))
+	items, failure := handler.service.ProjectRevisions(request.Request.Context(), handler.actor(request), request.Param("id"), requestOffset(request))
 	if failure != nil {
 		publicationError(request, failure)
 		return
@@ -216,7 +216,7 @@ func (handler *PublishingHandler) submit(request *gin.Context) {
 	request.Status(204)
 }
 func (handler *PublishingHandler) queue(request *gin.Context) {
-	items, failure := handler.service.ModerationQueue(request.Request.Context(), handler.actor(request))
+	items, failure := handler.service.ModerationQueue(request.Request.Context(), handler.actor(request), requestOffset(request))
 	if failure != nil {
 		publicationError(request, failure)
 		return

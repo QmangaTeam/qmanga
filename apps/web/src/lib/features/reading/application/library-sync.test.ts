@@ -1,0 +1,23 @@
+import {test,expect} from 'bun:test';
+import {LibrarySync,type LibraryLocal,type LibraryStorage} from './library-sync';
+import type {ReadingGateway,Selection} from './progress';
+import {AppFailure} from '$lib/shared/domain/failure';
+test('offline choices survive retry and conflicts require an explicit choice',async()=>{
+ const records=new Map<string,LibraryLocal>();
+ const storage:LibraryStorage={read:async(account,title)=>records.get(account+title)||null,write:async row=>{records.set(row.account+row.selection.titleId,structuredClone(row));},list:async account=>[...records.values()].filter(row=>row.account===account)};
+ let online=false,cloud:Selection={titleId:'title',status:'reading',favorite:false,preferredTeamId:'',notify:true,version:1},writes=0;
+ const gateway={save:async(account:string,input:Selection)=>{if(!online)throw new AppFailure('network');if(input.version!==cloud.version)throw new AppFailure('conflict');cloud={...input,version:cloud.version!+1};writes++;},selection:async()=>({...cloud}),account:async()=>'one'} as unknown as ReadingGateway;
+ const sync=new LibrarySync(gateway,storage);
+ await sync.remember('one',cloud);
+ await sync.save('one',{...cloud,favorite:true});
+ expect((await sync.state('one','title'))?.pending).toBe(true);
+ online=true;cloud={...cloud,status:'completed',version:2};
+ await sync.flush('one');
+ expect((await sync.state('one','title'))?.conflict?.status).toBe('completed');
+ expect(writes).toBe(0);
+ await sync.resolve('one','title',true);
+ expect(writes).toBe(1);
+ expect(cloud.favorite).toBe(true);
+ expect((await sync.state('one','title'))?.pending).toBe(false);
+ expect(await sync.state('two','title')).toBeNull();
+});

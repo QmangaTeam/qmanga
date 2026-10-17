@@ -38,11 +38,11 @@ func (repository *Repository) Revision(ctx context.Context, actor, id string) (a
 	}
 	return item, rows.Err()
 }
-func (repository *Repository) ProjectChapters(ctx context.Context, actor, projectID string) ([]application.ChapterChoice, error) {
+func (repository *Repository) ProjectChapters(ctx context.Context, actor, projectID string, offset ...int) ([]application.ChapterChoice, error) {
 	if failure := access(ctx, repository.pool, actor, projectID, "read_draft"); failure != nil {
 		return nil, failure
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT chapter.id,chapter.label,chapter.title_kk,chapter.order_num FROM chapters chapter JOIN projects project ON project.title_id=chapter.title_id WHERE project.id=$1 ORDER BY chapter.order_num LIMIT 1000", projectID)
+	rows, failure := repository.pool.Query(ctx, "SELECT chapter.id,chapter.label,chapter.title_kk,chapter.order_num FROM chapters chapter JOIN projects project ON project.title_id=chapter.title_id WHERE project.id=$1 ORDER BY chapter.order_num,chapter.id LIMIT 100 OFFSET "+pageOffset(offset), projectID)
 	if failure != nil {
 		return nil, failure
 	}
@@ -57,8 +57,8 @@ func (repository *Repository) ProjectChapters(ctx context.Context, actor, projec
 	}
 	return items, rows.Err()
 }
-func (repository *Repository) revisions(ctx context.Context, condition string, args ...any) ([]application.StudioRevision, error) {
-	rows, failure := repository.pool.Query(ctx, "SELECT "+studioColumns+studioJoins+"WHERE "+condition+" ORDER BY revision.created_at DESC LIMIT 100", args...)
+func (repository *Repository) revisions(ctx context.Context, offset []int, condition string, args ...any) ([]application.StudioRevision, error) {
+	rows, failure := repository.pool.Query(ctx, "SELECT "+studioColumns+studioJoins+"WHERE "+condition+" ORDER BY revision.created_at DESC,revision.id DESC LIMIT 100 OFFSET "+pageOffset(offset), args...)
 	if failure != nil {
 		return nil, failure
 	}
@@ -73,21 +73,21 @@ func (repository *Repository) revisions(ctx context.Context, condition string, a
 	}
 	return items, rows.Err()
 }
-func (repository *Repository) ProjectRevisions(ctx context.Context, actor, projectID string) ([]application.StudioRevision, error) {
+func (repository *Repository) ProjectRevisions(ctx context.Context, actor, projectID string, offset ...int) ([]application.StudioRevision, error) {
 	if failure := access(ctx, repository.pool, actor, projectID, "read_draft"); failure != nil {
 		return nil, failure
 	}
-	return repository.revisions(ctx, "publication.project_id=$1", projectID)
+	return repository.revisions(ctx, offset, "publication.project_id=$1", projectID)
 }
-func (repository *Repository) ModerationQueue(ctx context.Context, actor string) ([]application.StudioRevision, error) {
+func (repository *Repository) ModerationQueue(ctx context.Context, actor string, offset ...int) ([]application.StudioRevision, error) {
 	var allowed bool
-	if failure := repository.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND is_verified AND role IN('admin','moderator'))", actor).Scan(&allowed); failure != nil {
+	if failure := repository.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND is_verified AND NOT is_blocked AND role IN('admin','moderator'))", actor).Scan(&allowed); failure != nil {
 		return nil, failure
 	}
 	if !allowed {
 		return nil, domain.ErrForbidden
 	}
-	return repository.revisions(ctx, "revision.status='submitted'")
+	return repository.revisions(ctx, offset, "revision.status='submitted'")
 }
 func (repository *Repository) Manifest(ctx context.Context, actor, releaseID, previewID string) (application.Manifest, error) {
 	manifest := application.Manifest{Pages: []application.ManifestPage{}}

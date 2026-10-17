@@ -69,7 +69,7 @@ func (handler *TeamHandler) create(request *gin.Context) {
 }
 func (handler *TeamHandler) pending(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.Pending(request.Request.Context(), account.ID)
+	items, failure := handler.service.Pending(request.Request.Context(), account.ID, requestOffset(request))
 	if failure != nil {
 		teamError(request, failure)
 		return

@@ -44,11 +44,11 @@ func (service *Service) Upload(ctx context.Context, actor string, input Upload, 
 func (service *Service) Revision(ctx context.Context, actor, id string) (StudioRevision, error) {
 	return service.repository.Revision(ctx, actor, id)
 }
-func (service *Service) ProjectChapters(ctx context.Context, actor, id string) ([]ChapterChoice, error) {
-	return service.repository.ProjectChapters(ctx, actor, id)
+func (service *Service) ProjectChapters(ctx context.Context, actor, id string, offset ...int) ([]ChapterChoice, error) {
+	return service.repository.ProjectChapters(ctx, actor, id, offset...)
 }
-func (service *Service) ProjectRevisions(ctx context.Context, actor, id string) ([]StudioRevision, error) {
-	return service.repository.ProjectRevisions(ctx, actor, id)
+func (service *Service) ProjectRevisions(ctx context.Context, actor, id string, offset ...int) ([]StudioRevision, error) {
+	return service.repository.ProjectRevisions(ctx, actor, id, offset...)
 }
 func (service *Service) Reorder(ctx context.Context, actor, id string, version int64, ids []string) error {
 	return service.repository.Reorder(ctx, actor, id, version, ids)
@@ -77,8 +77,8 @@ func (service *Service) Withdraw(ctx context.Context, actor, id, reason string) 
 	}
 	return service.repository.Withdraw(ctx, actor, id, reason)
 }
-func (service *Service) ModerationQueue(ctx context.Context, actor string) ([]StudioRevision, error) {
-	return service.repository.ModerationQueue(ctx, actor)
+func (service *Service) ModerationQueue(ctx context.Context, actor string, offset ...int) ([]StudioRevision, error) {
+	return service.repository.ModerationQueue(ctx, actor, offset...)
 }
 func (service *Service) Manifest(ctx context.Context, actor, release, preview string) (Manifest, error) {
 	return service.repository.Manifest(ctx, actor, release, preview)

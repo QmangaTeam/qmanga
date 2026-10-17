@@ -11,7 +11,7 @@ function items(value: unknown): unknown[] { if (!object(value) || !Array.isArray
 export class HttpTeamsGateway implements TeamsGateway {
  constructor(private api: ApiClient) {}
  async list() { return items(await this.api.call('/api/v1/studio/teams')).map(team); }
- async pending() { return items(await this.api.call('/api/v1/admin/teams/pending')).map(team); }
+ async pending(offset=0) { return items(await this.api.call('/api/v1/admin/teams/pending?offset='+offset)).map(team); }
  async create(input: NewTeam) { return team(await this.api.call('/api/v1/studio/teams', 'POST', input)); }
  async approve(id: string) { await this.api.call('/api/v1/admin/teams/' + encodeURIComponent(id) + '/approve', 'POST', {}); }
  async members(id: string): Promise<Member[]> {

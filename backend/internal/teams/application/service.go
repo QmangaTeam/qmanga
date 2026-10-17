@@ -24,7 +24,7 @@ type Repository interface {
 	Access(context.Context, string, string) (domain.Access, error)
 	ProjectAccess(context.Context, string, string) (domain.Access, error)
 	ListForUser(context.Context, string) ([]TeamMembership, error)
-	Pending(context.Context, string) ([]domain.Team, error)
+	Pending(context.Context, string, ...int) ([]domain.Team, error)
 	Approve(context.Context, string, string) error
 	SaveInvitation(context.Context, string, Invitation) error
 	AcceptInvitation(context.Context, string, string, time.Time) (string, error)
@@ -79,8 +79,8 @@ func (service *Service) Check(ctx context.Context, actorID, teamID string, actio
 func (service *Service) List(ctx context.Context, actorID string) ([]TeamMembership, error) {
 	return service.repository.ListForUser(ctx, actorID)
 }
-func (service *Service) Pending(ctx context.Context, actorID string) ([]domain.Team, error) {
-	return service.repository.Pending(ctx, actorID)
+func (service *Service) Pending(ctx context.Context, actorID string, offset ...int) ([]domain.Team, error) {
+	return service.repository.Pending(ctx, actorID, offset...)
 }
 func (service *Service) Approve(ctx context.Context, actorID, teamID string) error {
 	return service.repository.Approve(ctx, actorID, teamID)

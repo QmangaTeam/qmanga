@@ -3,8 +3,8 @@ import type {Position} from '../domain/policies';
 export interface Progress extends Position {titleId:string;releaseId:string;revisionId:string;version:number;furthestOrder:number;deviceId:string;sequence:number}
 export interface ProgressEvent {id:string;deviceId:string;sequence:number;baseVersion:number;titleId:string;releaseId:string;revisionId:string;pageId:string;fraction:number;completed:boolean}
 export interface LocalProgress {scope:string;titleId:string;name:string;slug:string;progress:Progress;pending:ProgressEvent|null;conflict:Progress|null}
-export interface LibraryEntry {titleId:string;name:string;slug:string;status:string;favorite:boolean;preferredTeamId:string;notify:boolean;unseen:number;progress:Progress}
-export interface Selection {titleId:string;status:string;favorite:boolean;preferredTeamId:string;notify:boolean}
+export interface LibraryEntry {version?:number;removed?:boolean;titleId:string;name:string;slug:string;status:string;favorite:boolean;preferredTeamId:string;notify:boolean;unseen:number;progress:Progress}
+export interface Selection {version?:number;removed?:boolean;titleId:string;status:string;favorite:boolean;preferredTeamId:string;notify:boolean}
 export interface ReadingGateway {account():Promise<string|null>;selection(accountId:string,titleId:string):Promise<LibraryEntry|null>;progress(accountId:string,titleId:string):Promise<Progress>;advance(accountId:string,event:ProgressEvent):Promise<{outcome:string;progress:Progress}>;list(accountId:string,after?:string):Promise<{items:LibraryEntry[];hasMore:boolean}>;save(accountId:string,input:Selection):Promise<void>;remove(accountId:string,titleId:string):Promise<void>}
 export interface ProgressStorage {read(scope:string,titleId:string):Promise<LocalProgress|null>;write(value:LocalProgress):Promise<void>;list(scope:string):Promise<LocalProgress[]>;clearAccounts():Promise<void>;identity():{deviceId:string;sequence:number;id:string};watchAccountChange(callback:()=>void):()=>void}
 export class ReadingSession {

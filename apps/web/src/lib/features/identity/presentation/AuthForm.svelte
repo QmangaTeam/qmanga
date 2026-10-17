@@ -32,9 +32,9 @@
  {#if result}<StateMessage kind={result.ok?'success':'error'} title={result.ok?success:errorText($locale,result.code)}/>{/if}
  <Button type="submit" variant="primary" {busy}>{busy?text($locale,'Күте тұр…','Подожди…'):labels[mode]}</Button>
  </form>
- {#if mode==='login'}<a class="auth-link" href="/forgot-password">{text($locale,'Құпиясөзді ұмыттың ба?','Забыл пароль?')}</a><p class="auth-bottom">{text($locale,'Аккаунт жоқ па?','Нет аккаунта?')} <a href="/register">{text($locale,'Тіркелу','Зарегистрироваться')}</a></p>
- {:else if mode==='register'}<p class="auth-bottom">{text($locale,'Аккаунт бар ма?','Уже есть аккаунт?')} <a href="/login">{text($locale,'Кіру','Войти')}</a></p><Button variant="ghost" disabled={!email} {busy} onclick={resend}>{text($locale,'Растау хатын қайта жіберу','Отправить подтверждение ещё раз')}</Button>
- {:else}<a class="auth-link" href="/login">{text($locale,'Кіруге оралу','Вернуться ко входу')}</a>{/if}
+ {#if mode==='login'}<a class="auth-link" href={'/forgot-password?returnTo='+encodeURIComponent(safeReturnPath($page.url.searchParams.get('returnTo')))}>{text($locale,'Құпиясөзді ұмыттың ба?','Забыл пароль?')}</a><p class="auth-bottom">{text($locale,'Аккаунт жоқ па?','Нет аккаунта?')} <a href={'/register?returnTo='+encodeURIComponent(safeReturnPath($page.url.searchParams.get('returnTo')))}>{text($locale,'Тіркелу','Зарегистрироваться')}</a></p>
+ {:else if mode==='register'}<p class="auth-bottom">{text($locale,'Аккаунт бар ма?','Уже есть аккаунт?')} <a href={'/login?returnTo='+encodeURIComponent(safeReturnPath($page.url.searchParams.get('returnTo')))}>{text($locale,'Кіру','Войти')}</a></p><Button variant="ghost" disabled={!email} {busy} onclick={resend}>{text($locale,'Растау хатын қайта жіберу','Отправить подтверждение ещё раз')}</Button>
+ {:else}<a class="auth-link" href={'/login?returnTo='+encodeURIComponent(safeReturnPath($page.url.searchParams.get('returnTo')))}>{text($locale,'Кіруге оралу','Вернуться ко входу')}</a>{/if}
  {#snippet footer()}<p>{text($locale,'Оқу үшін тіркелу қажет емес.','Для чтения регистрация не нужна.')} <a class="auth-link" href="/catalog">{text($locale,'Каталогты ашу','Открыть каталог')}</a></p>{/snippet}
 </AuthLayout>
 <style>form { display:grid; gap:20px; } form :global(.ui-action) { width:100%; }</style>

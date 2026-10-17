@@ -83,11 +83,11 @@ type Repository interface {
 	CreateGenre(context.Context, string, Genre) error
 	CreateChapter(context.Context, string, string, string, string, string, int) (string, error)
 	CreateProject(context.Context, string, string, string, string) error
-	StudioProjects(context.Context, string) ([]Project, error)
-	AdminTitles(context.Context, string) ([]Summary, error)
+	StudioProjects(context.Context, string, ...int) ([]Project, error)
+	AdminTitles(context.Context, string, ...int) ([]Summary, error)
 	AdminDetail(context.Context, string, string) (Detail, error)
 	UpdateTitle(context.Context, string, domain.Title) error
-	ApprovedTeams(context.Context, string) ([]Team, error)
+	ApprovedTeams(context.Context, string, ...int) ([]Team, error)
 }
 type Service struct {
 	repository Repository
@@ -203,14 +203,14 @@ func (service *Service) CreateProject(ctx context.Context, actorID, titleID, tea
 	id := service.newID()
 	return id, service.repository.CreateProject(ctx, actorID, id, titleID, teamID)
 }
-func (service *Service) StudioProjects(ctx context.Context, actorID string) ([]Project, error) {
-	return service.repository.StudioProjects(ctx, actorID)
+func (service *Service) StudioProjects(ctx context.Context, actorID string, offset ...int) ([]Project, error) {
+	return service.repository.StudioProjects(ctx, actorID, offset...)
 }
-func (service *Service) AdminTitles(ctx context.Context, actorID string) ([]Summary, error) {
+func (service *Service) AdminTitles(ctx context.Context, actorID string, offset ...int) ([]Summary, error) {
 	if failure := service.admin(ctx, actorID); failure != nil {
 		return nil, failure
 	}
-	return service.repository.AdminTitles(ctx, actorID)
+	return service.repository.AdminTitles(ctx, actorID, offset...)
 }
 
 func (service *Service) AdminDetail(ctx context.Context, actorID, id string) (Detail, error) {
@@ -229,11 +229,11 @@ func (service *Service) UpdateTitle(ctx context.Context, actorID, id string, inp
 	}
 	return title, service.repository.UpdateTitle(ctx, actorID, title)
 }
-func (service *Service) ApprovedTeams(ctx context.Context, actorID string) ([]Team, error) {
+func (service *Service) ApprovedTeams(ctx context.Context, actorID string, offset ...int) ([]Team, error) {
 	if failure := service.admin(ctx, actorID); failure != nil {
 		return nil, failure
 	}
-	return service.repository.ApprovedTeams(ctx, actorID)
+	return service.repository.ApprovedTeams(ctx, actorID, offset...)
 }
 func (service *Service) Updates(ctx context.Context, after, team string, limit int) (UpdatePage, error) {
 	if len(after) > 36 || len(team) > 128 {

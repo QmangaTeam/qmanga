@@ -41,7 +41,7 @@ func translate(failure error) error {
 func access(ctx context.Context, database queryer, actor, projectID, action string) error {
 	var allowed teamDomain.Access
 	var status string
-	failure := database.QueryRow(ctx, `SELECT account.is_verified,account.role,team.is_approved,coalesce(member.role,''),project.status FROM projects project JOIN teams team ON team.id=project.team_id JOIN users account ON account.id=$1 LEFT JOIN team_memberships member ON member.team_id=team.id AND member.user_id=account.id WHERE project.id=$2`, actor, projectID).Scan(&allowed.Verified, &allowed.GlobalRole, &allowed.Approved, &allowed.Role, &status)
+	failure := database.QueryRow(ctx, `SELECT account.is_verified,account.role,team.is_approved,coalesce(member.role,''),project.status FROM projects project JOIN teams team ON team.id=project.team_id JOIN users account ON account.id=$1 AND NOT account.is_blocked LEFT JOIN team_memberships member ON member.team_id=team.id AND member.user_id=account.id WHERE project.id=$2`, actor, projectID).Scan(&allowed.Verified, &allowed.GlobalRole, &allowed.Approved, &allowed.Role, &status)
 	if errors.Is(failure, pgx.ErrNoRows) {
 		return domain.ErrForbidden
 	}
@@ -69,7 +69,7 @@ func (repository *Repository) withProject(ctx context.Context, actor, projectID,
 	if failure = transaction.QueryRow(ctx, "SELECT team.id FROM teams team JOIN projects project ON project.team_id=team.id WHERE project.id=$1 FOR UPDATE OF team", projectID).Scan(&locked); failure != nil {
 		return translate(failure)
 	}
-	if failure = transaction.QueryRow(ctx, "SELECT id FROM users WHERE id=$1 FOR SHARE", actor).Scan(&locked); failure != nil {
+	if failure = transaction.QueryRow(ctx, "SELECT id FROM users WHERE id=$1 AND NOT is_blocked FOR SHARE", actor).Scan(&locked); failure != nil {
 		return domain.ErrForbidden
 	}
 	if failure = access(ctx, transaction, actor, projectID, action); failure != nil {
@@ -218,8 +218,15 @@ func (repository *Repository) Reorder(ctx context.Context, actor, id string, ver
 		if version != revision.Version() {
 			return domain.ErrConflict
 		}
-		if len(pageIDs) != revision.PageCount() {
+		if len(pageIDs) > revision.PageCount() {
 			return domain.ErrTransition
+		}
+
+		if _, failure := transaction.Exec(ctx, "UPDATE jobs SET status='cancelled' WHERE type='process_page' AND payload->>'page_id' IN(SELECT id FROM pages WHERE revision_id=$1 AND NOT(id=ANY($2::varchar[])))", id, pageIDs); failure != nil {
+			return failure
+		}
+		if _, failure := transaction.Exec(ctx, "DELETE FROM pages WHERE revision_id=$1 AND NOT(id=ANY($2::varchar[]))", id, pageIDs); failure != nil {
+			return failure
 		}
 		seen := map[string]bool{}
 		for position, pageID := range pageIDs {
@@ -235,7 +242,7 @@ func (repository *Repository) Reorder(ctx context.Context, actor, id string, ver
 				return domain.ErrForbidden
 			}
 		}
-		_, failure := transaction.Exec(ctx, "UPDATE revisions SET version=version+1,updated_at=now() WHERE id=$1", id)
+		_, failure := transaction.Exec(ctx, "UPDATE revisions SET status=CASE WHEN NOT EXISTS(SELECT 1 FROM pages WHERE revision_id=$1) THEN 'draft' WHEN NOT EXISTS(SELECT 1 FROM pages WHERE revision_id=$1 AND status<>'ready') THEN 'ready' ELSE 'processing' END,version=version+1,updated_at=now() WHERE id=$1", id)
 		return failure
 	})
 }

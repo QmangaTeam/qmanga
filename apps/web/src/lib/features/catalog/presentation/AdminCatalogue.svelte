@@ -11,10 +11,13 @@
  const kindNames=$derived(catalogNames($locale).kind),originalStatusNames=$derived(catalogNames($locale).original),translationStatusNames=$derived(catalogNames($locale).translation);
  let { user, gateway }: { user: Account | null; gateway: CatalogManagementGateway } = $props();
  let titles = $state<Summary[]>([]), genres = $state<Genre[]>([]), teams = $state<{id: string; name: string}[]>([]);
+ let moreTitles=$state(false),moreTeams=$state(false);
+ async function loadMoreTitles(){const next=await gateway.titles(titles.length);titles=[...titles,...next];moreTitles=next.length===100;}
+ async function loadMoreTeams(){const next=await gateway.teams(teams.length);teams=[...teams,...next];moreTeams=next.length===100;}
  let selected = $state(''), input = $state(emptyMetadata()), aliases = $state(''), authors = $state(''), detail = $state<TitleDetail | null>(null);
  let busy = $state(false), notice = $state(''), failure = $state('');
  let chapterLabel = $state(''), chapterOrder = $state(1), volume = $state(''), chapterName = $state(''), teamId = $state(''), genreName = $state(''), genreSlug = $state('');
- async function reload() { [titles, genres, teams] = await Promise.all([gateway.titles(), gateway.genres(), gateway.teams()]); }
+ async function reload() { [titles, genres, teams] = await Promise.all([gateway.titles(), gateway.genres(), gateway.teams()]);moreTitles=titles.length===100;moreTeams=teams.length===100; }
  async function operation(action: () => Promise<void>) { if (busy) return; busy = true; failure = ''; notice = ''; try { await action(); notice = "saved"; } catch (error) { failure = failureCode(error); } finally { busy = false; } }
  async function choose(id: string) { selected = id; detail = id ? await gateway.detail(id) : null; input = detail ? editableMetadata(detail) : emptyMetadata(); aliases = input.aliases.join('\n'); authors=(input.authors||[]).join('\n'); }
  onMount(() => { if (user?.role === 'admin') operation(reload); });
@@ -26,6 +29,7 @@
 {#if failure}<p class="form-message" role="alert">{noticeText($locale,failure)}</p>{/if}{#if notice}<p class="form-message success" role="status">{noticeText($locale,notice)}</p>{/if}
 <div class="workspace-grid"><section class="panel"><h2>{copy($locale,"Тайтл")}</h2>
 <label>{copy($locale,"Таңдау")}<select value={selected} disabled={busy} onchange={event => operation(() => choose(event.currentTarget.value))}><option value="">{copy($locale,"Жаңа тайтл")}</option>{#each titles as title}<option value={title.id}>{title.name}</option>{/each}</select></label>
+{#if moreTitles}<button class="button subtle" disabled={busy} onclick={()=>operation(loadMoreTitles)}>{text($locale,'Тағы тайтлдар','Ещё тайтлы')}</button>{/if}
 <form onsubmit={save}>
  <label>{copy($locale,"Қазақша атауы")}<input bind:value={input.name} required maxlength="200"/></label>
  <label>{copy($locale,"Сілтемедегі атауы")}<input bind:value={input.slug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="128" placeholder="dala-sapary"/></label>
@@ -44,7 +48,7 @@
 </form></section>
 <section class="panel"><h2>{copy($locale,"Тараулар мен жобалар")}</h2>
 {#if selected}<form onsubmit={event => { event.preventDefault(); operation(async () => { await gateway.createChapter(selected,chapterLabel,chapterOrder,volume,chapterName); chapterLabel = ''; }); }}><label>{copy($locale,"Тарау белгісі")}<input bind:value={chapterLabel} required maxlength="64" placeholder={copy($locale,"1.1 немесе Арнайы")}/></label><label>{copy($locale,"Реттік саны")}<input type="number" bind:value={chapterOrder} min="1" max="1000000" required/></label><label>{copy($locale,"Том")}<input bind:value={volume} maxlength="32"/></label><label>{copy($locale,"Тарау атауы")}<input bind:value={chapterName} maxlength="200"/></label><button class="button primary" disabled={busy}>{copy($locale,"Тарау қосу")}</button></form>
-<h3>{copy($locale,"Командаға жоба беру")}</h3><form onsubmit={event => { event.preventDefault(); operation(async () => { await gateway.createProject(selected,teamId); await choose(selected); }); }}><label>{copy($locale,"Мақұлданған команда")}<select bind:value={teamId} required><option value="">{copy($locale,"Команданы таңдаңыз")}</option>{#each teams as team}<option value={team.id}>{team.name}</option>{/each}</select></label><button class="button primary" disabled={busy || !teamId}>{copy($locale,"Жоба құру")}</button></form>
+<h3>{copy($locale,"Командаға жоба беру")}</h3><form onsubmit={event => { event.preventDefault(); operation(async () => { await gateway.createProject(selected,teamId); await choose(selected); }); }}><label>{copy($locale,"Мақұлданған команда")}<select bind:value={teamId} required><option value="">{copy($locale,"Команданы таңдаңыз")}</option>{#each teams as team}<option value={team.id}>{team.name}</option>{/each}</select></label>{#if moreTeams}<button type="button" class="button subtle" disabled={busy} onclick={()=>operation(loadMoreTeams)}>{text($locale,'Тағы командалар','Ещё команды')}</button>{/if}<button class="button primary" disabled={busy || !teamId}>{copy($locale,"Жоба құру")}</button></form>
 {#each detail?.projects || [] as project}<p><a class="auth-link" href={'/studio/projects/' + encodeURIComponent(project.id)}>{project.teamName}: {project.titleName}</a></p>{/each}
 {:else}<p class="muted">{copy($locale,"Алдымен тайтлды сақтаңыз немесе таңдаңыз.")}</p>{/if}
 <h3>{copy($locale,"Жаңа жанр")}</h3><form onsubmit={event => { event.preventDefault(); operation(async () => { await gateway.createGenre(genreName,genreSlug); genres = await gateway.genres(); genreName = ''; genreSlug = ''; }); }}><label>{copy($locale,"Жанр атауы")}<input bind:value={genreName} required maxlength="80"/></label><label>{copy($locale,"Сілтемесі")}<input bind:value={genreSlug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="64"/></label><button class="button subtle" disabled={busy}>{copy($locale,"Жанр қосу")}</button></form>

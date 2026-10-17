@@ -9,7 +9,7 @@
  let { data }: { data: PageData } = $props();
 </script>
 {#key data.title.id}
-<Title title={data.title} chapters={data.chapters} nextURL={data.nextURL} firstChapter={data.firstChapter} chapterFilter={data.chapterFilter}>{#snippet library()}<LibrarySelection title={data.title} readingGateway={reading.readingGateway}/>{/snippet}</Title>
+<Title title={data.title} chapters={data.chapters} nextURL={data.nextURL} firstChapter={data.firstChapter} chapterFilter={data.chapterFilter}>{#snippet library()}<LibrarySelection title={data.title} readingGateway={reading.readingGateway} librarySync={reading.librarySync}/>{/snippet}</Title>
 <Discussion titleId={data.title.id} gateway={community}/>
 
 {/key}

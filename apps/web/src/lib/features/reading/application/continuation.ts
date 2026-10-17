@@ -12,7 +12,7 @@ export async function loadContinuation(gateway:ReadingGateway,storage:ProgressSt
  while(rows.length<limit){
   const page=await gateway.list(account,cursor);
   for(const item of page.items){
-   if(item.status==='reading'&&item.progress.releaseId&&!seen.has(item.titleId)){
+   if(!item.removed&&item.status==='reading'&&item.progress.releaseId&&!seen.has(item.titleId)){
     rows.push({titleId:item.titleId,name:item.name,slug:item.slug,releaseId:item.progress.releaseId});
     seen.add(item.titleId);
     if(rows.length===limit)return rows;

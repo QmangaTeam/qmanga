@@ -12,9 +12,9 @@ function revision(value: unknown): Revision {
 export class HttpPublishingGateway implements PublishingGateway {
  constructor(private api: ApiClient) {}
  private async items<Item>(path: string, map: (value: unknown) => Item) { return array(object(await this.api.call(path)).items, map); }
- async projects() { return this.items('/api/v1/studio/projects', value => { const item = object(value); return { id: text(item.id), titleName: text(item.title_name), teamName: text(item.team_name) }; }); }
- async chapters(id: string) { return this.items('/api/v1/studio/projects/' + encodeURIComponent(id) + '/chapters', value => { const item = object(value); return { id: text(item.id), label: text(item.label), name: text(item.name), order: number(item.order) }; }); }
- async revisions(id: string) { return this.items('/api/v1/studio/projects/' + encodeURIComponent(id) + '/revisions', revision); }
+ async projects(offset=0) { return this.items('/api/v1/studio/projects?offset='+offset, value => { const item = object(value); return { id: text(item.id), titleName: text(item.title_name), teamName: text(item.team_name) }; }); }
+ async chapters(id: string,offset=0) { return this.items('/api/v1/studio/projects/' + encodeURIComponent(id) + '/chapters?offset='+offset, value => { const item = object(value); return { id: text(item.id), label: text(item.label), name: text(item.name), order: number(item.order) }; }); }
+ async revisions(id: string,offset=0) { return this.items('/api/v1/studio/projects/' + encodeURIComponent(id) + '/revisions?offset='+offset, revision); }
  async revision(id: string) { return revision(await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id))); }
  async create(projectId: string, chapterId: string) { return revision(await this.api.call('/api/v1/studio/projects/' + encodeURIComponent(projectId) + '/revisions', 'POST', { chapter_id: chapterId })); }
  async prepare(files: unknown[]): Promise<UploadSource[]> {
@@ -53,7 +53,7 @@ export class HttpPublishingGateway implements PublishingGateway {
  async remove(id: string, pageId: string) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/pages/' + encodeURIComponent(pageId), 'DELETE'); }
  async attribution(id:string,version:number,source:string,credits:string,confirmed:boolean){await this.api.call('/api/v1/studio/revisions/'+encodeURIComponent(id)+'/attribution','PUT',{version,source_note:source,credits,rights_confirmed:confirmed});}
  async submit(id: string, version: number) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/submit', 'POST', { version }); }
- async pending() { return this.items('/api/v1/moderation/revisions', revision); }
+ async pending(offset=0) { return this.items('/api/v1/moderation/revisions?offset='+offset, revision); }
  async review(id: string, decision: 'publish' | 'reject', reason: string) { await this.api.call('/api/v1/moderation/revisions/' + encodeURIComponent(id) + '/review', 'POST', { decision, reason }); }
  async withdraw(id: string, reason: string) { await this.api.call('/api/v1/moderation/releases/' + encodeURIComponent(id) + '/withdraw', 'POST', { reason }); }
 }

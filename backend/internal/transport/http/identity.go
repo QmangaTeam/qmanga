@@ -39,6 +39,10 @@ func NewIdentityHandler(service *application.Service, origin string, secure bool
 	return &IdentityHandler{service: service, origin: origin, secure: secure, limiter: &rateLimiter{entries: make(map[string]rateEntry)}}
 }
 func (handler *IdentityHandler) Register(api *gin.RouterGroup) {
+	staff := api.Group("/moderation/accounts", handler.RequireUser(), expectedAccount(), RequireRole("admin", "moderator"))
+	staff.GET("", handler.accounts)
+	staff.PUT("/:id", handler.manageAccount)
+	api.GET("/admin/audit", handler.RequireUser(), expectedAccount(), RequireRole("admin"), handler.audit)
 	auth := api.Group("/auth")
 	auth.Use(handler.CheckOrigin())
 	auth.POST("/register", handler.limit(), handler.register)

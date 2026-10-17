@@ -34,7 +34,7 @@ func translate(failure error) error {
 func accessFor(ctx context.Context, database queryer, actorID, teamID string) (domain.Access, error) {
 	var access domain.Access
 	failure := database.QueryRow(ctx, `SELECT account.is_verified,account.role,coalesce(team.is_approved,false),coalesce(member.role,'')
-	FROM users account LEFT JOIN teams team ON team.id=$2 LEFT JOIN team_memberships member ON member.team_id=team.id AND member.user_id=account.id WHERE account.id=$1`, actorID, teamID).Scan(&access.Verified, &access.GlobalRole, &access.Approved, &access.Role)
+	FROM users account LEFT JOIN teams team ON team.id=$2 LEFT JOIN team_memberships member ON member.team_id=team.id AND member.user_id=account.id WHERE account.id=$1 AND NOT account.is_blocked`, actorID, teamID).Scan(&access.Verified, &access.GlobalRole, &access.Approved, &access.Role)
 	if errors.Is(failure, pgx.ErrNoRows) {
 		return access, domain.ErrForbidden
 	}
@@ -60,7 +60,7 @@ func (repository *Repository) Create(ctx context.Context, actorID string, team d
 	}
 	defer transaction.Rollback(ctx)
 	var verified bool
-	if failure = transaction.QueryRow(ctx, "SELECT is_verified FROM users WHERE id=$1 FOR SHARE", actorID).Scan(&verified); failure != nil {
+	if failure = transaction.QueryRow(ctx, "SELECT is_verified FROM users WHERE id=$1 AND NOT is_blocked FOR SHARE", actorID).Scan(&verified); failure != nil {
 		return domain.ErrForbidden
 	}
 	if !verified {
@@ -86,7 +86,7 @@ func (repository *Repository) withAccess(ctx context.Context, actorID, teamID st
 	if failure = transaction.QueryRow(ctx, "SELECT id FROM teams WHERE id=$1 FOR UPDATE", teamID).Scan(&lockedID); failure != nil {
 		return translate(failure)
 	}
-	if failure = transaction.QueryRow(ctx, "SELECT id FROM users WHERE id=$1 FOR SHARE", actorID).Scan(&lockedID); failure != nil {
+	if failure = transaction.QueryRow(ctx, "SELECT id FROM users WHERE id=$1 AND NOT is_blocked FOR SHARE", actorID).Scan(&lockedID); failure != nil {
 		return domain.ErrForbidden
 	}
 	access, failure := accessFor(ctx, transaction, actorID, teamID)
@@ -118,7 +118,7 @@ func (repository *Repository) ListForUser(ctx context.Context, actorID string) (
 	}
 	return items, rows.Err()
 }
-func (repository *Repository) Pending(ctx context.Context, actorID string) ([]domain.Team, error) {
+func (repository *Repository) Pending(ctx context.Context, actorID string, offset ...int) ([]domain.Team, error) {
 	access, failure := repository.Access(ctx, actorID, "")
 	if failure != nil {
 		return nil, failure
@@ -126,7 +126,7 @@ func (repository *Repository) Pending(ctx context.Context, actorID string) ([]do
 	if !access.Allows(domain.Approve) {
 		return nil, domain.ErrForbidden
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT id,slug,name,description,is_approved FROM teams WHERE NOT is_approved ORDER BY created_at LIMIT 100")
+	rows, failure := repository.pool.Query(ctx, "SELECT id,slug,name,description,is_approved FROM teams WHERE NOT is_approved ORDER BY created_at,id LIMIT 100 OFFSET "+pageOffset(offset))
 	if failure != nil {
 		return nil, failure
 	}
@@ -180,7 +180,7 @@ func (repository *Repository) AcceptInvitation(ctx context.Context, actorID, has
 	}
 	var email string
 	var verified bool
-	if failure = transaction.QueryRow(ctx, "SELECT email,is_verified FROM users WHERE id=$1 FOR SHARE", actorID).Scan(&email, &verified); failure != nil || !verified {
+	if failure = transaction.QueryRow(ctx, "SELECT email,is_verified FROM users WHERE id=$1 AND NOT is_blocked FOR SHARE", actorID).Scan(&email, &verified); failure != nil || !verified {
 		return "", domain.ErrForbidden
 	}
 	var inviteEmail string

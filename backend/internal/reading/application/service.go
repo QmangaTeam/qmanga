@@ -7,6 +7,8 @@ import (
 )
 
 type Entry struct {
+	Version                                      int64
+	Removed                                      bool
 	TitleID, Name, Slug, Status, PreferredTeamID string
 	Favorite, Notify                             bool
 	Unseen                                       int
@@ -14,6 +16,8 @@ type Entry struct {
 	Progress                                     domain.Progress
 }
 type Selection struct {
+	Version                          int64
+	Removed                          bool
 	TitleID, Status, PreferredTeamID string
 	Favorite, Notify                 bool
 }
@@ -40,7 +44,7 @@ func (service *Service) List(ctx context.Context, actor, after string) ([]Entry,
 	return service.repository.List(ctx, actor, after)
 }
 func (service *Service) Save(ctx context.Context, actor string, input Selection) error {
-	if !domain.ValidStatus(input.Status) || input.TitleID == "" {
+	if input.Version < 0 || !domain.ValidStatus(input.Status) || input.TitleID == "" {
 		return domain.ErrInvalid
 	}
 	return service.repository.Save(ctx, actor, input)

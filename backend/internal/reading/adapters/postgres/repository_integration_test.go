@@ -64,6 +64,20 @@ func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 		testingTarget.Fatal(own, failure)
 	}
 	foreign, failure := repository.List(ctx, "second", "")
+	stale := selection
+	selection.Version = own[0].Version
+	selection.Status = "paused"
+	if failure = repository.Save(ctx, "first", selection); failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	if failure = repository.Save(ctx, "first", stale); !errors.Is(failure, domain.ErrConflict) {
+		testingTarget.Fatal("stale library change accepted", failure)
+	}
+	selection.Version++
+	selection.Status = "reading"
+	if failure = repository.Save(ctx, "first", selection); failure != nil {
+		testingTarget.Fatal(failure)
+	}
 	if failure != nil || len(foreign) != 0 {
 		testingTarget.Fatal("library crossed accounts", failure)
 	}

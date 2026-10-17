@@ -31,18 +31,18 @@ func (repository *Repository) CreateAccount(ctx context.Context, account domain.
 }
 func (repository *Repository) AccountByEmail(ctx context.Context, email string) (domain.Account, error) {
 	var account domain.Account
-	failure := repository.pool.QueryRow(ctx, "SELECT id,email,password_hash,role,is_verified,display_name FROM users WHERE lower(email)=$1", email).Scan(&account.ID, &account.Email, &account.PasswordHash, &account.Role, &account.Verified, &account.DisplayName)
+	failure := repository.pool.QueryRow(ctx, "SELECT id,email,password_hash,role,is_verified,display_name FROM users WHERE lower(email)=$1 AND NOT is_blocked", email).Scan(&account.ID, &account.Email, &account.PasswordHash, &account.Role, &account.Verified, &account.DisplayName)
 	return account, translate(failure)
 }
 func (repository *Repository) SaveSession(ctx context.Context, session application.Session) error {
-	_, failure := repository.pool.Exec(ctx, "INSERT INTO sessions(id,user_id,csrf_hash,expires_at) VALUES($1,$2,$3,$4)", session.Hash, session.UserID, session.CSRFHash, session.ExpiresAt)
+	_, failure := repository.pool.Exec(ctx, "INSERT INTO sessions(id,user_id,csrf_hash,expires_at) SELECT $1,id,$3,$4 FROM users WHERE id=$2 AND NOT is_blocked", session.Hash, session.UserID, session.CSRFHash, session.ExpiresAt)
 	return failure
 }
 func (repository *Repository) SessionAccount(ctx context.Context, hash string, now time.Time) (application.Session, domain.Account, error) {
 	var session application.Session
 	var account domain.Account
 	failure := repository.pool.QueryRow(ctx, `SELECT session.id,session.user_id,session.csrf_hash,session.expires_at,account.id,account.email,account.password_hash,account.role,account.is_verified,account.display_name
- FROM sessions session JOIN users account ON account.id=session.user_id WHERE session.id=$1 AND session.expires_at>$2`, hash, now).Scan(
+ FROM sessions session JOIN users account ON account.id=session.user_id WHERE session.id=$1 AND session.expires_at>$2 AND NOT account.is_blocked`, hash, now).Scan(
 		&session.Hash, &session.UserID, &session.CSRFHash, &session.ExpiresAt, &account.ID, &account.Email, &account.PasswordHash, &account.Role, &account.Verified, &account.DisplayName)
 	if errors.Is(failure, pgx.ErrNoRows) {
 		return session, account, domain.ErrCredentials

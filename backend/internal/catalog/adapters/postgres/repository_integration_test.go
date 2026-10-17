@@ -220,4 +220,21 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 	if failure = repository.CreateTitle(ctx, "admin", title); !errors.Is(failure, domain.ErrForbidden) {
 		testingTarget.Fatal("adapter allowed revoked administrator")
 	}
+	execute("UPDATE users SET role='admin' WHERE id='admin'")
+	execute("INSERT INTO titles(id,slug,name_kk,type) SELECT 'extra-'||number,'extra-'||number,'Extra '||number,'manga' FROM generate_series(1,105)number")
+	firstPage, failure := repository.AdminTitles(ctx, "admin")
+	if failure != nil || len(firstPage) != 100 {
+		testingTarget.Fatal("first admin page", len(firstPage), failure)
+	}
+	nextPage, failure := repository.AdminTitles(ctx, "admin", 100)
+	if failure != nil || len(nextPage) == 0 {
+		testingTarget.Fatal("older titles inaccessible", failure)
+	}
+	for _, first := range firstPage {
+		for _, next := range nextPage {
+			if first.ID == next.ID {
+				testingTarget.Fatal("pagination overlaps")
+			}
+		}
+	}
 }

@@ -35,7 +35,7 @@ func progressView(item domain.Progress) gin.H {
 	return gin.H{"title_id": item.TitleID, "release_id": item.ReleaseID, "revision_id": item.RevisionID, "page_id": item.PageID, "fraction": item.Fraction, "furthest_order": item.FurthestOrder, "version": item.Version, "device_id": item.DeviceID, "sequence": item.Sequence}
 }
 func entryView(item application.Entry) gin.H {
-	return gin.H{"title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "status": item.Status, "favorite": item.Favorite, "preferred_team_id": item.PreferredTeamID, "notify": item.Notify, "unseen": item.Unseen, "progress": progressView(item.Progress)}
+	return gin.H{"version": item.Version, "removed": item.Removed, "title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "status": item.Status, "favorite": item.Favorite, "preferred_team_id": item.PreferredTeamID, "notify": item.Notify, "unseen": item.Unseen, "progress": progressView(item.Progress)}
 }
 func (handler *ReadingHandler) selection(request *gin.Context) {
 	account, _ := CurrentAccount(request)
@@ -59,12 +59,14 @@ func (handler *ReadingHandler) list(request *gin.Context) {
 	}
 	result := []gin.H{}
 	for _, item := range items {
-		result = append(result, gin.H{"title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "status": item.Status, "favorite": item.Favorite, "preferred_team_id": item.PreferredTeamID, "notify": item.Notify, "unseen": item.Unseen, "progress": progressView(item.Progress)})
+		result = append(result, gin.H{"version": item.Version, "removed": item.Removed, "title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "status": item.Status, "favorite": item.Favorite, "preferred_team_id": item.PreferredTeamID, "notify": item.Notify, "unseen": item.Unseen, "progress": progressView(item.Progress)})
 	}
 	request.JSON(200, gin.H{"items": result, "has_more": len(items) == 100})
 }
 func (handler *ReadingHandler) save(request *gin.Context) {
 	var input struct {
+		Version         int64  `json:"version"`
+		Removed         bool   `json:"removed"`
 		Status          string `json:"status"`
 		Favorite        bool   `json:"favorite"`
 		PreferredTeamID string `json:"preferred_team_id"`
@@ -74,7 +76,7 @@ func (handler *ReadingHandler) save(request *gin.Context) {
 		return
 	}
 	account, _ := CurrentAccount(request)
-	if failure := handler.service.Save(request.Request.Context(), account.ID, application.Selection{TitleID: request.Param("id"), Status: input.Status, Favorite: input.Favorite, PreferredTeamID: input.PreferredTeamID, Notify: input.Notify}); failure != nil {
+	if failure := handler.service.Save(request.Request.Context(), account.ID, application.Selection{Version: input.Version, Removed: input.Removed, TitleID: request.Param("id"), Status: input.Status, Favorite: input.Favorite, PreferredTeamID: input.PreferredTeamID, Notify: input.Notify}); failure != nil {
 		readingError(request, failure)
 		return
 	}
@@ -126,6 +128,8 @@ func (handler *ReadingHandler) advance(request *gin.Context) {
 }
 func readingError(request *gin.Context, failure error) {
 	switch {
+	case errors.Is(failure, domain.ErrConflict):
+		Error(request, 409, "conflict", "Кітапхана басқа құрылғыда өзгерді")
 	case errors.Is(failure, domain.ErrInvalid):
 		Error(request, 422, "validation", "Оқу деректерін тексеріңіз")
 	case errors.Is(failure, domain.ErrNotFound):

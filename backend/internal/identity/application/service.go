@@ -17,6 +17,9 @@ type Token struct {
 	ExpiresAt          time.Time
 }
 type Repository interface {
+	Accounts(context.Context, string, string, string) ([]ManagedAccount, error)
+	ManageAccount(context.Context, string, string, AccountChange) error
+	Audit(context.Context, string, string) ([]AuditEntry, error)
 	UpdateProfile(context.Context, string, string) error
 	CreateAccount(context.Context, domain.Account) error
 	AccountByEmail(context.Context, string) (domain.Account, error)

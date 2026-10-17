@@ -2,25 +2,28 @@
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {copy,noticeText,failureCode} from '$lib/shared/presentation/copy';
  const {locale,change:changeLanguage}=useLocale();
+ import LibrarySyncStatus from './LibrarySyncStatus.svelte';
+ import type {LibrarySync} from '../application/library-sync';
  import LibraryRow from './LibraryRow.svelte';
  import SectionHeading from '$lib/shared/presentation/ui/SectionHeading.svelte';
  import {onMount} from 'svelte';
  import type {LibraryEntry,LocalProgress,Progress,ProgressStorage,ReadingGateway} from '../application/progress';
  import {importGuest as transferGuest} from '../application/guest-import';
- let {readingGateway,progressStorage}:{readingGateway:ReadingGateway;progressStorage:ProgressStorage}=$props();
+ let {readingGateway,progressStorage,librarySync}:{readingGateway:ReadingGateway;progressStorage:ProgressStorage;librarySync?:LibrarySync}=$props();
  let entries=$state<LibraryEntry[]>([]),guests=$state<LocalProgress[]>([]),account=$state<string|null>(null),busy=$state(true),more=$state(false),message=$state(''),filter=$state('all'),conflict=$state<{guest:LocalProgress;cloud:Progress}|null>(null),valid=true;
  const statusNames=$derived<Record<string,string>>({reading:copy($locale,"Оқып жүрмін"),planned:copy($locale,"Жоспарда"),completed:copy($locale,"Оқып болдым"),paused:copy($locale,"Үзілісте"),dropped:copy($locale,"Тоқтаттым")});
  onMount(()=>{const stop=progressStorage.watchAccountChange(()=>{valid=false;entries=[];account=null;message="account_changed";});void load();return ()=>{valid=false;stop();};});
  async function load(after=''){busy=true;try{const current=account||await readingGateway.account();const guestRows=await progressStorage.list('guest');if(!valid)return;guests=guestRows;account=current;if(current){const result=await readingGateway.list(current,after);if(!valid)return;entries=after?[...entries,...result.items]:result.items;more=result.hasMore;}}catch(failure){message=failureCode(failure);}finally{busy=false;}}
- async function update(item:LibraryEntry){if(!account)return;try{await readingGateway.save(account,item);message="saved";}catch(failure){message=failureCode(failure);}}
+ async function update(item:LibraryEntry){if(!account)return;try{await readingGateway.save(account,item);message=(await librarySync?.state(account,item.titleId))?.pending?"":"saved";}catch(failure){message=failureCode(failure);}}
  async function remove(item:LibraryEntry){if(!account)return;try{await readingGateway.remove(account,item.titleId);entries=entries.filter(entry=>entry.titleId!==item.titleId);}catch{message="remove_failed";}}
  async function importGuest(guest:LocalProgress,baseVersion?:number){if(!account)return;busy=true;try{const cloud=await transferGuest(readingGateway,progressStorage,account,guest,baseVersion);if(cloud){conflict={guest,cloud};message="progress_conflict";return;}conflict=null;message="guest_imported";await load();}catch{message="import_failed";}finally{busy=false;}}
 </script>
 <svelte:head><title>{copy($locale,"Кітапхана — Qmanga")}</title><meta name="robots" content="noindex"/></svelte:head>
 <SectionHeading level={1} title={copy($locale,"Кітапхана")}>{#snippet actions()}<a class="button subtle" href="/saved">{copy($locale,"Сақталған тараулар")}</a>{/snippet}</SectionHeading>
 {#if message}<p role="status" class="form-message">{noticeText($locale,message)}</p>{/if}
+{#if account&&librarySync}<LibrarySyncStatus sync={librarySync} {account} onresolved={()=>{if(valid)void load();}}/>{/if}
 {#if account}<label class="filter">{copy($locale,"Тізім")}<select bind:value={filter}><option value="all">{copy($locale,"Барлығы")}</option><option value="favorites">{copy($locale,"Таңдаулы")}</option>{#each Object.entries(statusNames) as [value,label]}<option {value}>{label}</option>{/each}</select></label>
- {#each entries.filter(item=>filter==='all'||filter==='favorites'&&item.favorite||item.status===filter) as item}<LibraryRow name={item.name} href={`/titles/${item.slug}`} detail={text($locale,'Оқылмаған тараулар:','Непрочитанных глав:')+' '+item.unseen} releaseId={item.progress.releaseId} continueLabel={copy($locale,"Жалғастыру")}><div class="entry-controls"><select aria-label={item.name+': '+text($locale,'мәртебесі','статус')} bind:value={item.status} onchange={()=>update(item)}>{#each Object.entries(statusNames) as [value,label]}<option {value}>{label}</option>{/each}</select><label><input type="checkbox" bind:checked={item.favorite} onchange={()=>update(item)}/>{copy($locale,"Таңдаулы")}</label><button class="button subtle" onclick={()=>remove(item)}>{copy($locale,"Тізімнен алу")}</button></div></LibraryRow>{:else}{#if !busy}<p class="empty-state">{copy($locale,"Бұл тізімде тайтл жоқ. Тайтл бетінде кітапханаға қосыңыз.")}</p>{/if}{/each}
+ {#each entries.filter(item=>!item.removed&&(filter==='all'||filter==='favorites'&&item.favorite||item.status===filter)) as item}<LibraryRow name={item.name} href={`/titles/${item.slug}`} detail={text($locale,'Оқылмаған тараулар:','Непрочитанных глав:')+' '+item.unseen} releaseId={item.progress.releaseId} continueLabel={copy($locale,"Жалғастыру")}><div class="entry-controls"><select aria-label={item.name+': '+text($locale,'мәртебесі','статус')} bind:value={item.status} onchange={()=>update(item)}>{#each Object.entries(statusNames) as [value,label]}<option {value}>{label}</option>{/each}</select><label><input type="checkbox" bind:checked={item.favorite} onchange={()=>update(item)}/>{copy($locale,"Таңдаулы")}</label><button class="button subtle" onclick={()=>remove(item)}>{copy($locale,"Тізімнен алу")}</button></div></LibraryRow>{:else}{#if !busy}<p class="empty-state">{copy($locale,"Бұл тізімде тайтл жоқ. Тайтл бетінде кітапханаға қосыңыз.")}</p>{/if}{/each}
  {#if more}<button class="button" disabled={busy} onclick={()=>load(entries[entries.length-1].titleId)}>{copy($locale,"Тағы жүктеу")}</button>{/if}
 {:else if !busy}<p class="muted">{copy($locale,"Қонақтағы оқу орны осы құрылғыда сақталады. Құрылғылар арасында сақтау үшін ")}<a class="auth-link" href="/login?returnTo=%2Flibrary">{copy($locale,"кіріңіз")}</a>.</p>{/if}
 {#if busy}<p role="status">{copy($locale,"Жүктелуде…")}</p>{/if}

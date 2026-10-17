@@ -7,17 +7,20 @@
  import type { Account } from '$lib/features/identity/domain/account';
  import type { Team } from '../domain/team';
  let { user, gateway }: { user: Account | null; gateway: TeamsGateway } = $props();
+ let more=$state(false);
+ async function loadMore(){busy=true;try{const next=await gateway.pending(teams.length);teams=[...teams,...next];more=next.length===100;}catch(failure){error=failureCode(failure);}finally{busy=false;}}
  let teams = $state<Team[]>([]); let error = $state(''); let busy = $state(false);
- onMount(() => { if (user?.role === 'admin') gateway.pending().then(value => { teams = value; }).catch(failure => { error = failureCode(failure); }); });
+ onMount(() => { if (user?.role === 'admin') gateway.pending().then(value => { teams = value;more=value.length===100; }).catch(failure => { error = failureCode(failure); }); });
  async function approve(id: string) {
   busy = true; error = '';
-  try { await gateway.approve(id); teams = await gateway.pending(); } catch (failure) { error = failureCode(failure); } finally { busy = false; }
+  try { await gateway.approve(id); teams = await gateway.pending();more=teams.length===100; } catch (failure) { error = failureCode(failure); } finally { busy = false; }
  }
 </script>
 <svelte:head><title>{copy($locale,"Командаларды мақұлдау — Qmanga")}</title><meta name="robots" content="noindex"/></svelte:head>
-<div class="section-heading"><div><h1>{copy($locale,"Команда өтінімдері")}</h1></div></div>
+<div class="section-heading"><div><nav class="management-links"><a class="auth-link" href="/moderation/accounts">{text($locale,'Аккаунттар','Аккаунты')}</a><a class="auth-link" href="/moderation/reports">{text($locale,'Шағымдар','Обращения')}</a>{#if user?.role==='admin'}<a class="auth-link" href="/admin/audit">{text($locale,'Журнал','Журнал')}</a>{/if}</nav><h1>{copy($locale,"Команда өтінімдері")}</h1></div></div>
 <a class="auth-link" href="/admin/catalog">{copy($locale,"Каталогты басқару")}</a><a class="auth-link" href="/moderation">{copy($locale,"Жарияланымдарды тексеру")}</a>
 {#if !user || user.role !== 'admin'}<div class="empty-state"><h2>{copy($locale,"Әкімші рұқсаты қажет")}</h2><a class="button primary" href="/login">{copy($locale,"Кіру")}</a></div>{:else}
  {#if error}<p class="form-message" role="alert">{noticeText($locale,error)}</p>{/if}
  <div class="workspace-grid">{#each teams as team}<article class="panel"><span class="eyebrow">{team.slug}</span><h2>{team.name}</h2><p class="muted">{team.description}</p><button class="button primary" disabled={busy} onclick={() => approve(team.id)}>{copy($locale,"Команданы мақұлдау")}</button></article>{:else}<div class="empty-state"><h2>{copy($locale,"Жаңа өтінім жоқ")}</h2><p>{copy($locale,"Командалар жіберген өтінімдер осында көрінеді.")}</p></div>{/each}</div>
+{#if more}<button class="button subtle" disabled={busy} onclick={loadMore}>{text($locale,'Тағы өтінімдер','Ещё заявки')}</button>{/if}
 {/if}

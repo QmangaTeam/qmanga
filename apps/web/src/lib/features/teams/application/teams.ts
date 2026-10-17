@@ -8,7 +8,7 @@ export interface TeamsGateway {
  invite(teamId: string, email: string, role: Exclude<TeamRole, 'owner'>): Promise<void>;
  remove(teamId: string, userId: string): Promise<void>;
  accept(token: string): Promise<void>;
- pending(): Promise<Team[]>;
+ pending(offset?:number): Promise<Team[]>;
  approve(teamId: string): Promise<void>;
 }
 export function requestTeam(gateway: TeamsGateway, input: NewTeam): Promise<Team> {

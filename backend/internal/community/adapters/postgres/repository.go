@@ -32,7 +32,7 @@ func available(ctx context.Context, transaction pgx.Tx, title, release string) e
 func actor(ctx context.Context, transaction pgx.Tx, id string, moderator bool) error {
 	var verified bool
 	var role string
-	if failure := transaction.QueryRow(ctx, `SELECT is_verified,role FROM users WHERE id=$1 FOR UPDATE`, id).Scan(&verified, &role); failure != nil {
+	if failure := transaction.QueryRow(ctx, `SELECT is_verified,role FROM users WHERE id=$1 AND NOT is_blocked FOR UPDATE`, id).Scan(&verified, &role); failure != nil {
 		return domain.ErrForbidden
 	}
 	if !verified || moderator && (role != "admin" && role != "moderator") {
@@ -63,7 +63,7 @@ func (repository *Repository) Discussion(ctx context.Context, title, release, af
 	if !valid {
 		return result, domain.ErrNotFound
 	}
-	if failure := repository.pool.QueryRow(ctx, `SELECT COALESCE(avg(score)::float8,0),count(*) FROM ratings WHERE title_id=$1`, title).Scan(&result.Score, &result.Ratings); failure != nil {
+	if failure := repository.pool.QueryRow(ctx, `SELECT COALESCE(avg(score)::float8,0),count(*) FROM ratings JOIN users rating_user ON rating_user.id=ratings.user_id AND NOT rating_user.is_blocked WHERE title_id=$1`, title).Scan(&result.Score, &result.Ratings); failure != nil {
 		return result, failure
 	}
 	rows, failure := repository.pool.Query(ctx, `WITH roots AS(
