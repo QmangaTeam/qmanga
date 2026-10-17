@@ -69,6 +69,16 @@ services:
       timeout: 4s
       retries: 10
     restart: unless-stopped
+  go-tests:
+    profiles: ["tools"]
+    image: golang@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d
+    working_dir: /src
+    volumes: ["./backend:/src", "go-modules:/go/pkg/mod", "go-cache:/root/.cache/go-build"]
+    environment:
+      TEST_DATABASE_URL: postgres://qmanga:${POSTGRES_PASSWORD}@postgres:5432/qmanga?sslmode=disable
+    depends_on:
+      postgres: {condition: service_healthy}
+    command: ["go", "test", "./...", "-count=1"]
   gateway:
     build:
       context: .
@@ -85,4 +95,6 @@ services:
 volumes:
   postgres-data:
   minio-data:
+  go-modules:
+  go-cache:
 

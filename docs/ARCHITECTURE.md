@@ -1,6 +1,6 @@
 # Architecture decision: Clean Architecture + DDD
 
-Status: required by the owner on 2026-10-17 for both backend and frontend. This decision supersedes the flat package paths in the original implementation plan. Product scope is unchanged. AGY Gemini 3.8 Flash High implements; Codex reviews.
+Status: required by the owner on 2026-10-17 for both backend and frontend. This decision supersedes the flat package paths in the original implementation plan. Product scope is unchanged. Codex implements and verifies directly following the owner's updated instruction.
 
 ## Principles
 

@@ -7,7 +7,8 @@
     "dev": "vite dev --host",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json"
+    "check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
+    "check:architecture": "bun scripts/check-boundaries.mjs"
   },
   "devDependencies": {
     "@sveltejs/adapter-node": "^5.2.12",

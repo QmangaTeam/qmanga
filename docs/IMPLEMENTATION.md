@@ -1,6 +1,6 @@
 # Qmanga MVP Implementation Plan
 
-> **For agentic workers:** Use the AGY delegation workflow for implementation. The owner requested `gemini-3.8-flash-high` as executor and Codex as reviewer. Work task by task, test meaningful behavior, and commit accepted milestones.
+> **Execution amendment:** The owner now requests direct Codex implementation. AGY is stopped. Work directly in outputs/qmanga, task by task, test meaningful behavior, and commit accepted milestones.
 
 **Goal:** Deliver the Kazakh mobile-first manga platform specified in QMANGA-PLAN.md, runnable through Docker Compose with Alpine-based application images.
 
@@ -24,7 +24,7 @@
 - No real passwords or storage keys in git. Runtime secrets are generated locally or supplied through environment variables.
 - Preserve source files and browser privacy. Demo content must be original and clearly marked as fictional.
 - The user authorizes implementation, delegation, frequent commits and saving to the private GitHub repository. No public deployment is requested.
-- Only AGY Gemini 3.8 Flash High implements product code. Codex coordinates, reviews, runs checks, and integrates.
+- Codex implements and verifies directly. Do not restart AGY.
 - Enforce dependency direction with architectural tests; business logic cannot directly import database, HTTP, browser or Svelte APIs.
 - Do not spawn nested agents. Do not add inline code comments or one-letter identifiers.
 - Never silently replace a working feature with a placeholder or claim an untested feature works.
