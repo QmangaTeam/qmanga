@@ -20,11 +20,15 @@ func main() {
 	}
 	defer app.Close()
 	for ctx.Err() == nil {
+		notified, notificationError := app.Notifications.Deliver(ctx)
+		if notificationError != nil {
+			log.Printf("notification delivery failure: %T", notificationError)
+		}
 		worked, failure := app.Worker.Once(ctx)
 		if failure != nil {
 			log.Printf("image job failure: %T", failure)
 		}
-		if !worked || failure != nil {
+		if (!worked && !notified) || failure != nil || notificationError != nil {
 			select {
 			case <-ctx.Done():
 				return

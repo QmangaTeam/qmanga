@@ -10,10 +10,14 @@ import (
 	"github.com/google/uuid"
 	catalogPostgres "qmanga/internal/catalog/adapters/postgres"
 	catalogApp "qmanga/internal/catalog/application"
+	communityPostgres "qmanga/internal/community/adapters/postgres"
+	communityApp "qmanga/internal/community/application"
 	identityCrypto "qmanga/internal/identity/adapters/crypto"
 	identityPostgres "qmanga/internal/identity/adapters/postgres"
 	identitySMTP "qmanga/internal/identity/adapters/smtp"
 	identityApp "qmanga/internal/identity/application"
+	notificationPostgres "qmanga/internal/notifications/adapters/postgres"
+	notificationApp "qmanga/internal/notifications/application"
 	"qmanga/internal/platform/config"
 	"qmanga/internal/platform/postgres"
 	"qmanga/internal/platform/readiness"
@@ -21,6 +25,8 @@ import (
 	"qmanga/internal/publishing/adapters/imagemagick"
 	publicationPostgres "qmanga/internal/publishing/adapters/postgres"
 	publicationApp "qmanga/internal/publishing/application"
+	readingPostgres "qmanga/internal/reading/adapters/postgres"
+	readingApp "qmanga/internal/reading/application"
 	teamPostgres "qmanga/internal/teams/adapters/postgres"
 	teamApp "qmanga/internal/teams/application"
 	transport "qmanga/internal/transport/http"
@@ -34,6 +40,7 @@ type Application struct {
 	Worker         *publicationApp.Worker
 	Catalogue      *catalogApp.Service
 	Teams          *teamApp.Service
+	Notifications  *notificationApp.Service
 }
 
 func Initialize(parentContext context.Context) (*Application, error) {
@@ -89,6 +96,10 @@ func Initialize(parentContext context.Context) (*Application, error) {
 	publicationRepository := publicationPostgres.New(postgresClient.Pool())
 	publicationService := publicationApp.New(publicationRepository, storageClient, uuid.NewString)
 	transport.NewPublishingHandler(publicationService).Register(httpRouter, identityHandler)
+	transport.NewReadingHandler(readingApp.New(readingPostgres.New(postgresClient.Pool()))).Register(httpRouter.Group("/api/v1"), identityHandler)
+	transport.NewCommunityHandler(communityApp.New(communityPostgres.New(postgresClient.Pool()), uuid.NewString)).Register(httpRouter.Group("/api/v1"), identityHandler)
+	notifications := notificationApp.New(notificationPostgres.New(postgresClient.Pool()))
+	transport.NewNotificationHandler(notifications).Register(httpRouter.Group("/api/v1"), identityHandler)
 
 	httpServer := &http.Server{
 		Addr:              fmt.Sprintf(":%s", appConfig.HTTPPort),
@@ -105,6 +116,7 @@ func Initialize(parentContext context.Context) (*Application, error) {
 		Worker:         publicationApp.NewWorker(publicationRepository, storageClient, imagemagick.New(), uuid.NewString),
 		Catalogue:      catalogService,
 		Teams:          teamService,
+		Notifications:  notifications,
 	}
 
 	return appInstance, nil

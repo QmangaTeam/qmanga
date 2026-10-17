@@ -1,0 +1,4 @@
+ALTER TABLE reading_progress ADD COLUMN revision_id VARCHAR(36) REFERENCES revisions(id),ADD COLUMN page_id VARCHAR(36) REFERENCES pages(id),ADD COLUMN fraction DOUBLE PRECISION NOT NULL DEFAULT 0 CHECK(fraction>=0 AND fraction<=1),ADD COLUMN device_id VARCHAR(64) NOT NULL DEFAULT '',ADD COLUMN sequence BIGINT NOT NULL DEFAULT 0;
+CREATE TABLE reading_devices(user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,title_id VARCHAR(36) NOT NULL REFERENCES titles(id) ON DELETE CASCADE,device_id VARCHAR(64) NOT NULL,last_sequence BIGINT NOT NULL,PRIMARY KEY(user_id,title_id,device_id));
+CREATE TABLE reading_events(user_id VARCHAR(36) NOT NULL REFERENCES users(id) ON DELETE CASCADE,event_id VARCHAR(64) NOT NULL,title_id VARCHAR(36) NOT NULL REFERENCES titles(id) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT now(),PRIMARY KEY(user_id,event_id));
+CREATE INDEX library_user_page ON library_entries(user_id,id DESC);
