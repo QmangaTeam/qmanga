@@ -1,6 +1,6 @@
 # Qmanga UI direction and review
 
-Updated: 17 October 2026. Status: the owner approved the compact reading-library direction and specified components first, screen assembly second, new product functionality after the redesign. The written [component-first specification](../superpowers/specs/2026-10-17-component-first-redesign-design.md) is awaiting owner review through Superpowers; no general redesign or localization has been implemented yet.
+Updated: 17 October 2026. Status: the owner approved the compact reading-library direction, the written [component-first specification](../superpowers/specs/2026-10-17-component-first-redesign-design.md), and the order components first, screen assembly second, new product functionality after the redesign. The [implementation plan](../superpowers/plans/2026-10-17-component-first-redesign.md) awaits owner review through Superpowers; no general redesign or localization has been implemented yet.
 
 ## Owner decisions
 
