@@ -22,9 +22,12 @@ export class NotificationFeed {
  async read(item:Notification){
   const account=this.account,generation=this.generation;if(!account||this.closed||!this.items.some(value=>value.id===item.id))return;
   try{
-   const current=await this.gateway.account();if(this.closed||generation!==this.generation)return;
-   if(current!==account){this.accountChanged();return;}
+   const current=await this.gateway.account();if(!this.closed&&generation!==this.generation)return;
+   if(current!==account){if(!this.closed)this.accountChanged();return;}
+   // A link may unmount the view while identity is checked; finish the user's
+   // already-started read, with the server's expected-account guard intact.
    await this.gateway.read(account,item.id);
+   if(this.closed||generation!==this.generation)return;
    const latest=await this.gateway.account();if(this.closed||generation!==this.generation)return;
    if(latest!==account){this.accountChanged();return;}
    this.items=this.items.map(value=>value.id===item.id?{...value,read:true}:value);this.changed();
