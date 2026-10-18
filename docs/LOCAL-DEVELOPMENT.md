@@ -67,8 +67,10 @@ From `apps/web`, with the fixture above:
 
 ```powershell
 $env:QMANGA_FIXTURE_FILE = (Resolve-Path ../../tmp/acceptance/fixture.json).Path
-node --test tests/browser/*.test.mjs
+node --test --test-concurrency=1 tests/browser/*.test.mjs
 ```
+
+Run browser files serially against the shared disposable API. Parallel files can exhaust its real 30-authentication-requests-per-minute per-IP limit and contend for browser/worker resources. CI recreates the same API image after smoke fixtures and before this serial phase; persistent sessions, PostgreSQL data and private media are retained. Do not raise the production limit or bypass real login to accommodate tests.
 
 Missing fixture values fail the run; they are not skips. The browser uses a new profile with real API authentication, follows the actual admin catalogue project link, and verifies that load/selection do not claim a write. It confirms persistence after saving, and injects one failed write at the HTTP boundary to verify error feedback and retained input. It must run only against a disposable local environment. This small suite is not coverage for the remaining library/offline/long-reader backlog.
 

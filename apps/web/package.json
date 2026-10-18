@@ -11,7 +11,7 @@
     "check:architecture": "bun scripts/check-boundaries.mjs",
     "check:ui-contrast": "bun scripts/check-ui-contrast.mjs",
     "test:ui": "bun test --preload ./tests/ui/setup.ts ./tests/ui",
-    "test:browser": "node --test tests/browser/*.test.mjs",
+    "test:browser": "node --test --test-concurrency=1 tests/browser/*.test.mjs",
     "ui:preview": "svelte-kit sync && vite --config vite.ui-preview.config.ts",
     "check:ui-preview": "svelte-check --tsconfig ./tsconfig.ui-preview.json"
   },
