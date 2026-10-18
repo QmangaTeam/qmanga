@@ -100,6 +100,9 @@ func (service *Service) Login(ctx context.Context, email, password string) (Logi
 	if !service.credentials.Verify(password, account.PasswordHash) {
 		return LoginResult{}, domain.ErrCredentials
 	}
+	return service.newSession(ctx, account)
+}
+func (service *Service) newSession(ctx context.Context, account domain.Account) (LoginResult, error) {
 	token, tokenError := service.credentials.RandomToken()
 	if tokenError != nil {
 		return LoginResult{}, tokenError

@@ -11,6 +11,8 @@ import (
 )
 
 type Config struct {
+	GoogleClientID        string
+	GoogleClientSecret    string
 	Environment           string
 	HTTPPort              string
 	DatabaseURL           string
@@ -61,6 +63,18 @@ func Load() (Config, error) {
 	}
 
 	var validationErrors []string
+	googleClientID := strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_ID"))
+	googleClientSecret := strings.TrimSpace(os.Getenv("GOOGLE_CLIENT_SECRET"))
+	if (googleClientID == "") != (googleClientSecret == "") {
+		validationErrors = append(validationErrors, "GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must both be configured or both absent")
+	}
+	if googleClientID != "" && (!strings.HasSuffix(googleClientID, ".apps.googleusercontent.com") || strings.ContainsAny(googleClientID, " /\\\r\n")) {
+		validationErrors = append(validationErrors, "GOOGLE_CLIENT_ID must identify a Google Web OAuth client")
+	}
+	if googleClientSecret != "" && (len(googleClientSecret) < 16 || isPlaceholder(googleClientSecret)) {
+		validationErrors = append(validationErrors, "GOOGLE_CLIENT_SECRET must be a configured server secret")
+	}
+
 	switch mailTransport {
 	case "smtp":
 		if _, _, parseError := net.SplitHostPort(smtpAddress); parseError != nil {
@@ -178,6 +192,8 @@ func Load() (Config, error) {
 	}
 
 	configInstance := Config{
+		GoogleClientID:        googleClientID,
+		GoogleClientSecret:    googleClientSecret,
 		Environment:           environment,
 		HTTPPort:              portString,
 		DatabaseURL:           databaseURL,

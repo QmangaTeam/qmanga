@@ -177,3 +177,21 @@ func TestLoad_OCIEmailNeedsNoSMTPAddress(testingTarget *testing.T) {
 		testingTarget.Fatalf("OCI email configuration lost: %+v", loaded)
 	}
 }
+
+func TestGoogleConfigurationPair(t *testing.T) {
+	for _, scenario := range []struct {
+		id, secret string
+		invalid    bool
+	}{{"", "", false}, {"client.apps.googleusercontent.com", "server-secret-with-enough-entropy", false}, {"client.apps.googleusercontent.com", "", true}, {"", "server-secret-with-enough-entropy", true}, {"bad-client", "server-secret-with-enough-entropy", true}} {
+		t.Setenv("GOOGLE_CLIENT_ID", scenario.id)
+		t.Setenv("GOOGLE_CLIENT_SECRET", scenario.secret)
+		cfg, err := Load()
+		hasGoogleError := err != nil && strings.Contains(err.Error(), "GOOGLE_")
+		if hasGoogleError != scenario.invalid {
+			t.Fatalf("Google config validation %q: %v", scenario.id, err)
+		}
+		if cfg.GoogleClientID != scenario.id || cfg.GoogleClientSecret != scenario.secret {
+			t.Fatal("Google config not loaded")
+		}
+	}
+}

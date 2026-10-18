@@ -3,13 +3,16 @@ module qmanga
 go 1.26.0
 
 require (
+	github.com/coreos/go-oidc/v3 v3.17.0
 	github.com/gin-gonic/gin v1.12.0
+	github.com/go-jose/go-jose/v4 v4.1.3
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.11.0
 	github.com/minio/minio-go/v7 v7.4.1
 	github.com/oracle/oci-go-sdk/v65 v65.127.0
 	golang.org/x/crypto v0.57.0
 	golang.org/x/image v0.47.0
+	golang.org/x/oauth2 v0.36.0
 )
 
 require (
