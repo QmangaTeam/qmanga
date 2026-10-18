@@ -95,6 +95,7 @@ type CoverProcessor interface {
 
 type Repository interface {
 	CreateDraft(context.Context, string, string, string, string) (StudioRevision, error)
+	DiscardDraft(context.Context, string, string, int64) error
 	Revision(context.Context, string, string) (StudioRevision, error)
 	ProjectChapters(context.Context, string, string, ...int) ([]ChapterChoice, error)
 	ProjectRevisions(context.Context, string, string, ...int) ([]StudioRevision, error)

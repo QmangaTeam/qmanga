@@ -20,6 +20,7 @@ export class HttpPublishingGateway implements PublishingGateway {
  async revisions(id: string,offset=0) { return this.items('/api/v1/studio/projects/' + encodeURIComponent(id) + '/revisions?offset='+offset, revision); }
  async revision(id: string) { return revision(await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id))); }
  async create(projectId: string, chapterId: string) { return revision(await this.api.call('/api/v1/studio/projects/' + encodeURIComponent(projectId) + '/revisions', 'POST', { chapter_id: chapterId })); }
+ async discard(id:string,version:number) { await this.api.call('/api/v1/studio/revisions/'+encodeURIComponent(id)+'?version='+version,'DELETE'); }
  async prepare(files: unknown[]): Promise<UploadSource[]> {
   return Promise.all(files.map(async source => {
    if (!(source instanceof File) || source.size <= 0 || source.size > 25 * 1024 * 1024) throw new AppFailure('upload_size');

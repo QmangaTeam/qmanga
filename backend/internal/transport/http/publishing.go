@@ -42,6 +42,7 @@ func (handler *PublishingHandler) Register(router *gin.Engine, identity *Identit
 	studio.GET("/projects/:id/chapters", handler.projectChapters)
 	studio.GET("/projects/:id/revisions", handler.projectRevisions)
 	studio.POST("/projects/:id/revisions", handler.createDraft)
+	studio.DELETE("/revisions/:id", handler.discardDraft)
 	studio.PUT("/projects/:id/cover", handler.selectCover)
 	studio.PUT("/projects/:id/cover-file", handler.uploadCover)
 	studio.POST("/revisions/:id/pages/:page_id/retry", handler.retryPage)
@@ -119,6 +120,17 @@ func (handler *PublishingHandler) createDraft(request *gin.Context) {
 		return
 	}
 	request.JSON(201, revisionView(item))
+}
+func (handler *PublishingHandler) discardDraft(request *gin.Context) {
+	version, valid := queryInteger(request, "version", 1, 2147483647)
+	if !valid {
+		return
+	}
+	if failure := handler.service.DiscardDraft(request.Request.Context(), handler.actor(request), request.Param("id"), int64(version)); failure != nil {
+		publicationError(request, failure)
+		return
+	}
+	request.Status(204)
 }
 func (handler *PublishingHandler) revision(request *gin.Context) {
 	item, failure := handler.service.Revision(request.Request.Context(), handler.actor(request), request.Param("id"))

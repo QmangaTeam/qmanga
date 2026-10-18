@@ -38,3 +38,44 @@ test('editor uploads a separate title cover without changing chapter pages', {ti
   }finally{await page.close();}
  }finally{await context.close();}
 });
+
+test('accidental draft can be cancelled then discarded without touching the published chapter', {timeout:90000},async()=>{
+ const context=await browser.newContext({baseURL:fixture.app_url,viewport:{width:1280,height:800}});
+ try{
+  await context.addCookies([{name:'qmanga_locale',value:'ru',url:fixture.app_url}]);
+  const login=await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.owner_email,password:fixture.owner_password}});
+  assert.equal(login.status(),200);
+  const label='Accidental-'+Date.now();
+  const page=await context.newPage();
+  try{
+   await page.goto('/studio/projects/'+fixture.project_id);
+   await page.locator('.chapter-sidebar select').first().selectOption({label:'Добавить новую главу'});
+   await page.getByRole('textbox',{name:'Номер или обозначение главы'}).fill(label);
+   await page.getByRole('button',{name:'Добавить главу и открыть черновик'}).click();
+   await page.locator('.draft-panel h2').filter({hasText:label}).waitFor();
+   const rail=page.locator('.draft-steps');
+   assert.equal(await rail.locator('a').count(),3);
+   const railX=await rail.evaluate(element=>element.getBoundingClientRect().left);
+   const panelX=await page.locator('.draft-panel').evaluate(element=>element.getBoundingClientRect().left);
+   assert.ok(railX>panelX,'step rail should be to the right of the editor');
+   if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'draft-rail-1280.png'),fullPage:false});}
+   await rail.locator('a[href="#draft-details"]').click();
+   await page.waitForFunction(()=>document.querySelector('.draft-steps a[href="#draft-details"]')?.getAttribute('aria-current')==='location');
+   await page.getByRole('button',{name:'Удалить черновик'}).first().click();
+   const dialog=page.locator('.discard-dialog');
+   await dialog.getByRole('heading',{name:'Удалить черновик?'}).waitFor();
+   await dialog.getByRole('button',{name:'Отмена'}).click();
+   assert.equal(await page.locator('.draft-panel h2').filter({hasText:label}).count(),1);
+   if(process.env.QMANGA_SCREENSHOT_DIR){await page.setViewportSize({width:320,height:750});await page.evaluate(()=>scrollTo(0,0));await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'draft-steps-320.png'),fullPage:false});}
+   await page.getByRole('button',{name:'Удалить черновик'}).first().click();
+   await dialog.getByRole('button',{name:'Удалить черновик'}).click();
+   await page.getByText('Черновик удалён').waitFor();
+   const revisions=await (await context.request.get('/api/v1/studio/projects/'+fixture.project_id+'/revisions')).json();
+   assert.equal(revisions.items.some(item=>item.chapter_label===label),false);
+   const published=await context.request.get('/api/v1/releases/'+fixture.release_id+'/manifest');
+   assert.equal(published.status(),200);
+   await page.setViewportSize({width:320,height:750});
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+  }finally{await page.close();}
+ }finally{await context.close();}
+});

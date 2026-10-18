@@ -17,6 +17,7 @@ export interface PublishingGateway {
  revisions(projectId: string,offset?:number): Promise<Revision[]>;
  revision(id: string): Promise<Revision>;
  create(projectId: string, chapterId: string): Promise<Revision>;
+ discard(id:string,version:number):Promise<void>;
  prepare(files: unknown[]): Promise<UploadSource[]>;
  upload(id: string, source: UploadSource, position: number, progress: (fraction: number) => void): UploadTask;
  reorder(id: string, version: number, pageIds: string[]): Promise<void>;

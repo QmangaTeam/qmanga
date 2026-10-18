@@ -22,6 +22,12 @@ func New(repository Repository, storage Storage, coverProcessor CoverProcessor, 
 func (service *Service) CreateDraft(ctx context.Context, actor, project, chapter string) (StudioRevision, error) {
 	return service.repository.CreateDraft(ctx, actor, project, chapter, service.newID())
 }
+func (service *Service) DiscardDraft(ctx context.Context, actor, id string, version int64) error {
+	if version < 1 {
+		return domain.ErrConflict
+	}
+	return service.repository.DiscardDraft(ctx, actor, id, version)
+}
 func (service *Service) Upload(ctx context.Context, actor string, input Upload, content io.Reader) (Reservation, error) {
 	if input.Key == "" || len(input.Key) > 128 || strings.ContainsAny(input.Key, "\r\n") || input.Position < 1 || input.Position > 300 || len(input.Checksum) != 64 || len(input.OriginalName) > 255 || strings.ContainsAny(input.OriginalName, "\r\n\x00") {
 		return Reservation{}, domain.ErrInvalidImage
