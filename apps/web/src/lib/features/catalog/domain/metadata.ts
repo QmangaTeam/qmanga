@@ -1,8 +1,10 @@
+import {validAgeRating, type AgeRating} from './catalog';
 import type { Kind, OriginalStatus, TranslationStatus } from './catalog';
 import {emptyPublication,validPublication,type Publication} from './publication';
-export interface Metadata {publication?:Publication;listed?:boolean; authors?:string[]; featured?:boolean; slug: string; name: string; originalName: string; aliases: string[]; kind: Kind; originalStatus: OriginalStatus; translationStatus: TranslationStatus; description: string; direction: 'ltr' | 'rtl'; genreIds: string[]; demo: boolean }
-export function emptyMetadata(): Metadata { return {publication:emptyPublication(),listed:false, authors:[],featured:false,slug: '', name: '', originalName: '', aliases: [], kind: 'manga', originalStatus: 'ongoing', translationStatus: 'ongoing', description: '', direction: 'ltr', genreIds: [], demo: false }; }
+export interface Metadata {ageRating?:AgeRating;publication?:Publication;listed?:boolean; authors?:string[]; featured?:boolean; slug: string; name: string; originalName: string; aliases: string[]; kind: Kind; originalStatus: OriginalStatus; translationStatus: TranslationStatus; description: string; direction: 'ltr' | 'rtl'; genreIds: string[]; demo: boolean }
+export function emptyMetadata(): Metadata { return {ageRating:0,publication:emptyPublication(),listed:false, authors:[],featured:false,slug: '', name: '', originalName: '', aliases: [], kind: 'manga', originalStatus: 'ongoing', translationStatus: 'ongoing', description: '', direction: 'ltr', genreIds: [], demo: false }; }
 export function metadataError(input: Metadata): 'name' | 'slug' | 'metadata' | null {
+ if(input.ageRating!==undefined&&!validAgeRating(input.ageRating))return 'metadata';
  if(input.publication&&!validPublication(input.publication))return 'metadata';
  if (!input.name.trim() || [...input.name].length > 200) return 'name';
  if (!/^[a-z0-9]+(-[a-z0-9]+)*$/.test(input.slug) || input.slug.length > 128) return 'slug';

@@ -1,4 +1,5 @@
 <script lang="ts">
+ import AgeRating from './AgeRating.svelte';
  import type {Snippet} from 'svelte';
  import type {TitleDetail,Chapter,ResultPage,ChapterFilter} from '../application/catalog';
  import {useLocale,text} from '$lib/shared/presentation/locale';
@@ -44,7 +45,7 @@
   <div class="sidebar-metadata"><TitleMetadata {title}/></div>
  </aside>
  <header class="title-heading">
-  <div class="name-line"><div><h1>{title.name}</h1><p class="subtitle">{#if title.publication?.year}<span>{title.publication.year}</span>{/if}<a href={'/catalog?kind='+title.kind}>{names.kind[title.kind]}</a>{#if title.demo}<span class="demo">{text($locale,'Үлгі','Пример')}</span>{/if}</p></div>{#if rating}{@render rating()}{/if}</div>
+  <div class="name-line"><div><h1>{title.name}</h1><p class="subtitle"><AgeRating value={title.ageRating}/>{#if title.publication?.year}<span>{title.publication.year}</span>{/if}<a href={'/catalog?kind='+title.kind}>{names.kind[title.kind]}</a>{#if title.demo}<span class="demo">{text($locale,'Үлгі','Пример')}</span>{/if}</p></div>{#if rating}{@render rating()}{/if}</div>
   {#if title.genres.length}<div class="title-genres">{#each title.genres as genre}<a href={'/catalog?genre='+encodeURIComponent(genre.slug)}>{genre.name}</a>{/each}</div>{/if}
   {#if title.description}<p class="synopsis">{title.description}</p>{/if}
  </header>

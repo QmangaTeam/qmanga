@@ -21,3 +21,20 @@ test('public portfolio maps Telegram independently and drops non-public links',a
   expect((await new HttpCatalogGateway(client).team('dala'))?.telegramURL).toBe(expected);
  }
 });
+
+test('catalogue carries validated age ratings and preserves the age filter including unknown',async()=>{
+ for(const value of [undefined,0,12,16,18,14,'18']){
+  let requested='';
+  const client=new ApiClient((async(input:RequestInfo|URL)=>{
+   requested=String(input);
+   return Response.json({items:[{id:'title',slug:'dala',name:'Дала',kind:'manga',original_status:'ongoing',translation_status:'ongoing',cover_url:'',demo:false,chapter_count:0,rating_count:0,score:0,updated_at:'2026-10-17T00:00:00Z',...(value===undefined?{}:{age_rating:value})}],next_cursor:null});
+  }) as typeof fetch);
+  const gateway=new HttpCatalogGateway(client);
+  if(value===14||value==='18')await expect(gateway.list({})).rejects.toThrow();
+  else{
+   const result=await gateway.list({ageRating:'0'});
+   expect(result.items[0].ageRating).toBe(value??0);
+   expect(new URL(requested,'http://localhost').searchParams.get('age_rating')).toBe('0');
+  }
+ }
+});

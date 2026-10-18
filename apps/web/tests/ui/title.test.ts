@@ -22,3 +22,10 @@ test('title tabs retain real chapters and expose only the selected content',asyn
  expect(await elements(comments,'.chapter-search')).toHaveLength(0);
  expect(await elements(chapters,'a a, a button')).toHaveLength(0);
 });
+
+test('title distinguishes explicit age ratings without classifying unknown titles',async()=>{
+ const adult=render(Title,{props:{ageRating:18}}).body;
+ expect(await elements(adult,'.age-rating.adult')).toHaveLength(1);
+ expect(adult).toContain('18+');
+ expect(await elements(render(Title).body,'.age-rating')).toHaveLength(0);
+});

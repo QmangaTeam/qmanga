@@ -62,3 +62,11 @@ test('global search submits to catalogue and preserves locale-specific accessibl
   expect(html).toContain(language==='kk'?'Тайтл іздеу':'Поиск тайтла');
  }
 });
+
+test('cover classification keeps native links and never labels unclassified content',async()=>{
+ expect(await elements(render(Discovery).body,'.cover-card .age-rating')).toHaveLength(0);
+ const html=render(Discovery,{props:{ageRating:18}}).body;
+ expect(await elements(html,'.cover-card .age-rating.adult')).toHaveLength(1);
+ expect(await elements(html,'a a, a button')).toHaveLength(0);
+ expect(html).toContain('18+');
+});

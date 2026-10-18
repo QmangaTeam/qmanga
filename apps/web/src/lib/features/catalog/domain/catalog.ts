@@ -1,3 +1,6 @@
+export const ageRatings = [0, 12, 16, 18] as const;
+export type AgeRating = typeof ageRatings[number];
+export function validAgeRating(value: unknown): value is AgeRating { return ageRatings.includes(value as AgeRating); }
 export const kinds = ['manga', 'manhwa', 'manhua'] as const;
 export type Kind = typeof kinds[number];
 export const originalStatuses = ['ongoing', 'completed', 'hiatus', 'cancelled'] as const;

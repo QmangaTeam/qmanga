@@ -1,15 +1,16 @@
-import type { Kind, OriginalStatus, TranslationStatus } from '../domain/catalog';
+import type { AgeRating, Kind, OriginalStatus, TranslationStatus } from '../domain/catalog';
 import type {Publication} from '../domain/publication';
 
-export interface CatalogFilter {hasChapters?:boolean; featured?:boolean; query?: string; kind?: string; genre?: string; originalStatus?: string; translationStatus?: string; sort?: string }
+export interface CatalogFilter {ageRating?:string;hasChapters?:boolean; featured?:boolean; query?: string; kind?: string; genre?: string; originalStatus?: string; translationStatus?: string; sort?: string }
 export interface ChapterFilter { query?:string; sort?:'asc'|'desc'; limit?:number }
 export interface Genre { id: string; name: string; slug: string }
 export interface Summary {
+ ageRating?:AgeRating;
  id: string; slug: string; name: string; kind: Kind; originalStatus: OriginalStatus; translationStatus: TranslationStatus;
  coverURL: string; demo: boolean; chapterCount: number; ratingCount: number; score: number; updatedAt: string;
 }
 export interface Project { id: string; titleId: string; teamId: string; titleName: string; titleSlug: string; teamName: string; teamSlug: string; status: string }
-export interface TitleDetail {listed?:boolean; authors?:string[]; featured?:boolean;
+export interface TitleDetail {ageRating?:AgeRating;listed?:boolean; authors?:string[]; featured?:boolean;
  publication?:Publication; chapterCount?:number; readerCount?:number; ratingDistribution?:number[];
  id: string; slug: string; name: string; originalName: string; aliases: string[]; kind: Kind; originalStatus: OriginalStatus; translationStatus: TranslationStatus;
  description: string; direction: 'ltr' | 'rtl'; demo: boolean; coverURL: string; score: number; ratingCount: number; genres: Genre[]; projects: Project[];

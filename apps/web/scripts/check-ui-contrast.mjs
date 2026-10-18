@@ -9,7 +9,7 @@ for(const [theme,selector] of [['dark',/:root \{([^}]+)\}/],['light',/:root\[dat
  const block=css.match(selector)?.[1];
  if(!block)throw new Error('Theme missing: '+theme);
  const tokens=Object.fromEntries([...block.matchAll(/--([a-z-]+):\s*(#[a-f\d]+)/gi)].map(match=>[match[1],match[2]]));
- for(const [foreground,background,minimum] of [['text','bg',4.5],['text','panel',4.5],['muted','bg',4.5],['muted','panel',4.5],['accent-ink','accent',4.5],['accent','bg',3],['muted','panel',3]]) {
+ for(const [foreground,background,minimum] of [['text','bg',4.5],['text','panel',4.5],['muted','bg',4.5],['muted','panel',4.5],['accent-ink','accent',4.5],['age-restricted-ink','age-restricted',4.5],['text','raised',4.5],['accent','bg',3],['muted','panel',3]]) {
   const values=[luminance(tokens[foreground]),luminance(tokens[background])].sort((left,right)=>right-left);
   const ratio=(values[0]+.05)/(values[1]+.05);
   if(ratio<minimum)throw new Error(theme+' '+foreground+'/'+background+' contrast '+ratio.toFixed(2)+' < '+minimum);

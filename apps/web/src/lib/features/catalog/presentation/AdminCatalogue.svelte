@@ -1,4 +1,5 @@
 <script lang="ts">
+ import {ageRatings} from '../domain/catalog';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {copy,noticeText,failureCode} from '$lib/shared/presentation/copy';
  const {locale,change:changeLanguage}=useLocale();
@@ -43,6 +44,7 @@
  <label>{copy($locale,"Түрі")}<select bind:value={input.kind}>{#each Object.entries(kindNames) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
  <label>{copy($locale,"Түпнұсқа күйі")}<select bind:value={input.originalStatus}>{#each Object.entries(originalStatusNames) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
  <label>{copy($locale,"Аударма күйі")}<select bind:value={input.translationStatus}>{#each Object.entries(translationStatusNames) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
+ <label>{text($locale,'Жас санаты','Возрастная маркировка')}<select name="age_rating" bind:value={input.ageRating}>{#each ageRatings as age}<option value={age}>{age===0?text($locale,'Көрсетілмеген','Не указано'):age+'+'}</option>{/each}</select></label>
  <label>{copy($locale,"Оқу бағыты")}<select bind:value={input.direction}><option value="ltr">{copy($locale,"Солдан оңға")}</option><option value="rtl">{copy($locale,"Оңнан солға")}</option></select></label>
  <label>{copy($locale,"Сипаттама")}<textarea bind:value={input.description} rows="5" maxlength="10000"></textarea></label>
  <PublicationFields bind:value={input.publication}/>
