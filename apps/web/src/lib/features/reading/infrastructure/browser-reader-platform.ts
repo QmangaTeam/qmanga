@@ -3,6 +3,8 @@ import type {Manifest} from '../application/reader';
 import type { Position } from '../domain/policies';
 const key='qmanga:reader:preferences:v1';
 export class BrowserReaderPlatform implements ReaderPlatform {
+ libraryPromptDismissed(account:string,title:string){try{return sessionStorage.getItem('qmanga:library-prompt:'+account+':'+title)==='1';}catch{return true;}}
+ dismissLibraryPrompt(account:string,title:string){try{sessionStorage.setItem('qmanga:library-prompt:'+account+':'+title,'1');}catch{}}
  openRelease(releaseId:string){const path='/read/'+encodeURIComponent(releaseId);void import('$app/navigation').then(({goto})=>goto(path)).catch(()=>window.location.assign(path));}
  async prefetchRelease(releaseId:string):Promise<Manifest|null>{try{const {preloadData}=await import('$app/navigation');const result=await preloadData('/read/'+encodeURIComponent(releaseId));return result.type==='loaded'&&result.data&&'manifest' in result.data?result.data.manifest as Manifest:null;}catch{return null;}}
  preferences(kind: string): ReaderPreferences {

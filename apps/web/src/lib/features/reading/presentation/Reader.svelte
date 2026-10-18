@@ -17,6 +17,7 @@
  import type {CommunityGateway} from '../../community/application/community';
  import Discussion from '../../community/presentation/Discussion.svelte';
  import ReportForm from '../../community/presentation/ReportForm.svelte';
+ import {LibrarySuggestion} from '../application/library-suggestion';
  import {ThrottledSave} from '../application/throttled-save';
  import {ChapterDirectory} from '../application/chapter-directory';
  import type {Position} from '../domain/policies';
@@ -33,6 +34,9 @@
  const chapterDirectory=new ChapterDirectory(untrack(()=>catalogue),untrack(()=>manifest.titleSlug),()=>chapterVersion++);
  const chapters=$derived.by(()=>{chapterVersion;return chapterDirectory.items;}),cursor=$derived.by(()=>{chapterVersion;return chapterDirectory.nextCursor;}),chapterBusy=$derived.by(()=>{chapterVersion;return chapterDirectory.busy;}),chapterFailed=$derived.by(()=>{chapterVersion;return chapterDirectory.failed;});
  let download=$state<Download|null>(null),downloadBusy=$state(false),downloadController:AbortController|undefined;
+ let suggestion=$state.raw<LibrarySuggestion>(),suggestionVersion=$state(0);
+ const libraryPrompt=$derived.by(()=>{suggestionVersion;return suggestion?.visible||false;});
+ const promptBusy=$derived.by(()=>{suggestionVersion;return suggestion?.busy||false;});
  let session=$state.raw<ReadingSession>(),progressVersion=$state(0);
  const navigation=new PageNavigation(untrack(()=>manifest.pages.length));
  const progressMessage=$derived.by(()=>{progressVersion;return session?.notice||'';});
@@ -53,7 +57,7 @@
  onMount(()=>{
   const linkedIndex=manifest.pages.findIndex(page=>page.id===initialPage);if(linkedIndex>=0)userNavigated=true;
   queue=new ImageQueue(images(firstImage,!preview&&!offlineTier),timer,()=>version++);
-  saver=new ThrottledSave(timer,async value=>{if(session)await session.record(value.manifest,value.position,value.completed);else if(!readingGateway)platform.savePosition(value.manifest.releaseId,value.position);});mounted=true;
+  saver=new ThrottledSave(timer,async value=>{if(session){await session.record(value.manifest,value.position,value.completed);if(value.completed)void checkLibraryPrompt();}else if(!readingGateway)platform.savePosition(value.manifest.releaseId,value.position);});mounted=true;
   let observed=false;const stopObserve=platform.observe(stage,value=>{const position=current.position,resized=observed&&Math.abs(value.width-viewport.width)>.5;observed=true;viewport=value;if(preferences.mode==='strip'){navigation.observe(visible(sheet.items,value).pageIndex);pageIndex=navigation.index;}if(resized&&position.pageId)void tick().then(()=>platform.scroll(stage,anchorOffset(sheet.items,position,value.width)));}),stopVisibility=platform.visibility(hidden=>{queue?.pause(hidden);if(hidden)void saver?.flush().then(()=>session?.flush());}),stopKeyboard=platform.keyboard(action=>{if(panel)return;if(action==='menu')void openPanel('settings');else step(pageStep(action,direction));});
   preferences=platform.preferences(manifest.kind);onlineQuality=preferences.quality;
   if(offlineTier){preferences={...preferences,quality:offlineTier};tier=offlineTier;}
@@ -68,14 +72,15 @@
    })().catch(()=>{/* Background preloading must never interrupt reading. */});
   },1500);
   const saved=preview||readingGateway?null:platform.loadPosition(manifest.releaseId);
-  if(!preview&&readingGateway&&progressStorage)session=new ReadingSession(readingGateway,progressStorage,timer,()=>progressVersion++);
+  if(!preview&&!offlineTier&&readingGateway)suggestion=new LibrarySuggestion(readingGateway,platform,manifest.titleId,()=>suggestionVersion++);
+  if(!preview&&readingGateway&&progressStorage)session=new ReadingSession(readingGateway,progressStorage,timer,()=>{progressVersion++;if(session?.notice==='account_changed')suggestion?.close();if(session?.notice==='progress_cloud_saved')void checkLibraryPrompt();});
   void initializeReaderPosition(linkedIndex>=0?{pageId:manifest.pages[linkedIndex].id,fraction:0}:null,async()=>{
    if(!mounted)return null;
    if(!session)return saved;
    const position=await session.start(manifest,!!offlineTier);
    return position?.releaseId===manifest.releaseId?position:null;
   },{go:async position=>{const index=manifest.pages.findIndex(page=>page.id===position.pageId);if(index>=0)await goPage(index,position.fraction,false);},userNavigated:()=>userNavigated,ready:()=>{if(mounted)positionReady=true;},quality:()=>changeQuality(preferences.quality)}).catch(failure=>{message=failureCode(failure);});
-  return ()=>{mounted=false;stopPrefetch();prefetchController.abort();void saver?.flush().finally(()=>session?.close());downloadController?.abort();closePanel?.();stopObserve();stopVisibility();stopKeyboard();queue?.close();};
+  return ()=>{mounted=false;suggestion?.close();stopPrefetch();prefetchController.abort();void saver?.flush().finally(()=>session?.close());downloadController?.abort();closePanel?.();stopObserve();stopVisibility();stopKeyboard();queue?.close();};
  });
  async function changeQuality(quality:ReaderPreferences['quality']) {
   if(!mounted)return;
@@ -92,6 +97,9 @@
  function dismiss() {const stop=closePanel;closePanel=undefined;panel='';stop?.();}
  async function loadChapters(reset=false) {if(reset||!chapters.length)await chapterDirectory.search(query,reverse?'asc':'desc');else await chapterDirectory.more();}
  const releaseFor=(chapter:Chapter)=>chapter.releases.find(release=>release.projectId===manifest.projectId);
+ async function checkLibraryPrompt(){if(session?.row)await suggestion?.check(session.row.scope,!session.row.pending&&!session.row.conflict);}
+ function dismissLibraryPrompt(){suggestion?.dismiss();}
+ async function addLibrary(){await suggestion?.add();if(suggestion?.error)message=suggestion.error;}
  async function saveOffline(){if(!downloads)return;downloadBusy=true;downloadController=new AbortController();try{await downloads.save(manifest,tier,downloadController.signal,value=>download=value);}catch(failure){message=failureCode(failure);}finally{downloadBusy=false;}}
  async function resolveProgress(local:boolean){if(!session)return;try{await resolveReaderProgress(session,local,manifest.releaseId,{go:async position=>{const index=manifest.pages.findIndex(page=>page.id===position.pageId);if(index>=0)await goPage(index,position.fraction,false);},openRelease:id=>platform.openRelease(id)});}catch(failure){message=failureCode(failure);}}
 
@@ -121,6 +129,7 @@
   <button class="page-zone right-zone" aria-label={rightStep>0?copy($locale,"Келесі бет · оң жақ"):copy($locale,"Алдыңғы бет · оң жақ")} disabled={!canStep(rightStep)} onclick={()=>step(rightStep)}></button>
  </div>
  {#if preferences.mode==='pages'&&pageIndex<manifest.pages.length-1}<section class="chapter-end"><button onclick={()=>step(1)}>{copy($locale,"Келесі бет →")}</button></section>{:else}<section class="chapter-end" aria-label={copy($locale,"Тарауды аяқтау")}><p>{text($locale,manifest.chapterLabel+'-тараудың соңы','Конец главы '+manifest.chapterLabel)}</p><span>{manifest.team.name}</span><div>{#if manifest.previousId}<a href={`/read/${manifest.previousId}`}>{copy($locale,"← Алдыңғы тарау")}</a>{/if}{#if manifest.nextId}<a class="next-chapter" href={`/read/${manifest.nextId}`}>{copy($locale,"Келесі тарау →")}</a>{:else}<a href={`/titles/${manifest.titleSlug}`}>{copy($locale,"Тайтлға оралу")}</a>{/if}</div></section>{#if community&&!preview&&!offlineTier}<div class="reader-discussion"><Discussion titleId={manifest.titleId} releaseId={manifest.releaseId} gateway={community}/></div>{/if}{/if}
+ {#if libraryPrompt}<aside class="library-prompt" aria-label={text($locale,'Кітапханаға қосу','Добавить в библиотеку')}><p>{text($locale,'Бірнеше тарауды оқыдыңыз. Тайтлды кітапханаға қосу керек пе?','Вы прочитали несколько глав. Добавить тайтл в библиотеку?')}</p><button onclick={addLibrary} disabled={promptBusy}>{text($locale,'Қосу','Добавить')}</button><button onclick={dismissLibraryPrompt} disabled={promptBusy}>{text($locale,'Қазір емес','Не сейчас')}</button></aside>{/if}
  <nav class="reader-controls" aria-label={copy($locale,"Оқу навигациясы")}><button class="icon" onclick={()=>step(leftStep)} disabled={!canStep(leftStep)} aria-label={leftStep>0?copy($locale,"Келесі бет"):copy($locale,"Алдыңғы бет")}>‹</button><button onclick={()=>openPanel('chapters')} aria-label={copy($locale,"Тараулар тізімі")}><span aria-hidden="true">☷</span><small>{copy($locale,"Тараулар")}</small></button><button onclick={()=>openPanel('settings')} aria-label={copy($locale,"Оқу баптаулары")}><span aria-hidden="true">⚙</span><small>{copy($locale,"Баптаулар")}</small></button><button class="icon" onclick={()=>step(rightStep)} disabled={!canStep(rightStep)} aria-label={rightStep>0?copy($locale,"Келесі бет"):copy($locale,"Алдыңғы бет")}>›</button></nav>
  {#if preferences.numbers}<button class="page-counter" onclick={()=>openPanel('chapters')} aria-label={copy($locale,"Ағымдағы бет")}>{current.pageIndex+1} / {manifest.pages.length}</button>{/if}
  <dialog bind:this={dialog} class="reader-drawer" onclose={()=>{if(panel)dismiss();}}>
@@ -155,7 +164,7 @@
  </dialog>
 </div>
 
-<style>.advanced summary{min-height:44px;display:flex;align-items:center;cursor:pointer}.advanced-body{display:grid;gap:18px;padding-top:12px}.attribution summary{display:flex;align-items:center;min-height:44px;cursor:pointer}.attribution p{white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0;font-size:14px}
+<style>.library-prompt{margin:12px auto;max-width:640px;padding:16px;background:var(--reader-panel);border:1px solid var(--reader-line)}.library-prompt p{margin:0 0 12px}.library-prompt button{margin:4px}.advanced summary{min-height:44px;display:flex;align-items:center;cursor:pointer}.advanced-body{display:grid;gap:18px;padding-top:12px}.attribution summary{display:flex;align-items:center;min-height:44px;cursor:pointer}.attribution p{white-space:pre-wrap;overflow-wrap:anywhere;margin:12px 0;font-size:14px}
  .reader{--select-arrow:var(--select-arrow-dark);--raised:var(--reader-panel);--bg:var(--reader-bg);--panel:var(--reader-panel);--text:var(--reader-text);--muted:var(--reader-muted);--line:var(--reader-line)}
  .reader-discussion{padding:0 20px}
  .reader{--reader-bg:#101014;--reader-panel:#231a17;--reader-line:#40342e;--reader-text:#efedf1;--reader-muted:#aaa4ae;--accent:#ff873d;--accent-ink:#201007;min-height:100dvh;background:var(--reader-bg);color:var(--reader-text);padding:52px 0 100px;line-height:1.4;color-scheme:dark}

@@ -11,6 +11,7 @@ export interface ReadReference {teamName?:string;titleId:string;name:string;slug
 export interface RecentReading extends ReadReference {progress:Progress;updatedAt:number;pagePosition:number;availability:'available'|'updated'|'withdrawn'|'last-known'}
 export interface ReadingGateway {
  account():Promise<string|null>;
+ suggestion?(accountId:string,titleId:string):Promise<boolean>;
  selection(accountId:string,titleId:string):Promise<LibraryEntry|null>;
  progress(accountId:string,titleId:string):Promise<Progress>;
  advance(accountId:string,event:ProgressEvent):Promise<{outcome:string;progress:Progress}>;

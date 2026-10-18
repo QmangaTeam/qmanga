@@ -7,6 +7,7 @@ function referenceFrom(value:unknown):ReadReference{const item=object(value),cov
 export class HttpReadingGateway implements ReadingGateway {
  constructor(private api:ApiClient,private scope:AccountScope){}
  account(){return this.scope.currentId();}
+ async suggestion(accountId:string,titleId:string){const result=object(await this.api.call('/api/v1/reading/suggestion/'+encodeURIComponent(titleId),'GET',undefined,accountId));return result.eligible===true;}
  async selection(accountId:string,titleId:string){const result=object(await this.api.call('/api/v1/library/'+encodeURIComponent(titleId),'GET',undefined,accountId));if(!result.entry)return null;return this.entry(result.entry);}
  private entry(value:unknown):LibraryEntry{const item=object(value);return {version:Number(item.version)||0,removed:item.removed===true,titleId:String(item.title_id),name:String(item.name),slug:String(item.slug),status:String(item.status),favorite:item.favorite===true,preferredTeamId:String(item.preferred_team_id),notify:item.notify===true,unseen:Number(item.unseen),progress:progressFrom(item.progress)};}
  async progress(accountId:string,titleId:string){return progressFrom(await this.api.call('/api/v1/progress/'+encodeURIComponent(titleId),'GET',undefined,accountId));}

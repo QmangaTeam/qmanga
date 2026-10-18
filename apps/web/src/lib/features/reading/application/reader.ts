@@ -12,6 +12,8 @@ export class MediaFailure extends Error { constructor(message: string, readonly 
 export interface ReaderPreferences { quality: Exclude<QualityPreference,'original'>; mode: 'pages' | 'strip'; theme: 'dark' | 'light' | 'system'; fit: 'width' | 'height'; maxWidth: number; brightness: number; numbers: boolean; direction: 'auto' | 'ltr' | 'rtl' }
 export interface Viewport { width: number; height: number; top: number }
 export interface ReaderPlatform {
+ libraryPromptDismissed?(account:string,title:string):boolean;
+ dismissLibraryPrompt?(account:string,title:string):void;
  openRelease(releaseId:string):void;
  prefetchRelease?(releaseId:string):Promise<Manifest|null>;
  preferences(kind: string): ReaderPreferences;
