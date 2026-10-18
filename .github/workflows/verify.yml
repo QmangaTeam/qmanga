@@ -20,6 +20,13 @@ jobs:
       - uses: actions/setup-node@v6
         with:
           node-version: '22'
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.3'
+      - name: Check locked Backlog data
+        run: |
+          bun install --frozen-lockfile
+          bun run backlog doctor
       - name: Check setup and create isolated configuration
         shell: pwsh
         run: |
@@ -62,7 +69,7 @@ jobs:
         run: |
           docker run --rm --mount "type=bind,source=$PWD/apps/web,target=/app" -w /app oven/bun@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373 bun install --frozen-lockfile
           node apps/web/node_modules/playwright/cli.js install --with-deps chromium
-      - name: Browser staff navigation and save feedback
+      - name: Browser integration and interaction regressions
         working-directory: apps/web
         env:
           QMANGA_FIXTURE_FILE: ${{ github.workspace }}/tmp/ci/fixture.json

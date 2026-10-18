@@ -2,6 +2,28 @@
 
 The public names are `qmanga-dev.maqsatto.dev` (staging) and `qmanga.maqsatto.dev` (production). Both may share one Oracle Ampere A1 host, but use separate Compose projects, PostgreSQL databases, MinIO volumes and credentials. This is **one-host fault tolerance during application updates**, not high availability if Oracle, the VM, its disk or the network fails.
 
+## Development, integration and acceptance contract
+
+This section is the working contract for Backlog tasks, not evidence that a particular release passed. Use the existing [architecture boundaries](../ARCHITECTURE.md) and [local test environment](../LOCAL-DEVELOPMENT.md).
+
+1. Read the selected Backlog task, dependencies and acceptance criteria; compare them with current code. Assign one owner, set `In Progress`, and record the current plan in that card. Keep each change independently reviewable and commit after appropriate checks. A task on the board is not authorization to expand the current request.
+2. Choose checks at the boundary that can fail. For a bug, reproduce it with a failing regression before the fix. Add browser regressions to `apps/web/tests/browser/*.test.mjs`; the existing CI glob includes new files automatically. A static/SSR check does not replace interaction or real persistence checks.
+
+| Change boundary | Contract to preserve | Required evidence for that change |
+| --- | --- | --- |
+| Presentation → application | Existing ports, truthful loading/error/success state, retained input on errors, kk/ru, both themes, keyboard and reduced motion | Frontend application and SSR tests, app/preview diagnostics, architecture/contrast, production build; browser regression at 320/360/desktop for changed interactions |
+| HTTP → use case → PostgreSQL | Auth/role enforcement, validated DTOs, explicit conflict/version semantics, correct transaction boundaries, persisted results | Relevant Go unit/adapter/HTTP tests and real PostgreSQL integration; browser/API acceptance for the affected user journey |
+| Publishing → worker → media gateway | Private originals, immutable public revisions, safe codecs, retry behavior and authorized derivative delivery | Real PostgreSQL/codec suite plus synthetic publish/read smoke; test replacements against the existing published revision |
+| Browser → offline storage | Account isolation, saved-byte completeness, no false success or position loss, safe cache/schema updates | Browser offline/eviction/retry regression with an isolated context; no production fixtures |
+| Schema / HTTP shape / cache format | Previous deployed app keeps working during the rollback window; old clients/data remain readable or have an explicit transition | Backward-compatible migration/adapter tests; document the rollout sequence in the card before changing the contract |
+| CI / Backlog / deployment | Locked dependencies, acyclic task identities/dependencies, complete test results, tested SHA only | Locked install and `backlog doctor`, config/shell checks and affected release/backup tests; observed Actions result before claiming remote CI success |
+
+3. Run local checks in a disposable environment where data fixtures are needed. Never point seeding or cleanup at production, or reuse the owner's real data as a fixture. Keep credentials in ignored env/fixture files. Use serial full builds to avoid memory pressure. For UI changes rebuild and inspect the integrated Docker web service, not just a preview.
+4. Record the code commit SHA, commands/results, failed or unperformed checks, and the concrete next step in the same card. Keep screenshots/logs under ignored `tmp/`; don't create a new report per session. Set `Review` after implementation when remote CI, user acceptance or release gates remain. Docs/tooling tasks may be `Done` after their own verified criteria; product tasks requiring release remain `Review` until that release is observed.
+5. On an authorized push/PR, `Verify Qmanga` checks locked Backlog data, setup/deployment definitions, cold Docker start, full Go/PostgreSQL/codec tests without actual skips, auth/publishing/reading smoke, and all browser regressions. Images publish only after successful acceptance on `main`. Inspect the run for the **same SHA**; workflow configuration or a local green build is not a remote result. Push remains subject to the owner's working instructions.
+6. On staging, verify that exact SHA, readiness and the changed user journey, including failure/role cases. The host poller and optional GitHub staging job are described below; don't enable a second deployment path or change host access as part of a product task. Record the observed environment/SHA/checks in the card.
+7. Promote the same staging images through the existing production gates: verified off-host backup, restore drill, SMTP and health checks. Observe the public changed journey, then mark the product task `Done`. If the candidate fails, use the existing application rollback; database writes and migrations are not reverted. A destructive restore needs its own maintenance decision. No automatic force-push, schema rollback or volume deletion is part of ordinary development.
+
 ## Before the first release
 
 1. In the Oracle home region, check actual Always Free capacity and create an **ARM64** Ubuntu VM with at least 2 OCPU, 12 GB RAM and enough persistent disk for two sites, two warm application versions and two backups. Reserve a stable public IP if available. Keep a separate off-host backup destination; a second folder on this VM is insufficient.
