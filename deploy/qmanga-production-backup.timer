@@ -1,0 +1,11 @@
+[Unit]
+Description=Daily verified Qmanga production backup
+
+[Timer]
+OnCalendar=*-*-* 02:30:00 UTC
+RandomizedDelaySec=15m
+Persistent=true
+Unit=qmanga-production-backup.service
+
+[Install]
+WantedBy=timers.target

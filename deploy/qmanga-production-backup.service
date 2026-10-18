@@ -1,0 +1,13 @@
+[Unit]
+Description=Qmanga production backup to local and Oracle object storage
+Wants=docker.service
+After=docker.service
+
+[Service]
+Type=oneshot
+User=qmanga
+Group=qmanga
+WorkingDirectory=/opt/qmanga/repo
+UMask=0077
+ExecStart=/usr/bin/flock -w 600 /opt/qmanga/state/deployment.lock /bin/bash /opt/qmanga/repo/deploy/backup.sh production
+TimeoutStartSec=2h
