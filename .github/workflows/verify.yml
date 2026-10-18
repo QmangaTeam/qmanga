@@ -33,6 +33,7 @@ jobs:
         run: |
           set -euo pipefail
           bash -n deploy/*.sh
+          bash scripts/test-offsite-oci.sh
           export RELEASE_SHA=0123456789abcdef0123456789abcdef01234567 GATEWAY_PORT=18280 DEPLOY_TARGET=staging
           docker compose --env-file deploy/host.env.example -f deploy/compose.data.yaml config --quiet
           docker compose --env-file deploy/host.env.example -f deploy/compose.app.yaml config --quiet

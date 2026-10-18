@@ -1,4 +1,4 @@
-FROM oven/bun@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373 AS dependencies
+FROM --platform=$BUILDPLATFORM oven/bun@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373 AS dependencies
 WORKDIR /app
 COPY apps/web/package.json apps/web/bun.lock ./
 RUN bun install --frozen-lockfile
