@@ -4,7 +4,7 @@ import Menu from './Menu.fixture.svelte';
 
 test('menu destinations are icon-backed native links, never nested buttons',async()=>{
  const html=render(Menu).body;
- for(const destination of ['/library','/saved','/notifications','/studio/projects','/studio/requests','/studio/teams','/reports','/help']){
+ for(const destination of ['/library','/saved','/notifications','/studio/projects','/studio/requests','/studio/teams']){
   expect(await elements(html,'a[href="'+destination+'"] svg')).toHaveLength(1);
  }
  expect(await elements(html,'a button,a a')).toHaveLength(0);
@@ -31,7 +31,6 @@ test('menu retains guest return path and staff-only destinations',async()=>{
  expect(await elements(moderator,'a[href="/moderation"]')).toHaveLength(1);
  expect(await elements(moderator,'a[href^="/admin"]')).toHaveLength(0);
  const admin=render(Menu,{props:{role:'admin'}}).body;
- for(const destination of ['/moderation','/admin','/admin/requests','/admin/catalog']){
-  expect(await elements(admin,'a[href="'+destination+'"]')).toHaveLength(1);
- }
+ expect(await elements(admin,'a[href="/admin"]')).toHaveLength(1);
+ expect(await elements(admin,'a[href^="/admin/"],a[href="/moderation"]')).toHaveLength(0);
 });

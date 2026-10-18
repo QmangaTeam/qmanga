@@ -1,8 +1,9 @@
 <script lang="ts">
+ import type {Snippet} from 'svelte';
  import type {NavigationItem} from './types';
  import Icon from './Icon.svelte';
  import {useLocale,text} from '../locale';
- let {items,currentPath,accountHref,accountLabel,homeLabel,navigationLabel}:{items:NavigationItem[];currentPath:string;accountHref:string;accountLabel:string;homeLabel:string;navigationLabel:string}=$props();
+ let {items,currentPath,accountHref,accountLabel,homeLabel,navigationLabel,account,unreadCount=0,unreadBadge=''}:{items:NavigationItem[];currentPath:string;accountHref:string;accountLabel:string;homeLabel:string;navigationLabel:string;account?:Snippet;unreadCount?:number;unreadBadge?:string}=$props();
  const {locale}=useLocale();
  let searchDialog:HTMLDialogElement;
  let searchInput:HTMLInputElement;
@@ -17,8 +18,8 @@
    <a class="studio-link" href="/studio" aria-current={currentPath.startsWith('/studio')?'page':undefined}><Icon name="upload"/><span>{text($locale,'Аудармашыларға','Переводчикам')}</span></a>
   </nav>
   <nav class="account-navigation" aria-label={text($locale,'Жеке бөлім','Личный раздел')}>
-   {#each items.filter(item=>item.href==='/library'||item.href==='/notifications') as item}<a class="icon-link" href={item.href} aria-label={item.label} title={item.label} aria-current={currentPath===item.href?'page':undefined}><Icon name={item.icon}/></a>{/each}
-   <a class="account-link" href={accountHref} aria-label={accountLabel} title={accountLabel}><Icon name="user"/></a>
+   {#each items.filter(item=>item.href==='/library'||item.href==='/notifications') as item}<a class="icon-link" href={item.href} aria-label={item.href==='/notifications'&&!!unreadBadge?item.label+': '+unreadCount:item.label} title={item.label} aria-current={currentPath===item.href?'page':undefined}><Icon name={item.icon}/>{#if item.href==='/notifications'&&!!unreadBadge}<span class="unread-badge" aria-hidden="true">{unreadBadge}</span>{/if}</a>{/each}
+   {#if account}{@render account()}{:else}<a class="account-link" href={accountHref} aria-label={accountLabel} title={accountLabel}><Icon name="user"/></a>{/if}
   </nav>
  </div>
 </header>
@@ -33,7 +34,9 @@
 <style>
  header{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line)}
  .header-inner{max-width:1280px;min-height:60px;margin:auto;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
- .wordmark,.account-navigation,.primary-navigation>a{display:none}
+ .wordmark,.primary-navigation>a,.account-navigation>.icon-link{display:none}
+ .account-navigation{display:flex;align-items:center;flex:none}.primary-navigation{min-width:0}
+ .icon-link{position:relative}.unread-badge{position:absolute;top:0;right:0;min-width:18px;padding:1px 4px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:10px;line-height:16px}
  .primary-navigation{width:100%;display:flex;align-items:center;gap:24px}
  a,button{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:14px;font-weight:550;text-decoration:none}
  button{border:0;background:none;padding:0 12px}
@@ -55,7 +58,7 @@
   .wordmark{display:inline-flex;justify-self:start;color:var(--text);font-size:24px;font-weight:750;letter-spacing:-1px}.wordmark span{color:var(--accent)}
   .primary-navigation{width:auto;gap:20px}.primary-navigation>a{display:inline-flex}.primary-navigation .studio-link{display:none}
   .search-trigger{width:auto;background:var(--panel);border:1px solid var(--line);padding:0 12px}
-  .account-navigation{display:flex;justify-content:flex-end;align-items:center;gap:4px}
+  .account-navigation>.icon-link{display:inline-flex}.account-navigation{display:flex;justify-content:flex-end;align-items:center;gap:4px}
   .account-link{border:1px solid var(--line);border-radius:50%;background:var(--panel);margin-left:8px;color:var(--text)}
  }
  @media(min-width:1024px){.primary-navigation .studio-link{display:inline-flex}}

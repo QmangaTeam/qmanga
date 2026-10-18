@@ -17,14 +17,7 @@
   {href:'/studio/requests',label:text($locale,'Жобаға өтінім','Заявки на проекты'),icon:'file'},
   {href:'/studio/teams',label:text($locale,'Командаларым','Мои команды'),icon:'users'}
  ]);
- const staff=$derived<{href:string;label:string;icon:IconName}[]>(user?.role==='admin'||user?.role==='moderator'?[
-  {href:'/moderation',label:'Модерация',icon:'shield'},
-  ...(user.role==='admin'?[
-   {href:'/admin/requests',label:text($locale,'Жоба өтінімдері','Заявки на проекты'),icon:'file' as const},
-   {href:'/admin',label:text($locale,'Команда өтінімдері','Заявки команд'),icon:'users' as const},
-   {href:'/admin/catalog',label:text($locale,'Каталогты басқару','Управление каталогом'),icon:'catalog' as const}
-  ]:[])
- ]:[]);
+ const staff=$derived<{href:string;label:string;icon:IconName}[]>(user?.verified&&user.role==='admin'?[{href:'/admin',label:text($locale,'Басқару','Управление'),icon:'shield'}]:user?.verified&&user.role==='moderator'?[{href:'/moderation',label:'Модерация',icon:'shield'}]:[]);
 </script>
 <svelte:head><title>{text($locale,'Мәзір','Меню')} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>
 <div class="menu-page">
@@ -34,7 +27,7 @@
   <section><h2>{text($locale,'Оқу','Чтение')}</h2><div class="tile-grid">{#each reading as item}<MenuTile {...item}/>{/each}</div></section>
   <section><h2>{text($locale,'Аудармашыларға','Переводчикам')}</h2><div class="menu-rows">{#each studio as item}<MenuTile {...item} row/>{/each}</div></section>
   {#if staff.length}<section><h2>{text($locale,'Басқару','Управление')}</h2><div class="menu-rows">{#each staff as item}<MenuTile {...item} row/>{/each}</div></section>{/if}
-  <section><h2>{text($locale,'Қосымша','Ещё')}</h2><div class="menu-rows"><MenuTile href="/settings" label={text($locale,'Баптаулар','Настройки')} icon="settings" row/><MenuTile href="/reports" label={text($locale,'Өтініштерім','Мои обращения')} icon="flag" row/><MenuTile href="/help" label={text($locale,'Көмек','Помощь')} icon="help" row/></div></section>
+
  </div>
 </div>
 <style>

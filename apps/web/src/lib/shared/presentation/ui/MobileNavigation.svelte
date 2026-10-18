@@ -1,14 +1,14 @@
 <script lang="ts">
  import Icon from './Icon.svelte';
  import type { NavigationItem } from './types';
- let { items, currentPath, label }: {items:NavigationItem[];currentPath:string;label:string} = $props();
+ let { items, currentPath, label, unreadCount=0, unreadBadge='' }: {items:NavigationItem[];currentPath:string;label:string;unreadCount?:number;unreadBadge?:string} = $props();
  const activeIndex = $derived(items.findIndex(item => currentPath === item.href));
 </script>
 <nav aria-label={label} style:--item-count={items.length}>
  <div class="active-indicator" aria-hidden="true" style:--active-index={Math.max(0, activeIndex)} class:visible={activeIndex >= 0}></div>
  {#each items as item}
-  <a href={item.href} aria-label={item.label} aria-current={currentPath===item.href?'page':undefined}>
-   <Icon name={item.icon}/><span>{item.shortLabel||item.label}</span>
+  <a href={item.href} aria-label={item.href==='/notifications'&&!!unreadBadge?item.label+': '+unreadCount:item.label} aria-current={currentPath===item.href?'page':undefined}>
+   <div class="nav-icon"><Icon name={item.icon}/>{#if item.href==='/notifications'&&!!unreadBadge}<b class="unread-badge" aria-hidden="true">{unreadBadge}</b>{/if}</div><span>{item.shortLabel||item.label}</span>
   </a>
  {/each}
 </nav>
@@ -20,6 +20,7 @@
  a[aria-current] { color:var(--accent); }
  a:active { transform:scale(.94); }
  a:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
+ .nav-icon{position:relative;display:flex}.unread-badge{position:absolute;top:-6px;left:14px;min-width:18px;padding:1px 4px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:10px;line-height:16px}
  span { max-width:100%; white-space:nowrap; text-align:center; }
  @media(prefers-reduced-motion:reduce) { .active-indicator,a { transition:none; } a:active { transform:none; } }
  @media(min-width:768px) { nav { display:none; } }
