@@ -34,6 +34,7 @@
  const chapterDirectory=new ChapterDirectory(untrack(()=>catalogue),untrack(()=>manifest.titleSlug),()=>chapterVersion++);
  const chapters=$derived.by(()=>{chapterVersion;return chapterDirectory.items;}),cursor=$derived.by(()=>{chapterVersion;return chapterDirectory.nextCursor;}),chapterBusy=$derived.by(()=>{chapterVersion;return chapterDirectory.busy;}),chapterFailed=$derived.by(()=>{chapterVersion;return chapterDirectory.failed;});
  let download=$state<Download|null>(null),downloadBusy=$state(false),downloadController:AbortController|undefined;
+ let completedForSuggestion=false;
  let suggestion=$state.raw<LibrarySuggestion>(),suggestionVersion=$state(0);
  const libraryPrompt=$derived.by(()=>{suggestionVersion;return suggestion?.visible||false;});
  const promptBusy=$derived.by(()=>{suggestionVersion;return suggestion?.busy||false;});
@@ -57,7 +58,7 @@
  onMount(()=>{
   const linkedIndex=manifest.pages.findIndex(page=>page.id===initialPage);if(linkedIndex>=0)userNavigated=true;
   queue=new ImageQueue(images(firstImage,!preview&&!offlineTier),timer,()=>version++);
-  saver=new ThrottledSave(timer,async value=>{if(session){await session.record(value.manifest,value.position,value.completed);if(value.completed)void checkLibraryPrompt();}else if(!readingGateway)platform.savePosition(value.manifest.releaseId,value.position);});mounted=true;
+  saver=new ThrottledSave(timer,async value=>{if(session){if(value.completed)completedForSuggestion=true;await session.record(value.manifest,value.position,value.completed);if(value.completed)void checkLibraryPrompt();}else if(!readingGateway)platform.savePosition(value.manifest.releaseId,value.position);});mounted=true;
   let observed=false;const stopObserve=platform.observe(stage,value=>{const position=current.position,resized=observed&&Math.abs(value.width-viewport.width)>.5;observed=true;viewport=value;if(preferences.mode==='strip'){navigation.observe(visible(sheet.items,value).pageIndex);pageIndex=navigation.index;}if(resized&&position.pageId)void tick().then(()=>platform.scroll(stage,anchorOffset(sheet.items,position,value.width)));}),stopVisibility=platform.visibility(hidden=>{queue?.pause(hidden);if(hidden)void saver?.flush().then(()=>session?.flush());}),stopKeyboard=platform.keyboard(action=>{if(panel)return;if(action==='menu')void openPanel('settings');else step(pageStep(action,direction));});
   preferences=platform.preferences(manifest.kind);onlineQuality=preferences.quality;
   if(offlineTier){preferences={...preferences,quality:offlineTier};tier=offlineTier;}
@@ -97,7 +98,7 @@
  function dismiss() {const stop=closePanel;closePanel=undefined;panel='';stop?.();}
  async function loadChapters(reset=false) {if(reset||!chapters.length)await chapterDirectory.search(query,reverse?'asc':'desc');else await chapterDirectory.more();}
  const releaseFor=(chapter:Chapter)=>chapter.releases.find(release=>release.projectId===manifest.projectId);
- async function checkLibraryPrompt(){if(session?.row)await suggestion?.check(session.row.scope,!session.row.pending&&!session.row.conflict);}
+ async function checkLibraryPrompt(){if(completedForSuggestion&&session?.row)await suggestion?.check(session.row.scope,!session.row.pending&&!session.row.conflict);}
  function dismissLibraryPrompt(){suggestion?.dismiss();}
  async function addLibrary(){await suggestion?.add();if(suggestion?.error)message=suggestion.error;}
  async function saveOffline(){if(!downloads)return;downloadBusy=true;downloadController=new AbortController();try{await downloads.save(manifest,tier,downloadController.signal,value=>download=value);}catch(failure){message=failureCode(failure);}finally{downloadBusy=false;}}

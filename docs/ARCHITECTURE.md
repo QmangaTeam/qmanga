@@ -21,6 +21,7 @@ Status: required by the owner on 2026-10-17 for both backend and frontend. This 
 | Reading | Library entry, preferred translation and versioned reading progress |
 | Community | Ratings, comments, spoilers, reports and moderation decisions |
 | Notifications | Subscriptions, deduplicated in-app delivery and read state |
+| Metrics | Private daily operational event aggregates and scoped dashboard read models |
 
 A title, chapter, team release and immutable revision are different concepts. Do not collapse them into one manga table/model. A frontend view may combine read models from several contexts without merging their business ownership.
 

@@ -19,5 +19,5 @@ export class LibrarySuggestion {
   }catch(failure){this.error=typeof failure==='object'&&failure!==null&&'code' in failure?String(failure.code):'library_failed';}
   finally{this.busy=false;this.changed();}
  }
- close(){this.stopped=true;this.visible=false;}
+ close(){this.stopped=true;this.visible=false;this.changed();}
 }
