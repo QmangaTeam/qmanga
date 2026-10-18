@@ -1,0 +1,4 @@
+import {test,expect} from 'bun:test';
+import {HttpAuthGateway} from './http-auth-gateway';
+test('external login uses the same awaited account transition callback as password login',async()=>{const events:string[]=[];let finish!:()=>void;const gateway=new HttpAuthGateway('',async()=>{throw Error('no extra request needed');},'',()=>new Promise<void>(done=>{events.push('reset');finish=done;}));const pending=gateway.completeExternalLogin().then(()=>events.push('complete'));expect(events).toEqual(['reset']);finish();await pending;expect(events).toEqual(['reset','complete']);});
+test('external transition failure is propagated so navigation cannot bypass cleanup',async()=>{const gateway=new HttpAuthGateway('',fetch,'',async()=>{throw Error('storage unavailable');});await expect(gateway.completeExternalLogin()).rejects.toThrow('storage unavailable');});

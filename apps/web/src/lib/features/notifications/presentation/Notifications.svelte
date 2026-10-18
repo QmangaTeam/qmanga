@@ -3,13 +3,17 @@
  import {copy,noticeText,failureCode} from '$lib/shared/presentation/copy';
  const {locale,change:changeLanguage}=useLocale();
  import {notificationGroups} from '../application/groups';
- import {onMount} from 'svelte';
+ import {onMount,untrack} from 'svelte';
+ import {NotificationFeed} from '../application/feed';
  import type {Notification,NotificationsGateway} from '../application/notifications';
  let {gateway}:{gateway:NotificationsGateway}=$props();
- let account=$state<string|null>(null),items=$state<Notification[]>([]),busy=$state(true),more=$state(false),message=$state('');
- async function load(after=''){busy=true;try{account=await gateway.account();if(account){const result=await gateway.list(account,after);items=after?[...items,...result.items]:result.items;more=result.hasMore;}}catch(failure){message=failureCode(failure);}finally{busy=false;}}
- onMount(()=>{void load();});
- async function read(item:Notification){if(!account)return;try{await gateway.read(account,item.id);item.read=true;items=[...items];}catch{message="notification_failed";}}
+ let version=$state(0);
+ const feed=new NotificationFeed(untrack(()=>gateway),()=>version++);
+ const account=$derived.by(()=>{version;return feed.account;}),items=$derived.by(()=>{version;return feed.items;}),busy=$derived.by(()=>{version;return feed.busy;}),more=$derived.by(()=>{version;return feed.more;}),message=$derived.by(()=>{version;return feed.error;});
+ function load(after=''){return feed.load(after);}
+ function read(item:Notification){return feed.read(item);}
+ onMount(()=>{const stop=gateway.watchAccountChange?.(()=>{feed.reset();void feed.load();});void feed.load();return()=>{stop?.();feed.close();};});
+
 </script>
 <svelte:head><title>{copy($locale,"Хабарлар — Qmanga")}</title><meta name="robots" content="noindex"/></svelte:head><h1>{copy($locale,"Хабарлар")}</h1><p class="muted">{text($locale,'Жаңа тараулар, пікірге жауаптар және жарияланым туралы шешімдер.','Новые главы, ответы на комментарии и решения по публикациям.')}</p>
 {#if message}<p class="form-message" role="status">{noticeText($locale,message)}</p>{/if}{#if !account&&!busy}<p>{copy($locale,"Хабарларды көру үшін ")}<a class="auth-link" href="/login?returnTo=%2Fnotifications">{copy($locale,"кіріңіз")}</a>.</p>{/if}

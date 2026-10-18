@@ -2,6 +2,7 @@ import type { Account, Credentials } from '../domain/account';
 import { credentialError } from '../domain/account';
 export interface AuthResult { ok: boolean; message: string; code?: string; account?: Account }
 export interface AuthGateway {
+ completeExternalLogin?():Promise<void>;
  googleStatus?():Promise<boolean>;
  googleStart?(returnPath:string,nickname:string):Promise<{url?:string;code?:string}>;
  updateProfile(accountId:string,displayName:string):Promise<AuthResult>;

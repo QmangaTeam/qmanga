@@ -1,12 +1,15 @@
 package http
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"net/http/httptest"
 	"qmanga/internal/identity/application"
+	"qmanga/internal/identity/domain"
 	"strings"
 	"testing"
+	"time"
 )
 
 func TestGoogleDisabledByDefaultAndCallbackRequiresCookie(t *testing.T) {
@@ -41,5 +44,70 @@ func TestGoogleDisabledByDefaultAndCallbackRequiresCookie(t *testing.T) {
 				t.Fatal("unsafe state cookie")
 			}
 		}
+	}
+}
+
+type completionGoogleService struct {
+	destination string
+	failure     error
+}
+
+func (s completionGoogleService) Start(context.Context, string, string) (string, string, error) {
+	return "", "", nil
+}
+func (s completionGoogleService) Finish(context.Context, string, string) (application.LoginResult, string, error) {
+	return application.LoginResult{Account: domain.Account{DisplayName: "Reader"}, SessionToken: "ordinary-session", CSRFToken: "ordinary-csrf", ExpiresAt: time.Now().Add(time.Hour)}, s.destination, s.failure
+}
+func TestGoogleSuccessUsesBrowserAccountTransitionAndCancellationDoesNot(t *testing.T) {
+	gin.SetMode(gin.TestMode)
+	for _, scenario := range []struct {
+		destination, want string
+		cancel            bool
+	}{{"/read/release?mode=strip", "/auth/complete?returnTo=%2Fread%2Frelease%3Fmode%3Dstrip", false}, {"/auth/complete?returnTo=/auth/complete", "/auth/complete?returnTo=%2F", false}, {"//evil.example", "/auth/complete?returnTo=%2F", false}, {"/catalog?genre=adventure", "/catalog?genre=adventure", true}} {
+		router := gin.New()
+		identity := NewIdentityHandler(nil, "https://app.test", true)
+		service := completionGoogleService{destination: scenario.destination}
+		if scenario.cancel {
+			service.failure = domain.ErrCredentials
+		}
+		handler := &GoogleHandler{service: service, identity: identity}
+		handler.Register(router.Group("/api/v1"))
+		path := "/api/v1/auth/google/callback?state=" + strings.Repeat("a", 43) + "&code=code"
+		if scenario.cancel {
+			path += "&error=access_denied"
+		}
+		request := httptest.NewRequest("GET", path, nil)
+		request.AddCookie(&http.Cookie{Name: "qmanga_google_state", Value: strings.Repeat("a", 43)})
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, request)
+		want := scenario.want
+		if !scenario.cancel {
+			want += "&nonce=" + strings.Repeat("a", 43)
+		}
+		if response.Code != 303 || response.Header().Get("Location") != want {
+			t.Fatalf("%s -> %d %s", scenario.destination, response.Code, response.Header().Get("Location"))
+		}
+		session := false
+		for _, cookie := range response.Result().Cookies() {
+			if cookie.Name == "qmanga_session" {
+				session = true
+			}
+		}
+		if session == scenario.cancel {
+			t.Fatal("session cookie success/cancel mismatch")
+		}
+		proof := false
+		for _, cookie := range response.Result().Cookies() {
+			if cookie.Name == "qmanga_external_complete" {
+				proof = true
+				if !cookie.HttpOnly || !cookie.Secure || len(cookie.Value) != 64 || cookie.MaxAge > 60 {
+					t.Fatal("unsafe completion proof")
+				}
+			}
+		}
+		if proof == scenario.cancel {
+			t.Fatal("completion proof success/cancel mismatch")
+		}
+
 	}
 }

@@ -24,6 +24,7 @@ export class HttpAuthGateway implements AuthGateway {
    return { ok: true, message: typeof payload.message === 'string' ? payload.message : '', account: accountView(payload.user) };
   } catch { return { ok: false, code:'network', message: 'Қосылым үзілді. Қайталап көріңіз.' }; }
  }
+ async completeExternalLogin(){await this.accountChanged();}
  async googleStatus(){try{const response=await this.request(this.base+'/api/v1/auth/google/status',{signal:AbortSignal.timeout(10000)});const data:unknown=await response.json();return response.ok&&object(data)&&data.enabled===true;}catch{return false;}}
  async googleStart(returnPath:string,nickname:string){try{const response=await this.request(this.base+'/api/v1/auth/google/start',{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify({return_path:returnPath,nickname}),signal:AbortSignal.timeout(15000)});const data:unknown=await response.json();if(response.ok&&object(data)&&typeof data.url==='string'&&data.url.startsWith('https://accounts.google.com/o/oauth2/v2/auth?'))return {url:data.url};return {code:'validation'};}catch{return {code:'network'};}}
  async login(input: Credentials) {const result=await this.call('login', { email: input.email, password: input.password });if(result.ok)await this.accountChanged();return result;}

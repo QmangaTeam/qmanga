@@ -1,7 +1,7 @@
 import {before,after,test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {randomUUID} from 'node:crypto';
+import {randomUUID,randomBytes,createHash} from 'node:crypto';
 import {spawnSync} from 'node:child_process';
 import {chromium} from 'playwright';
 if(!process.env.QMANGA_FIXTURE_FILE)throw Error('QMANGA_FIXTURE_FILE required; reading suggestion tests never skip');
@@ -50,13 +50,25 @@ test('preferred team comes from actual translation, remains editable, and third 
  }finally{await context.close();}
 });
 
-test('an actual login in another tab closes the first account prompt; guests never receive it',{timeout:90000},async()=>{
+test('external login completion clears prior-account reader state only with a one-use session-bound proof; guests never receive prompts',{timeout:90000},async()=>{
  const context=await contextFor(),page=await context.newPage();try{
   await context.request.delete('/api/v1/library/'+title,{headers:await headers(context)});
   const progress=await(await context.request.get('/api/v1/progress/'+title,{headers:await headers(context)})).json();
   for(let index=0;index<2;index++){const ch=chapters[index];await complete(context,ch.release,ch.revision,ch.pages[1],index+1,progress.version+index,'account-switch-browser');}
   await page.goto('/read/'+chapters[2].release);await finishReader(page);await prompt(page).waitFor();
-  const second=await context.newPage();await second.goto('/login');await second.locator('input[type=email]').fill(otherEmail);await second.locator('input[type=password]').fill(fixture.owner_password);await second.getByRole('button',{name:'Войти',exact:true}).click();await second.waitForURL(url=>!url.pathname.startsWith('/login'));await prompt(page).waitFor({state:'detached'});assert.equal(await page.locator('.library-prompt').count(),0);
+  const epoch=await page.evaluate(()=>localStorage.getItem('qmanga:auth-epoch'));
+  const oldSession=(await context.cookies()).find(cookie=>cookie.name==='qmanga_session').value;
+  // This exercises the browser handoff after a real session switch, not Google's consent UI.
+  assert.equal((await context.request.post('/api/v1/auth/login',{headers:{Origin:baseURL},data:{email:otherEmail,password:fixture.owner_password}})).status(),200);
+  const session=(await context.cookies()).find(cookie=>cookie.name==='qmanga_session').value,second=await context.newPage();
+  await second.goto('/auth/complete?returnTo=/menu');await second.waitForURL('**/menu');assert.equal(await page.evaluate(()=>localStorage.getItem('qmanga:auth-epoch')),epoch,'unmarked public GET must not clear pending state');assert.equal(await prompt(page).count(),1);
+  const nonce=randomBytes(32).toString('base64url');
+  const marker=token=>createHash('sha256').update(nonce+'\0'+token).digest('hex');
+  await context.addCookies([{name:'qmanga_external_complete',value:marker(oldSession),url:baseURL,httpOnly:true,sameSite:'Lax',expires:Math.floor(Date.now()/1000)+60}]);
+  await second.goto('/auth/complete?nonce='+nonce+'&returnTo=/menu');await second.waitForURL('**/menu');assert.equal(await page.evaluate(()=>localStorage.getItem('qmanga:auth-epoch')),epoch,'proof for a previous session must be rejected');assert.equal(await prompt(page).count(),1);
+  await context.addCookies([{name:'qmanga_external_complete',value:marker(session),url:baseURL,httpOnly:true,sameSite:'Lax',expires:Math.floor(Date.now()/1000)+60}]);
+  const landing='/auth/complete?nonce='+nonce+'&returnTo=/menu';await second.goto(landing);await second.waitForURL('**/menu');await prompt(page).waitFor({state:'detached'});assert.notEqual(await page.evaluate(()=>localStorage.getItem('qmanga:auth-epoch')),epoch);assert.equal(await page.locator('.library-prompt').count(),0);
+  const completedEpoch=await second.evaluate(()=>localStorage.getItem('qmanga:auth-epoch'));await second.goto(landing);await second.waitForURL('**/menu');assert.equal(await second.evaluate(()=>localStorage.getItem('qmanga:auth-epoch')),completedEpoch,'replaying a consumed marker must not reset caches again');
  }finally{await context.close();}
  const saving=await contextFor(),savingPage=await saving.newPage();try{await savingPage.goto('/read/'+chapters[2].release);await finishReader(savingPage);await prompt(savingPage).waitFor();const persisted=savingPage.waitForResponse(r=>r.request().method()==='PUT'&&r.url().endsWith('/library/'+title));await prompt(savingPage).getByRole('button',{name:'Добавить',exact:true}).click();assert.equal((await persisted).status(),204);await prompt(savingPage).waitFor({state:'detached'});const entry=(await(await saving.request.get('/api/v1/library/'+title,{headers:await headers(saving)})).json()).entry;assert.equal(entry.removed,false);assert.equal(entry.preferred_team_id,teams[0],'restored title follows the translation actually being read');}finally{await saving.close();}
  const guest=await browser.newContext({baseURL,viewport:{width:360,height:800}});try{await guest.addCookies([{name:'qmanga_locale',value:'ru',url:baseURL}]);await guest.addInitScript(()=>localStorage.setItem('qmanga:reader:preferences:v1',JSON.stringify({mode:'strip',quality:'eco'})));const page=await guest.newPage();let suggestions=0;page.on('request',r=>{if(r.url().includes('/reading/suggestion/'))suggestions++;});await page.goto('/read/'+chapters[2].release);await reachEnd(page);await page.locator('.chapter-end').waitFor();await page.waitForFunction(title=>new Promise(resolve=>{const open=indexedDB.open('qmanga-reading');open.onsuccess=()=>{const db=open.result;if(!db.objectStoreNames.contains('positions')){db.close();resolve(false);return;}const request=db.transaction('positions').objectStore('positions').get(['guest',title]);request.onsuccess=()=>{const ready=request.result?.progress.fraction===1;db.close();resolve(ready);};};open.onerror=()=>resolve(false);}),title);assert.equal(await prompt(page).count(),0);assert.equal(suggestions,0);}finally{await guest.close();}

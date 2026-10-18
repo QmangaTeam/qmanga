@@ -2,22 +2,33 @@ package http
 
 import (
 	"context"
+	"crypto/sha256"
 	"crypto/subtle"
+	"encoding/hex"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"net/url"
 	"qmanga/internal/identity/application"
 	"qmanga/internal/identity/domain"
+	"strings"
 	"time"
 )
 
+type googleLoginService interface {
+	Start(context.Context, string, string) (string, string, error)
+	Finish(context.Context, string, string) (application.LoginResult, string, error)
+}
 type GoogleHandler struct {
-	service  *application.GoogleService
+	service  googleLoginService
 	identity *IdentityHandler
 }
 
 func NewGoogleHandler(service *application.GoogleService, identity *IdentityHandler) *GoogleHandler {
-	return &GoogleHandler{service, identity}
+	handler := &GoogleHandler{identity: identity}
+	if service != nil {
+		handler.service = service
+	}
+	return handler
 }
 func (h *GoogleHandler) Register(api *gin.RouterGroup) {
 	api.GET("/auth/google/status", func(c *gin.Context) {
@@ -82,5 +93,16 @@ func (h *GoogleHandler) callback(c *gin.Context) {
 	if result.Account.DisplayName == "" {
 		destination = "/settings"
 	}
-	c.Redirect(303, application.SafeAuthReturn(destination))
+	proof := sha256.Sum256([]byte(state + "\x00" + result.SessionToken))
+	h.identity.cookie(c, "qmanga_external_complete", hex.EncodeToString(proof[:]), time.Now().Add(time.Minute))
+	c.Redirect(303, googleCompletionURL(destination, state))
+}
+
+func googleCompletionURL(destination, nonce string) string {
+	destination = application.SafeAuthReturn(destination)
+	parsed, _ := url.Parse(destination)
+	if parsed != nil && (parsed.Path == "/auth/complete" || strings.HasPrefix(parsed.Path, "/auth/complete/")) {
+		destination = "/"
+	}
+	return "/auth/complete?returnTo=" + url.QueryEscape(destination) + "&nonce=" + url.QueryEscape(nonce)
 }
