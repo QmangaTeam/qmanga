@@ -12,32 +12,32 @@ User-authorized scope: finish the Senkuro title page first, then implement the a
 ## Execution plan and ownership
 
 ### A — Publication workflow (publishing agent)
-- [ ] Independent cover lifecycle: publication must not silently replace a chosen title cover; explicit authorized management and safe derived images.
-- [ ] Page thumbnails, original filenames, staged positions, clear failures/retry.
-- [ ] New revision clones published pages/assets/credits; replacing one page preserves current publication until acceptance.
-- [ ] Coherent version handling, save feedback, navigation protection and retryable upload queue.
-- [ ] Separate release availability and revision state; authorized restoration with reason/audit.
-- [ ] Preparation method and human review metadata; truthful public display.
-- [ ] Documented idempotent import of prepared pages through existing authorized interfaces; defer ZIP/OCR editor.
+- [x] Independent cover lifecycle: publication must not silently replace a chosen title cover; explicit authorized management and safe derived images.
+- [x] Page thumbnails, original filenames, staged positions, clear failures/retry.
+- [x] New revision clones published pages/assets/credits; replacing one page preserves current publication until acceptance.
+- [x] Coherent version handling, save feedback, navigation protection and retryable upload queue.
+- [x] Separate release availability and revision state; authorized restoration with reason/audit.
+- [x] Preparation method and human review metadata; truthful public display.
+- [x] Documented idempotent import of prepared pages through existing authorized interfaces; defer ZIP/OCR editor.
 
 ### B — Offline reading (offline agent)
-- [ ] Cold offline entry opens a list of complete saved chapters, not an arbitrary last chapter.
-- [ ] Two saved chapters selectable; missing/evicted/incomplete files never shown as complete.
-- [ ] Recoverable download failures and safe service-worker updates, with regression tests.
+- [x] Cold offline entry opens a list of complete saved chapters, not an arbitrary last chapter.
+- [x] Two saved chapters selectable; missing/evicted/incomplete files never shown as complete.
+- [x] Recoverable download failures and safe service-worker updates, with regression tests.
 
 ### C — Moderation/account audit (moderation agent)
-- [ ] Reports contain title/team/comment/page context and useful links; technical IDs secondary.
-- [ ] Pagination cursor independent of removed/resolved rows.
-- [ ] Audit shows actor, target, before/after, reason, time and relevant destination, with authorized visibility.
+- [x] Reports contain title/team/comment/page context and useful links; technical IDs secondary.
+- [x] Pagination cursor independent of removed/resolved rows.
+- [x] Audit shows actor, target, before/after, reason, time and relevant destination, with authorized visibility.
 
 ### D — Integration, reader/team usability and CI (primary)
-- [ ] CI separates Docker diagnostics from Go JSON and fails honestly on tests/skips/no events.
-- [ ] Resume/guest-cloud conflicts show concrete positions without automatically choosing furthest progress.
-- [ ] Mobile labels avoid word splitting; catalogue shows active conditions and reset.
-- [ ] Team portfolio: structured Telegram/public link, clear solo-team wording, useful publish/share copy; invitation lifecycle if currently incomplete.
-- [ ] Reader settings distinguish frequent and advanced options.
-- [ ] Practical performance/bandwidth evidence and repeatable pilot instructions.
-- [ ] Integrated test/build, fresh review and one corrective pass; update state and report remaining limitations accurately.
+- [x] CI separates Docker diagnostics from Go JSON and fails honestly on tests/skips/no events.
+- [x] Resume/guest-cloud conflicts show concrete positions without automatically choosing furthest progress.
+- [x] Mobile labels avoid word splitting; catalogue shows active conditions and reset.
+- [x] Team portfolio: structured Telegram/public link, clear solo-team wording, useful publish/share copy; invitation lifecycle if currently incomplete.
+- [x] Reader settings distinguish frequent and advanced options.
+- [x] Practical performance/bandwidth evidence and repeatable pilot instructions.
+- [x] Integrated test/build, fresh review and one corrective pass; update state and report remaining limitations accurately.
 
 ## Constraints and rulings
 
@@ -51,3 +51,19 @@ User-authorized scope: finish the Senkuro title page first, then implement the a
 ## Evidence ledger
 
 Title pass logs: `tmp/title-full-go.log`, `tmp/title-web-final.log` (ignored). Additional task evidence will be appended as results arrive.
+
+## Completed verification and remaining limits
+
+- Final full backend run: `tmp/reliability-go-release.jsonl`, 66 test/subtest passes, 21 packages, no actual skips. PostgreSQL and real image codec tests executed.
+- Integrated auth/SMTP/password reset, publishing/processing/moderation and reading/community scripts passed: `tmp/reliability-auth-smoke.log`, `tmp/reliability-publishing-smoke.log`, `tmp/reliability-reading-smoke.log`.
+- Publishing fixture: 45 synthetic pages, three actual WebP tiers. Browser correction cloned all 45 pages; replacement of page 23 preserved the public revision and its original page. Explicit cover selection and unsaved-edit navigation protection worked.
+- Browser cold offline acceptance: downloaded two chapters, stopped the local gateway, closed tabs, reopened `/saved`, read both chapters and reloaded page 23. Removed one cached image: incomplete chapter lost its read action; restarted gateway and resumed successfully. This found and fixed a real Svelte proxy/IndexedDB structured-clone error. Cache verification then passed. Service-worker update waited safely for old tabs to close.
+- Browser moderation acceptance: page-23 report displayed title/team/chapter/page, opened the exact preview position, resolved with a reason and appeared in audit. Follow-up review fixed localized cover audit states and unnamed actor links.
+- Responsive inspection: kk dark at 360 px, ru light at 320 px and desktop at 1280 px; no document overflow in the inspected title views. Screenshots: `tmp/reliability-screenshots/` (local evidence, ignored).
+- Independent cross-review covered reader position races, studio polling versus dirty edits, report pagination, safe audit fields and offline state handling. Corrections are included.
+- Browser regression file `apps/web/tests/browser/offline.test.mjs` was syntax checked; local acceptance used the managed browser. The complete browser runner is a separate CI gate, not claimed to have run locally.
+
+Scope limits: cover selection uses a ready project image and an independent safe derivative snapshot; dedicated file upload/cropping is not implemented. Upload-first replacement needs one free page slot and temporary byte quota; at the 300-page/500-MiB limit an explicit draft edit is required. File retry survives the current visit; after reload files must be selected again. Team avatar uses initials, not an image uploader. Historical absent audit fields cannot be reconstructed; complaint text reflects current content. Human review is an attributed team attestation, not proof of translation quality.
+
+Physical-device endurance, representative mobile performance, human usability and Kazakh translation review remain unperformed pilot gates. No production deployment or external invitations were performed. See `PILOT-AND-PERFORMANCE-2026-10-18.md` and `PREPARED-PUBLICATION-IMPORT.md`.
+Final production build: `tmp/reliability-final-build.log` — 84 frontend tests (380 assertions), 26 SSR UI tests (650 assertions), zero failures; app and preview each zero errors/warnings; architecture and both-theme contrast checks pass. API, worker and web rebuilt; all seven local services healthy. Final browser recheck confirmed cover audit before/after and actor links, decoded offline page 23 from blob storage, preserved online `auto` quality, and offline chapter panel linking to saved chapters without online directory errors.

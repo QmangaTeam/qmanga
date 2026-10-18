@@ -17,12 +17,13 @@ type teamDTO struct {
 	Slug         string `json:"slug"`
 	Name         string `json:"name"`
 	Description  string `json:"description"`
+	TelegramURL  string `json:"telegram_url"`
 	Approved     bool   `json:"approved"`
 	Role         string `json:"my_role,omitempty"`
 }
 
 func viewTeam(team domain.Team, role domain.Role) teamDTO {
-	return teamDTO{ID: team.ID, Slug: team.Slug, Name: team.Name, Description: team.Description, Approved: team.Approved, Role: string(role), ReviewStatus: team.ReviewStatus, ReviewNote: team.ReviewNote}
+	return teamDTO{ID: team.ID, Slug: team.Slug, Name: team.Name, Description: team.Description, TelegramURL: team.TelegramURL, Approved: team.Approved, Role: string(role), ReviewStatus: team.ReviewStatus, ReviewNote: team.ReviewNote}
 }
 func NewTeamHandler(service *application.Service) *TeamHandler { return &TeamHandler{service: service} }
 func (handler *TeamHandler) Register(api *gin.RouterGroup, identity *IdentityHandler) {
@@ -33,6 +34,8 @@ func (handler *TeamHandler) Register(api *gin.RouterGroup, identity *IdentityHan
 	studio.PUT("/teams/:id", handler.update)
 	studio.GET("/teams/:id/members", handler.members)
 	studio.POST("/teams/:id/invitations", handler.invite)
+	studio.GET("/teams/:id/invitations", handler.invitations)
+	studio.DELETE("/teams/:id/invitations/:invitation_id", handler.revokeInvitation)
 	studio.DELETE("/teams/:id/members/:user_id", handler.remove)
 	api.POST("/teams/invitations/accept", identity.RequireUser(), handler.accept)
 	admin := api.Group("/admin")
@@ -59,12 +62,13 @@ func (handler *TeamHandler) create(request *gin.Context) {
 		Slug        string `json:"slug"`
 		Name        string `json:"name"`
 		Description string `json:"description"`
+		TelegramURL string `json:"telegram_url"`
 	}
 	if !decode(request, &input) {
 		return
 	}
 	account, _ := CurrentAccount(request)
-	team, failure := handler.service.Create(request.Request.Context(), account.ID, input.Slug, input.Name, input.Description)
+	team, failure := handler.service.Create(request.Request.Context(), account.ID, input.Slug, input.Name, input.Description, input.TelegramURL)
 	if failure != nil {
 		teamError(request, failure)
 		return

@@ -1,5 +1,5 @@
 import {AppFailure} from '../../../shared/domain/failure';
-import type { Team, Member, NewTeam, TeamRole } from '../domain/team';
+import type { Team, Member, NewTeam, TeamRole,Invitation } from '../domain/team';
 import { validTeam } from '../domain/team';
 export interface TeamsGateway {
  reject(id:string,reason:string):Promise<void>;
@@ -8,6 +8,8 @@ export interface TeamsGateway {
  create(input: NewTeam): Promise<Team>;
  members(teamId: string, offset?:number): Promise<Member[]>;
  invite(teamId: string, email: string, role: Exclude<TeamRole, 'owner'>): Promise<void>;
+ invitations(teamId:string,offset?:number):Promise<Invitation[]>;
+ revokeInvitation(teamId:string,id:string):Promise<void>;
  remove(teamId: string, userId: string): Promise<void>;
  accept(token: string): Promise<void>;
  pending(offset?:number): Promise<Team[]>;

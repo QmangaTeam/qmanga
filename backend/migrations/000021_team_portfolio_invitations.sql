@@ -1,0 +1,2 @@
+ALTER TABLE teams ADD COLUMN telegram_url TEXT NOT NULL DEFAULT '';
+ALTER TABLE team_invitations ADD COLUMN revoked_at TIMESTAMPTZ;

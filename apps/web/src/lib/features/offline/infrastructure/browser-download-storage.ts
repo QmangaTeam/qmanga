@@ -21,7 +21,7 @@ export class BrowserDownloadStorage implements DownloadStorage {
  async install(){
   if(!('serviceWorker' in navigator))throw new AppFailure('offline_unsupported');
   const registration=await navigator.serviceWorker.register('/service-worker.js'),installing=registration.installing||registration.waiting;
-  if(installing&&installing.state!=='activated')await new Promise<void>((resolve,reject)=>{const deadline=setTimeout(()=>{installing.removeEventListener('statechange',changed);reject(new AppFailure('offline_install'));},90000);const changed=()=>{if(installing.state==='activated'||installing.state==='redundant'){clearTimeout(deadline);installing.removeEventListener('statechange',changed);if(installing.state==='activated')resolve();else reject(new AppFailure('offline_install'));}};installing.addEventListener('statechange',changed);changed();});
+  if(!registration.active&&installing&&installing.state!=='activated')await new Promise<void>((resolve,reject)=>{const deadline=setTimeout(()=>{installing.removeEventListener('statechange',changed);reject(new AppFailure('offline_install'));},90000);const changed=()=>{if(installing.state==='activated'||installing.state==='redundant'){clearTimeout(deadline);installing.removeEventListener('statechange',changed);if(installing.state==='activated')resolve();else reject(new AppFailure('offline_install'));}};installing.addEventListener('statechange',changed);changed();});
   await navigator.serviceWorker.ready;await navigator.storage?.persist?.().catch(()=>false);
  }
 }

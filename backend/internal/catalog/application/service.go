@@ -72,6 +72,7 @@ type PublicMember struct{ Name, Role string }
 type Team struct {
 	Members                     []PublicMember
 	ID, Slug, Name, Description string
+	TelegramURL                 string
 	Projects                    []Project
 }
 type Update struct {

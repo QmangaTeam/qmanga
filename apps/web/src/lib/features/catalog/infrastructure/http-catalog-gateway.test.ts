@@ -14,3 +14,10 @@ test('catalogue maps transport names and permits only Go media URLs', async () =
  await expect(gateway('http://minio:9000/media/private.jpg').list({})).rejects.toThrow();
  await expect(gateway('//foreign.example/cover.jpg').list({})).rejects.toThrow();
 });
+
+test('public portfolio maps Telegram independently and drops non-public links',async()=>{
+ for(const [link,expected] of [['https://t.me/dala_team','https://t.me/dala_team'],['https://t.me@evil.test/dala_team',''],['javascript:alert(1)','']]){
+  const client=new ApiClient((async()=>Response.json({id:'team',slug:'dala',name:'Дала',description:'',telegram_url:link,members:[],projects:[]})) as typeof fetch);
+  expect((await new HttpCatalogGateway(client).team('dala'))?.telegramURL).toBe(expected);
+ }
+});

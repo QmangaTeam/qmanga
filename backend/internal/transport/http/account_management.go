@@ -36,6 +36,7 @@ func (handler *IdentityHandler) manageAccount(request *gin.Context) {
 	request.Status(204)
 }
 func (handler *IdentityHandler) audit(request *gin.Context) {
+	request.Header("Cache-Control", "no-store")
 	account, _ := CurrentAccount(request)
 	items, failure := handler.service.Audit(request.Request.Context(), account.ID, request.Query("after"))
 	if failure != nil {
@@ -44,7 +45,7 @@ func (handler *IdentityHandler) audit(request *gin.Context) {
 	}
 	result := []gin.H{}
 	for _, item := range items {
-		result = append(result, gin.H{"id": item.ID, "actor": item.Actor, "action": item.Action, "entity_type": item.EntityType, "entity_id": item.EntityID, "reason": item.Reason, "created_at": item.CreatedAt})
+		result = append(result, gin.H{"id": item.ID, "actor": item.Actor, "action": item.Action, "entity_type": item.EntityType, "entity_id": item.EntityID, "reason": item.Reason, "created_at": item.CreatedAt, "actor_name": item.ActorName, "target_name": item.TargetName, "target_path": item.TargetPath, "before": item.Before, "after": item.After})
 	}
 	request.JSON(200, gin.H{"items": result, "has_more": len(items) == 50})
 }

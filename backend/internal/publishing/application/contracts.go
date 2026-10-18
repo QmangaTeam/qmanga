@@ -8,11 +8,16 @@ import (
 )
 
 type Page struct {
+	OriginalName, ThumbnailID                                               string
 	ID, RevisionID, Status, Format, SourceKey, Checksum, Failure, UploadKey string
 	Position, Width, Height                                                 int
 	Bytes                                                                   int64
 }
 type StudioRevision struct {
+	CoverID, HumanReviewer                                                                       string
+	HumanReviewedAt                                                                              *time.Time
+	ReleaseStatus, PreparationMethod                                                             string
+	HumanReviewed                                                                                bool
 	Source, Credits, ConfirmedBy                                                                 string
 	RightsConfirmed                                                                              bool
 	ID, ReleaseID, ProjectID, ChapterID, TitleID, TitleName, ChapterLabel, TeamName, State, Note string
@@ -24,6 +29,7 @@ type ChapterChoice struct {
 	Order           int
 }
 type Upload struct {
+	OriginalName                                         string
 	RevisionID, PageID, Key, SourceKey, Checksum, Format string
 	Position, Width, Height                              int
 	Bytes                                                int64
@@ -49,6 +55,10 @@ type ManifestPage struct {
 	Variants                map[string][]Variant
 }
 type Manifest struct {
+	HumanReviewer                                                                                                                        string
+	HumanReviewedAt                                                                                                                      *time.Time
+	PreparationMethod                                                                                                                    string
+	HumanReviewed                                                                                                                        bool
 	CoverID                                                                                                                              string
 	Source, Credits                                                                                                                      string
 	ReleaseID, RevisionID, TitleID, TitleSlug, TitleName, ChapterLabel, ProjectID, TeamID, TeamName, Kind, Direction, PreviousID, NextID string
@@ -79,11 +89,14 @@ type Repository interface {
 	Uploaded(context.Context, string, string, string) error
 	UploadFailed(context.Context, string, string) error
 	Reorder(context.Context, string, string, int64, []string) error
-	DeletePage(context.Context, string, string, string) error
+	DeletePage(context.Context, string, string, string, int64) error
 	SaveAttribution(context.Context, string, string, int64, domain.Attribution) error
 	Submit(context.Context, string, string, int64) error
 	Review(context.Context, string, string, string, string) error
 	Withdraw(context.Context, string, string, string) error
+	Restore(context.Context, string, string, string) error
+	SelectCover(context.Context, string, string, string) error
+	RetryPage(context.Context, string, string, string) error
 	ModerationQueue(context.Context, string, ...int) ([]StudioRevision, error)
 	LeaseJob(context.Context, string) (Job, bool, error)
 	CompleteJob(context.Context, Job, []Variant) error

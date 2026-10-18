@@ -5,4 +5,4 @@
  let {data}:{data:PageData}=$props();
  const ports={...createReader(),...createReading()},downloads=createDownloads(),community=createCommunity();
 </script>
-{#key data.manifest.revisionId}<Reader manifest={data.manifest} preview={data.preview} {downloads} {community} {...ports}/>{/key}
+{#key data.manifest.revisionId+data.initialPage}<Reader manifest={data.manifest} preview={data.preview} initialPage={data.initialPage} {downloads} {community} {...ports}/>{/key}

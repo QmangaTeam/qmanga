@@ -11,6 +11,9 @@ var ErrNotFound = errors.New("reading resource not found")
 var ErrForbidden = errors.New("reading access denied")
 
 type Progress struct {
+	ChapterLabel, TeamName                           string
+	PagePosition                                     int
+	UpdatedAt                                        int64
 	TitleID, ReleaseID, RevisionID, PageID, DeviceID string
 	Fraction                                         float64
 	FurthestOrder                                    int

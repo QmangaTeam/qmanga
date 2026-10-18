@@ -1,7 +1,7 @@
 import {AppFailure} from '../../../shared/domain/failure';
 import { naturalOrder } from '../domain/revision';
-export interface StudioPage { id: string; position: number; width: number; height: number; bytes: number; status: string; failure: string; uploadKey: string }
-export interface Revision { source?:string;credits?:string;rightsConfirmed?:boolean;confirmedBy?:string; id: string; releaseId: string; projectId: string; chapterId: string; titleId: string; titleName: string; chapterLabel: string; teamName: string; state: string; note: string; version: number; pages: StudioPage[] }
+export interface StudioPage { originalName?:string; thumbnailId?:string; id: string; position: number; width: number; height: number; bytes: number; status: string; failure: string; uploadKey: string }
+export interface Revision { coverId?:string;humanReviewer?:string;humanReviewedAt?:string; releaseStatus?:string;preparationMethod?:string;humanReviewed?:boolean; source?:string;credits?:string;rightsConfirmed?:boolean;confirmedBy?:string; id: string; releaseId: string; projectId: string; chapterId: string; titleId: string; titleName: string; chapterLabel: string; teamName: string; state: string; note: string; version: number; pages: StudioPage[] }
 export interface ChapterChoice { id: string; label: string; name: string; order: number }
 export interface UploadSource { name: string; size: number; key: string; content: unknown }
 export interface UploadTask { done: Promise<void>; cancel(): void }
@@ -20,11 +20,14 @@ export interface PublishingGateway {
  prepare(files: unknown[]): Promise<UploadSource[]>;
  upload(id: string, source: UploadSource, position: number, progress: (fraction: number) => void): UploadTask;
  reorder(id: string, version: number, pageIds: string[]): Promise<void>;
- remove(id: string, pageId: string): Promise<void>;
- attribution(id:string,version:number,source:string,credits:string,confirmed:boolean):Promise<void>;
+ remove(id: string, pageId: string,version:number): Promise<void>;
+ attribution(id:string,version:number,source:string,credits:string,confirmed:boolean,preparationMethod?:string,humanReviewed?:boolean):Promise<void>;
  submit(id: string, version: number): Promise<void>;
  pending(offset?:number): Promise<Revision[]>;
  review(id: string, decision: 'publish' | 'reject', reason: string): Promise<void>;
+ selectCover(projectId:string,pageId:string):Promise<void>;
+ retryPage(revisionId:string,pageId:string):Promise<void>;
+ restore(releaseId:string,reason:string):Promise<void>;
  withdraw(releaseId: string, reason: string): Promise<void>;
 }
 export class UploadQueue {
@@ -48,4 +51,19 @@ export class UploadQueue {
   }
   this.active = null;
  }
+}
+
+// Upload first: a failed transfer must never delete the page being corrected.
+export async function replacePage(gateway:PublishingGateway,revision:Revision,pageId:string,source:UploadSource,progress:(fraction:number)=>void):Promise<Revision>{
+ if(!revision.pages.some(page=>page.id===pageId))throw new AppFailure('conflict');
+ // A replacement is a distinct upload even if the same file was previously added.
+ const replacement={...source,key:('replace:'+pageId+':'+source.key).slice(0,128)};
+ const existing=revision.pages.find(page=>page.uploadKey===replacement.key);
+ await gateway.upload(revision.id,replacement,existing?.position??Math.max(0,...revision.pages.map(page=>page.position))+1,progress).done;
+ const latest=await gateway.revision(revision.id);
+ const uploaded=latest.pages.find(page=>page.uploadKey===replacement.key);
+ if(!uploaded||!latest.pages.some(page=>page.id===pageId))throw new AppFailure('conflict');
+ const order=latest.pages.filter(page=>page.id!==uploaded.id).map(page=>page.id===pageId?uploaded.id:page.id);
+ await gateway.reorder(latest.id,latest.version,order);
+ return gateway.revision(latest.id);
 }

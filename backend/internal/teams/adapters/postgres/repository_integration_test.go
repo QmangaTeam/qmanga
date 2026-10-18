@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	catalogPostgres "qmanga/internal/catalog/adapters/postgres"
 	identityCrypto "qmanga/internal/identity/adapters/crypto"
 	"qmanga/internal/platform/postgres"
 	"qmanga/internal/teams/application"
@@ -109,6 +110,69 @@ func TestTeamIsolationAndRevocation(testingTarget *testing.T) {
 	if !errors.Is(service.Check(ctx, "member", team.ID, domain.ReadDraft), domain.ErrForbidden) {
 		testingTarget.Fatal("removed member retains access")
 	}
+
+	testingTarget.Run("owner Telegram edits persist and invitation revocation survives resend", func(testingTarget *testing.T) {
+		if failure := service.Update(ctx, "owner", team.ID, team.Slug, team.Name, team.Description, "https://t.me/dala_team"); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		listed, failure := service.List(ctx, "owner")
+		if failure != nil || len(listed) != 1 || listed[0].Team.TelegramURL != "https://t.me/dala_team" {
+			testingTarget.Fatal("Telegram link lost", listed, failure)
+		}
+		public, failure := catalogPostgres.New(database.Pool()).Team(ctx, team.Slug)
+		if failure != nil || public.TelegramURL != "https://t.me/dala_team" {
+			testingTarget.Fatal("public portfolio link lost", public, failure)
+		}
+		if failure := service.Update(ctx, "other", team.ID, team.Slug, team.Name, team.Description, "https://t.me/other_team"); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("foreign profile edit", failure)
+		}
+		if failure := service.Invite(ctx, "owner", team.ID, "member@example.test", domain.Member); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		firstToken := strings.Split(mailer.body, "token=")[1][:43]
+		invitations, failure := service.Invitations(ctx, "owner", team.ID)
+		if failure != nil || len(invitations) != 1 || invitations[0].Status != "pending" {
+			testingTarget.Fatal("pending invitation absent", invitations, failure)
+		}
+		id := invitations[0].ID
+		if _, failure := service.Invitations(ctx, "other", team.ID); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("foreign invitations exposed", failure)
+		}
+		if failure := service.RevokeInvitation(ctx, "other", team.ID, id); !errors.Is(failure, domain.ErrForbidden) {
+			testingTarget.Fatal("foreign revocation", failure)
+		}
+		if _, failure := database.Pool().Exec(ctx, "UPDATE team_invitations SET expires_at=now()-interval '1 minute' WHERE id=$1", id); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		invitations, failure = service.Invitations(ctx, "owner", team.ID)
+		if failure != nil || invitations[0].Status != "expired" {
+			testingTarget.Fatal("expiry absent", invitations, failure)
+		}
+		if failure := service.RevokeInvitation(ctx, "owner", team.ID, id); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		invitations, failure = service.Invitations(ctx, "owner", team.ID)
+		if failure != nil || invitations[0].Status != "revoked" {
+			testingTarget.Fatal("revocation absent", invitations, failure)
+		}
+		if failure := service.Invite(ctx, "owner", team.ID, "member@example.test", domain.Editor); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		invitations, failure = service.Invitations(ctx, "owner", team.ID)
+		if failure != nil || len(invitations) != 1 || invitations[0].ID != id || invitations[0].Status != "pending" {
+			testingTarget.Fatal("resend duplicated invitation", invitations, failure)
+		}
+		if _, failure := service.Accept(ctx, "member", firstToken); !errors.Is(failure, domain.ErrExpired) {
+			testingTarget.Fatal("resend retained old token", failure)
+		}
+		secondToken := strings.Split(mailer.body, "token=")[1][:43]
+		if failure := service.RevokeInvitation(ctx, "owner", team.ID, id); failure != nil {
+			testingTarget.Fatal(failure)
+		}
+		if _, failure := service.Accept(ctx, "member", secondToken); !errors.Is(failure, domain.ErrExpired) {
+			testingTarget.Fatal("revoked invitation accepted", failure)
+		}
+	})
 
 	testingTarget.Run("team and member lists expose later pages without overlap", func(testingTarget *testing.T) {
 		for _, statement := range []string{

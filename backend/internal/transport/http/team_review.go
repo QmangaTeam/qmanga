@@ -21,12 +21,13 @@ func (handler *TeamHandler) update(request *gin.Context) {
 		Slug        string `json:"slug"`
 		Name        string `json:"name"`
 		Description string `json:"description"`
+		TelegramURL string `json:"telegram_url"`
 	}
 	if !decode(request, &input) {
 		return
 	}
 	account, _ := CurrentAccount(request)
-	if failure := handler.service.Update(request.Request.Context(), account.ID, request.Param("id"), input.Slug, input.Name, input.Description); failure != nil {
+	if failure := handler.service.Update(request.Request.Context(), account.ID, request.Param("id"), input.Slug, input.Name, input.Description, input.TelegramURL); failure != nil {
 		teamError(request, failure)
 		return
 	}

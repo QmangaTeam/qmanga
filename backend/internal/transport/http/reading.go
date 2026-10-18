@@ -25,7 +25,7 @@ func (handler *ReadingHandler) Register(api *gin.RouterGroup, identity *Identity
 	group.POST("/progress/:id", handler.advance)
 }
 func referenceView(item application.Reference) gin.H {
-	return gin.H{"title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "cover_url": coverURL(item.CoverID), "release_id": item.ReleaseID, "revision_id": item.RevisionID, "chapter_label": item.ChapterLabel}
+	return gin.H{"title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "cover_url": coverURL(item.CoverID), "release_id": item.ReleaseID, "revision_id": item.RevisionID, "chapter_label": item.ChapterLabel, "team_name": item.TeamName}
 }
 func (handler *ReadingHandler) references(request *gin.Context) {
 	request.Header("Cache-Control", "private, no-store")
@@ -83,7 +83,7 @@ func expectedAccount() gin.HandlerFunc {
 	}
 }
 func progressView(item domain.Progress) gin.H {
-	return gin.H{"title_id": item.TitleID, "release_id": item.ReleaseID, "revision_id": item.RevisionID, "page_id": item.PageID, "fraction": item.Fraction, "furthest_order": item.FurthestOrder, "version": item.Version, "device_id": item.DeviceID, "sequence": item.Sequence}
+	return gin.H{"title_id": item.TitleID, "release_id": item.ReleaseID, "revision_id": item.RevisionID, "page_id": item.PageID, "fraction": item.Fraction, "furthest_order": item.FurthestOrder, "version": item.Version, "device_id": item.DeviceID, "sequence": item.Sequence, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "page_position": item.PagePosition, "updated_at": item.UpdatedAt}
 }
 func entryView(item application.Entry) gin.H {
 	return gin.H{"version": item.Version, "removed": item.Removed, "title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "status": item.Status, "favorite": item.Favorite, "preferred_team_id": item.PreferredTeamID, "notify": item.Notify, "unseen": item.Unseen, "progress": progressView(item.Progress)}

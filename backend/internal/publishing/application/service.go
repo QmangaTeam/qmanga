@@ -22,7 +22,7 @@ func (service *Service) CreateDraft(ctx context.Context, actor, project, chapter
 	return service.repository.CreateDraft(ctx, actor, project, chapter, service.newID())
 }
 func (service *Service) Upload(ctx context.Context, actor string, input Upload, content io.Reader) (Reservation, error) {
-	if input.Key == "" || len(input.Key) > 128 || strings.ContainsAny(input.Key, "\r\n") || input.Position < 1 || input.Position > 300 || len(input.Checksum) != 64 {
+	if input.Key == "" || len(input.Key) > 128 || strings.ContainsAny(input.Key, "\r\n") || input.Position < 1 || input.Position > 300 || len(input.Checksum) != 64 || len(input.OriginalName) > 255 || strings.ContainsAny(input.OriginalName, "\r\n\x00") {
 		return Reservation{}, domain.ErrInvalidImage
 	}
 	input.PageID = service.newID()
@@ -53,8 +53,8 @@ func (service *Service) ProjectRevisions(ctx context.Context, actor, id string, 
 func (service *Service) Reorder(ctx context.Context, actor, id string, version int64, ids []string) error {
 	return service.repository.Reorder(ctx, actor, id, version, ids)
 }
-func (service *Service) DeletePage(ctx context.Context, actor, id, page string) error {
-	return service.repository.DeletePage(ctx, actor, id, page)
+func (service *Service) DeletePage(ctx context.Context, actor, id, page string, version int64) error {
+	return service.repository.DeletePage(ctx, actor, id, page, version)
 }
 func (service *Service) SaveAttribution(ctx context.Context, actor, id string, version int64, input domain.Attribution) error {
 	if !input.Valid() {
@@ -76,6 +76,18 @@ func (service *Service) Withdraw(ctx context.Context, actor, id, reason string) 
 		return domain.ErrTransition
 	}
 	return service.repository.Withdraw(ctx, actor, id, reason)
+}
+func (service *Service) Restore(ctx context.Context, actor, id, reason string) error {
+	if len(reason) > 4000 || strings.TrimSpace(reason) == "" {
+		return domain.ErrTransition
+	}
+	return service.repository.Restore(ctx, actor, id, reason)
+}
+func (service *Service) SelectCover(ctx context.Context, actor, project, page string) error {
+	return service.repository.SelectCover(ctx, actor, project, page)
+}
+func (service *Service) RetryPage(ctx context.Context, actor, revision, page string) error {
+	return service.repository.RetryPage(ctx, actor, revision, page)
 }
 func (service *Service) ModerationQueue(ctx context.Context, actor string, offset ...int) ([]StudioRevision, error) {
 	return service.repository.ModerationQueue(ctx, actor, offset...)

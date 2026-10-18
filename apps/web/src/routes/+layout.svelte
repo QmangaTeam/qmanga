@@ -13,16 +13,16 @@
  let {children,data}=$props();
  const localeStore=createLocalePreferences();
  const {locale}=provideLocale(untrack(()=>data.locale),value=>changeLocale(localeStore,value));
- onMount(()=>{initializeTheme(createPreferences()); if($page.url.pathname==='/offline-reader') locale.set(localeStore.read()); localeStore.apply($locale);});
+ onMount(()=>{initializeTheme(createPreferences()); if($page.url.pathname==='/offline-reader'||$page.url.pathname==='/saved') locale.set(localeStore.read()); localeStore.apply($locale);});
  $effect(()=>{localeStore.apply($locale);});
  const navigation=$derived<NavigationItem[]>([
   {label:text($locale,'Басты бет','Главная'),href:'/',icon:'home'},
   {label:'Каталог',href:'/catalog',icon:'catalog'},
-  {label:text($locale,'Кітапхана','Библиотека'),href:'/library',icon:'bookmark'},
-  {label:text($locale,'Хабарлар','Уведомления'),href:'/notifications',icon:'bell'},
+  {label:text($locale,'Кітапхана','Библиотека'),shortLabel:text($locale,'Сөре','Списки'),href:'/library',icon:'bookmark'},
+  {label:text($locale,'Хабарлар','Уведомления'),shortLabel:text($locale,'Хабарлар','События'),href:'/notifications',icon:'bell'},
   {label:text($locale,'Мәзір','Меню'),href:'/menu',icon:'menu'}
  ]);
- const loginReturn=$derived(safeReturnPath(/^\/(login|register|forgot-password|reset-password|verify-email)(\/|$)/.test($page.url.pathname)?$page.url.searchParams.get('returnTo'):$page.url.pathname+$page.url.search));
+ const loginReturn=$derived($page.url.pathname==='/saved'?'/saved':safeReturnPath(/^\/(login|register|forgot-password|reset-password|verify-email)(\/|$)/.test($page.url.pathname)?$page.url.searchParams.get('returnTo'):$page.url.pathname+$page.url.search));
 </script>
 <a class="skip-link" href="#content">{text($locale,'Мазмұнға өту','К содержимому')}</a>
 {#if $page.url.pathname.startsWith('/read/') || $page.url.pathname==='/offline-reader'}

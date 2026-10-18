@@ -297,7 +297,7 @@ func (repository *Repository) Genres(ctx context.Context) ([]application.Genre, 
 
 func (repository *Repository) Team(ctx context.Context, slug string) (application.Team, error) {
 	var team application.Team
-	failure := repository.pool.QueryRow(ctx, "SELECT id,slug,name,description FROM teams WHERE slug=$1 AND is_approved", slug).Scan(&team.ID, &team.Slug, &team.Name, &team.Description)
+	failure := repository.pool.QueryRow(ctx, "SELECT id,slug,name,description,telegram_url FROM teams WHERE slug=$1 AND is_approved", slug).Scan(&team.ID, &team.Slug, &team.Name, &team.Description, &team.TelegramURL)
 	if failure != nil {
 		return team, translate(failure)
 	}

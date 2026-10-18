@@ -219,14 +219,31 @@ func (repository *Repository) Report(ctx context.Context, user string, input app
 func (repository *Repository) Reports(ctx context.Context, user, after string) ([]application.Report, error) {
 	items := []application.Report{}
 	failure := repository.write(ctx, user, true, func(transaction pgx.Tx) error {
-		rows, failure := transaction.Query(ctx, `SELECT id,COALESCE(user_id,''),COALESCE(title_id,''),COALESCE(release_id,''),COALESCE(page_id,''),target_type,target_id,category,reason,status,resolution_note,created_at,contact_email FROM reports WHERE status='pending' AND ($1::varchar='' OR id>$1::varchar)ORDER BY id LIMIT 50`, after)
+		rows, failure := transaction.Query(ctx, `SELECT report.id,COALESCE(report.user_id,''),COALESCE(report.title_id,''),COALESCE(report.release_id,''),COALESCE(report.page_id,''),report.target_type,report.target_id,report.category,report.reason,report.status,report.resolution_note,report.created_at,report.contact_email,
+ COALESCE(title.name_kk,''),COALESCE(title.slug,''),COALESCE(team.name,''),COALESCE(team.slug,''),COALESCE(chapter.label,''),COALESCE(release.status,''),COALESCE(page.revision_id,release.current_revision_id,''),COALESCE(page.position,0),
+ COALESCE(comment.body,''),COALESCE(author.display_name,''),COALESCE(comment.is_hidden,false),comment.deleted_at IS NOT NULL,
+ COALESCE((SELECT jsonb_agg(decision ORDER BY decision.created_at DESC) FROM (
+ SELECT audit.action,COALESCE(audit.metadata->'after'->>'status','') AS status,COALESCE(staff.display_name,'') AS actor_name,COALESCE(audit.metadata->>'reason','') AS reason,audit.created_at
+ FROM audit_logs audit LEFT JOIN users staff ON staff.id=audit.user_id
+ WHERE audit.entity_type='community' AND (audit.entity_id=report.target_id OR audit.entity_id IN(SELECT previous.id FROM reports previous WHERE previous.target_type=report.target_type AND previous.target_id=report.target_id))
+ ORDER BY audit.created_at DESC,audit.id DESC LIMIT 10) decision),'[]'::jsonb)
+ FROM reports report LEFT JOIN titles title ON title.id=report.title_id
+ LEFT JOIN releases release ON release.id=report.release_id LEFT JOIN chapters chapter ON chapter.id=release.chapter_id
+ LEFT JOIN teams team ON team.id=release.team_id
+ LEFT JOIN pages page ON page.id=CASE WHEN report.target_type='page' THEN report.target_id ELSE report.page_id END
+ LEFT JOIN comments comment ON report.target_type='comment' AND comment.id=report.target_id LEFT JOIN users author ON author.id=comment.user_id
+ WHERE report.status='pending' AND ($1::varchar='' OR report.id>$1::varchar) ORDER BY report.id LIMIT 50`, after)
 		if failure != nil {
 			return failure
 		}
 		defer rows.Close()
 		for rows.Next() {
 			var item application.Report
-			if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.PageID, &item.TargetType, &item.TargetID, &item.Category, &item.Reason, &item.Status, &item.Resolution, &item.CreatedAt, &item.ContactEmail); failure != nil {
+			var history []byte
+			if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.PageID, &item.TargetType, &item.TargetID, &item.Category, &item.Reason, &item.Status, &item.Resolution, &item.CreatedAt, &item.ContactEmail, &item.TitleName, &item.TitleSlug, &item.TeamName, &item.TeamSlug, &item.ChapterLabel, &item.ReleaseStatus, &item.RevisionID, &item.PagePosition, &item.CommentBody, &item.CommentAuthor, &item.CommentHidden, &item.CommentDeleted, &history); failure != nil {
+				return failure
+			}
+			if failure = json.Unmarshal(history, &item.History); failure != nil {
 				return failure
 			}
 			items = append(items, item)
@@ -244,11 +261,15 @@ func (repository *Repository) Resolve(ctx context.Context, user, id, status, rea
 		if result.RowsAffected() == 0 {
 			return domain.ErrNotFound
 		}
-		return audit(ctx, transaction, user, "resolve_report", id, reason)
+		return audit(ctx, transaction, user, "resolve_report", id, reason, map[string]any{"status": "pending"}, map[string]any{"status": status})
 	})
 }
 func (repository *Repository) Visibility(ctx context.Context, user, id string, hidden bool, reason string) error {
 	return repository.write(ctx, user, true, func(transaction pgx.Tx) error {
+		var before bool
+		if failure := transaction.QueryRow(ctx, `SELECT is_hidden FROM comments WHERE id=$1 AND deleted_at IS NULL FOR UPDATE`, id).Scan(&before); failure != nil {
+			return domain.ErrNotFound
+		}
 		result, failure := transaction.Exec(ctx, `UPDATE comments SET is_hidden=$2,updated_at=now() WHERE id=$1`, id, hidden)
 		if failure != nil {
 			return failure
@@ -256,11 +277,15 @@ func (repository *Repository) Visibility(ctx context.Context, user, id string, h
 		if result.RowsAffected() == 0 {
 			return domain.ErrNotFound
 		}
-		return audit(ctx, transaction, user, "comment_visibility", id, reason)
+		action := "restore_comment"
+		if hidden {
+			action = "hide_comment"
+		}
+		return audit(ctx, transaction, user, action, id, reason, map[string]any{"hidden": before}, map[string]any{"hidden": hidden})
 	})
 }
-func audit(ctx context.Context, transaction pgx.Tx, user, action, id, reason string) error {
-	metadata, _ := json.Marshal(map[string]string{"reason": reason})
+func audit(ctx context.Context, transaction pgx.Tx, user, action, id, reason string, before, after map[string]any) error {
+	metadata, _ := json.Marshal(map[string]any{"reason": reason, "before": before, "after": after})
 	_, failure := transaction.Exec(ctx, `INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,metadata)VALUES($1,$2,$3,'community',$4,$5)`, uuid.NewString(), user, action, id, metadata)
 	return failure
 }

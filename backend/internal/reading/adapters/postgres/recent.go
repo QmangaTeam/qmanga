@@ -5,7 +5,7 @@ import (
 	"qmanga/internal/reading/application"
 )
 
-const referenceColumns = `title.id,title.name_kk,title.slug,coalesce(title.cover_asset_id,''),publication.id,coalesce(publication.current_revision_id,''),coalesce(chapter.label,'')`
+const referenceColumns = `title.id,title.name_kk,title.slug,coalesce(title.cover_asset_id,''),publication.id,coalesce(publication.current_revision_id,''),coalesce(chapter.label,''),coalesce((SELECT name FROM teams WHERE id=publication.team_id),'')`
 
 func (repository *Repository) Recent(ctx context.Context, actor string, limit int) ([]application.RecentEntry, error) {
 	rows, failure := repository.pool.Query(ctx, `SELECT `+referenceColumns+`,progress.release_id,coalesce(progress.revision_id,''),coalesce(progress.page_id,''),progress.fraction,progress.furthest_chapter_order,progress.version,progress.device_id,progress.sequence,progress.updated_at,progress.page_position,
@@ -22,7 +22,7 @@ func (repository *Repository) Recent(ctx context.Context, actor string, limit in
 	items := []application.RecentEntry{}
 	for rows.Next() {
 		var item application.RecentEntry
-		if failure = rows.Scan(&item.TitleID, &item.Name, &item.Slug, &item.CoverID, &item.ReleaseID, &item.RevisionID, &item.ChapterLabel, &item.Progress.ReleaseID, &item.Progress.RevisionID, &item.Progress.PageID, &item.Progress.Fraction, &item.Progress.FurthestOrder, &item.Progress.Version, &item.Progress.DeviceID, &item.Progress.Sequence, &item.UpdatedAt, &item.PagePosition, &item.Availability); failure != nil {
+		if failure = rows.Scan(&item.TitleID, &item.Name, &item.Slug, &item.CoverID, &item.ReleaseID, &item.RevisionID, &item.ChapterLabel, &item.TeamName, &item.Progress.ReleaseID, &item.Progress.RevisionID, &item.Progress.PageID, &item.Progress.Fraction, &item.Progress.FurthestOrder, &item.Progress.Version, &item.Progress.DeviceID, &item.Progress.Sequence, &item.UpdatedAt, &item.PagePosition, &item.Availability); failure != nil {
 			return nil, failure
 		}
 		item.Progress.TitleID = item.TitleID
@@ -39,7 +39,7 @@ func (repository *Repository) References(ctx context.Context, ids []string) ([]a
 	items := []application.Reference{}
 	for rows.Next() {
 		var item application.Reference
-		if failure = rows.Scan(&item.TitleID, &item.Name, &item.Slug, &item.CoverID, &item.ReleaseID, &item.RevisionID, &item.ChapterLabel); failure != nil {
+		if failure = rows.Scan(&item.TitleID, &item.Name, &item.Slug, &item.CoverID, &item.ReleaseID, &item.RevisionID, &item.ChapterLabel, &item.TeamName); failure != nil {
 			return nil, failure
 		}
 		items = append(items, item)

@@ -2,6 +2,7 @@ package postgres
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"github.com/google/uuid"
 	"net/url"
@@ -46,6 +47,9 @@ func TestAccountManagement(tester *testing.T) {
 	if _, failure = database.Pool().Exec(ctx, "INSERT INTO users(id,email,password_hash,role,is_verified) VALUES('admin','admin@test.local','hash','admin',true),('mod','mod@test.local','hash','moderator',true),('reader','reader@test.local','hash','reader',true)"); failure != nil {
 		tester.Fatal(failure)
 	}
+	if _, failure = database.Pool().Exec(ctx, "UPDATE users SET display_name=CASE id WHEN 'mod' THEN 'Moderator' WHEN 'reader' THEN 'Reader' ELSE 'Admin' END"); failure != nil {
+		tester.Fatal(failure)
+	}
 	repository := New(database.Pool())
 	if failure = repository.ManageAccount(ctx, "reader", "mod", application.AccountChange{Role: "admin", Reason: "not permitted", Version: 0}); !errors.Is(failure, domain.ErrForbidden) {
 		tester.Fatal("reader elevated privileges", failure)
@@ -74,6 +78,15 @@ func TestAccountManagement(tester *testing.T) {
 	history, failure := repository.Audit(ctx, "admin", "")
 	if failure != nil || len(history) != 1 {
 		tester.Fatal("missing management audit", history, failure)
+	}
+	encoded, _ := json.Marshal(history[0])
+	var view map[string]any
+	json.Unmarshal(encoded, &view)
+	if view["ActorName"] != "Moderator" || view["TargetName"] != "Reader" || view["Before"] == nil || view["After"] == nil {
+		tester.Fatal("audit lacks readable actor, target and state change", string(encoded))
+	}
+	if _, failure = repository.Audit(ctx, "mod", ""); !errors.Is(failure, domain.ErrForbidden) {
+		tester.Fatal("moderator audit leaked", failure)
 	}
 	if _, failure = repository.Audit(ctx, "reader", ""); !errors.Is(failure, domain.ErrForbidden) {
 		tester.Fatal("audit leaked", failure)

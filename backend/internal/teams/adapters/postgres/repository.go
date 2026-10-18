@@ -66,7 +66,7 @@ func (repository *Repository) Create(ctx context.Context, actorID string, team d
 	if !verified {
 		return domain.ErrForbidden
 	}
-	_, failure = transaction.Exec(ctx, "INSERT INTO teams(id,slug,name,description) VALUES($1,$2,$3,$4)", team.ID, team.Slug, team.Name, team.Description)
+	_, failure = transaction.Exec(ctx, "INSERT INTO teams(id,slug,name,description,telegram_url) VALUES($1,$2,$3,$4,$5)", team.ID, team.Slug, team.Name, team.Description, team.TelegramURL)
 	if failure != nil {
 		return translate(failure)
 	}
@@ -102,7 +102,7 @@ func (repository *Repository) withAccess(ctx context.Context, actorID, teamID st
 	return transaction.Commit(ctx)
 }
 func (repository *Repository) ListForUser(ctx context.Context, actorID string, offset ...int) ([]application.TeamMembership, error) {
-	rows, failure := repository.pool.Query(ctx, `SELECT team.id,team.slug,team.name,team.description,team.is_approved,team.review_status,team.review_note,member.role FROM teams team JOIN team_memberships member ON member.team_id=team.id WHERE member.user_id=$1 ORDER BY team.name,team.id LIMIT 100 OFFSET `+pageOffset(offset), actorID)
+	rows, failure := repository.pool.Query(ctx, `SELECT team.id,team.slug,team.name,team.description,team.is_approved,team.review_status,team.review_note,member.role,team.telegram_url FROM teams team JOIN team_memberships member ON member.team_id=team.id WHERE member.user_id=$1 ORDER BY team.name,team.id LIMIT 100 OFFSET `+pageOffset(offset), actorID)
 	if failure != nil {
 		return nil, failure
 	}
@@ -111,7 +111,7 @@ func (repository *Repository) ListForUser(ctx context.Context, actorID string, o
 	for rows.Next() {
 		var membership application.TeamMembership
 		team := &membership.Team
-		if failure = rows.Scan(&team.ID, &team.Slug, &team.Name, &team.Description, &team.Approved, &team.ReviewStatus, &team.ReviewNote, &membership.Role); failure != nil {
+		if failure = rows.Scan(&team.ID, &team.Slug, &team.Name, &team.Description, &team.Approved, &team.ReviewStatus, &team.ReviewNote, &membership.Role, &team.TelegramURL); failure != nil {
 			return nil, failure
 		}
 		items = append(items, membership)
@@ -126,7 +126,7 @@ func (repository *Repository) Pending(ctx context.Context, actorID string, offse
 	if !access.Allows(domain.Approve) {
 		return nil, domain.ErrForbidden
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT id,slug,name,description,is_approved,review_status,review_note FROM teams WHERE NOT is_approved AND review_status='pending' ORDER BY created_at,id LIMIT 100 OFFSET "+pageOffset(offset))
+	rows, failure := repository.pool.Query(ctx, "SELECT id,slug,name,description,is_approved,review_status,review_note,telegram_url FROM teams WHERE NOT is_approved AND review_status='pending' ORDER BY created_at,id LIMIT 100 OFFSET "+pageOffset(offset))
 	if failure != nil {
 		return nil, failure
 	}
@@ -134,7 +134,7 @@ func (repository *Repository) Pending(ctx context.Context, actorID string, offse
 	items := make([]domain.Team, 0)
 	for rows.Next() {
 		var team domain.Team
-		if failure = rows.Scan(&team.ID, &team.Slug, &team.Name, &team.Description, &team.Approved, &team.ReviewStatus, &team.ReviewNote); failure != nil {
+		if failure = rows.Scan(&team.ID, &team.Slug, &team.Name, &team.Description, &team.Approved, &team.ReviewStatus, &team.ReviewNote, &team.TelegramURL); failure != nil {
 			return nil, failure
 		}
 		items = append(items, team)
@@ -167,7 +167,7 @@ func (repository *Repository) SaveInvitation(ctx context.Context, actorID string
 			return domain.ErrInvalid
 		}
 		_, failure := transaction.Exec(ctx, `INSERT INTO team_invitations(id,team_id,email,role,token,expires_at) VALUES($1,$2,$3,$4,$5,$6)
-		ON CONFLICT(team_id,email) DO UPDATE SET role=excluded.role,token=excluded.token,expires_at=excluded.expires_at`, invitation.ID, invitation.TeamID, invitation.Email, invitation.Role, invitation.Hash, invitation.ExpiresAt)
+		ON CONFLICT(team_id,email) DO UPDATE SET role=excluded.role,token=excluded.token,expires_at=excluded.expires_at,revoked_at=NULL,created_at=now()`, invitation.ID, invitation.TeamID, invitation.Email, invitation.Role, invitation.Hash, invitation.ExpiresAt)
 		return failure
 	})
 }
@@ -195,7 +195,7 @@ func (repository *Repository) AcceptInvitation(ctx context.Context, actorID, has
 	}
 	var inviteEmail string
 	var role domain.Role
-	failure = transaction.QueryRow(ctx, "DELETE FROM team_invitations WHERE token=$1 AND expires_at>$2 RETURNING email,role", hash, now).Scan(&inviteEmail, &role)
+	failure = transaction.QueryRow(ctx, "DELETE FROM team_invitations WHERE token=$1 AND expires_at>$2 AND revoked_at IS NULL RETURNING email,role", hash, now).Scan(&inviteEmail, &role)
 	if errors.Is(failure, pgx.ErrNoRows) {
 		return "", domain.ErrExpired
 	}

@@ -12,6 +12,6 @@ export async function loadContinuation(gateway:ReadingGateway,storage:ProgressSt
  try{references=await gateway.references([...new Set(local.map(row=>row.progress.releaseId))]);}catch{}
  return local.map(row=>{
   const reference=references?.find(item=>item.releaseId===row.progress.releaseId&&item.titleId===row.titleId);
-  return {titleId:row.titleId,name:row.name,slug:row.slug,coverURL:row.coverURL||'',releaseId:row.progress.releaseId,revisionId:row.progress.revisionId,chapterLabel:row.chapterLabel||'',...reference,progress:row.progress,updatedAt:row.updatedAt||0,pagePosition:row.pagePosition||1,availability:references===null?'last-known':!reference?'withdrawn':reference.revisionId!==row.progress.revisionId?'updated':'available'};
+  return {titleId:row.titleId,name:row.name,slug:row.slug,coverURL:row.coverURL||'',releaseId:row.progress.releaseId,revisionId:row.progress.revisionId,chapterLabel:row.chapterLabel||'',teamName:row.progress.teamName||'',...reference,progress:row.progress,updatedAt:row.updatedAt||0,pagePosition:row.pagePosition||1,availability:references===null?'last-known':!reference?'withdrawn':reference.revisionId!==row.progress.revisionId?'updated':'available'};
  });
 }

@@ -8,12 +8,12 @@ import (
 	"qmanga/internal/publishing/domain"
 )
 
-const studioColumns = `revision.id,publication.id,publication.project_id,chapter.id,title.id,title.name_kk,chapter.label,team.name,revision.status,revision.moderation_note,revision.version,revision.source_note,revision.credits,revision.rights_confirmed,coalesce(revision.rights_confirmed_by,'')`
+const studioColumns = `revision.id,publication.id,publication.project_id,chapter.id,title.id,title.name_kk,chapter.label,team.name,revision.status,revision.moderation_note,revision.version,revision.source_note,revision.credits,revision.rights_confirmed,coalesce(revision.rights_confirmed_by,''),publication.status,revision.preparation_method,revision.human_reviewed,coalesce(title.cover_asset_id,''),coalesce((SELECT display_name FROM users WHERE id=revision.human_reviewed_by),''),revision.human_reviewed_at`
 const studioJoins = ` FROM revisions revision JOIN releases publication ON publication.id=revision.release_id JOIN chapters chapter ON chapter.id=publication.chapter_id JOIN titles title ON title.id=chapter.title_id JOIN teams team ON team.id=publication.team_id `
 
 func scanStudio(row pgx.Row) (application.StudioRevision, error) {
 	item := application.StudioRevision{Pages: []application.Page{}}
-	failure := row.Scan(&item.ID, &item.ReleaseID, &item.ProjectID, &item.ChapterID, &item.TitleID, &item.TitleName, &item.ChapterLabel, &item.TeamName, &item.State, &item.Note, &item.Version, &item.Source, &item.Credits, &item.RightsConfirmed, &item.ConfirmedBy)
+	failure := row.Scan(&item.ID, &item.ReleaseID, &item.ProjectID, &item.ChapterID, &item.TitleID, &item.TitleName, &item.ChapterLabel, &item.TeamName, &item.State, &item.Note, &item.Version, &item.Source, &item.Credits, &item.RightsConfirmed, &item.ConfirmedBy, &item.ReleaseStatus, &item.PreparationMethod, &item.HumanReviewed, &item.CoverID, &item.HumanReviewer, &item.HumanReviewedAt)
 	return item, failure
 }
 func (repository *Repository) Revision(ctx context.Context, actor, id string) (application.StudioRevision, error) {
@@ -24,14 +24,14 @@ func (repository *Repository) Revision(ctx context.Context, actor, id string) (a
 	if failure = access(ctx, repository.pool, actor, item.ProjectID, "read_draft"); failure != nil {
 		return application.StudioRevision{}, failure
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT id,revision_id,status,image_format,source_key,checksum,failure_code,upload_key,position,width,height,byte_size FROM pages WHERE revision_id=$1 ORDER BY position", id)
+	rows, failure := repository.pool.Query(ctx, "SELECT id,revision_id,status,image_format,source_key,checksum,failure_code,upload_key,position,width,height,byte_size,original_name,coalesce((SELECT id FROM page_variants WHERE page_id=pages.id AND tier='eco' ORDER BY offset_y LIMIT 1),'') FROM pages WHERE revision_id=$1 ORDER BY position", id)
 	if failure != nil {
 		return item, failure
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var page application.Page
-		if failure = rows.Scan(&page.ID, &page.RevisionID, &page.Status, &page.Format, &page.SourceKey, &page.Checksum, &page.Failure, &page.UploadKey, &page.Position, &page.Width, &page.Height, &page.Bytes); failure != nil {
+		if failure = rows.Scan(&page.ID, &page.RevisionID, &page.Status, &page.Format, &page.SourceKey, &page.Checksum, &page.Failure, &page.UploadKey, &page.Position, &page.Width, &page.Height, &page.Bytes, &page.OriginalName, &page.ThumbnailID); failure != nil {
 			return item, failure
 		}
 		item.Pages = append(item.Pages, page)
@@ -109,7 +109,7 @@ func (repository *Repository) Manifest(ctx context.Context, actor, releaseID, pr
 			return manifest, domain.ErrNotFound
 		}
 	}
-	if failure = repository.pool.QueryRow(ctx, "SELECT status,source_note,credits FROM revisions WHERE id=$1 AND release_id=$2", manifest.RevisionID, releaseID).Scan(&revisionState, &manifest.Source, &manifest.Credits); failure != nil {
+	if failure = repository.pool.QueryRow(ctx, "SELECT status,source_note,credits,preparation_method,human_reviewed,coalesce((SELECT display_name FROM users WHERE id=revisions.human_reviewed_by),''),human_reviewed_at FROM revisions WHERE id=$1 AND release_id=$2", manifest.RevisionID, releaseID).Scan(&revisionState, &manifest.Source, &manifest.Credits, &manifest.PreparationMethod, &manifest.HumanReviewed, &manifest.HumanReviewer, &manifest.HumanReviewedAt); failure != nil {
 		return manifest, translate(failure)
 	}
 	if previewID == "" && revisionState != "published" {
@@ -167,13 +167,22 @@ func (repository *Repository) Manifest(ctx context.Context, actor, releaseID, pr
 }
 func (repository *Repository) Asset(ctx context.Context, actor, id string) (application.Asset, error) {
 	var asset application.Asset
+	failure := repository.pool.QueryRow(ctx, `SELECT cover.id,cover.object_key,cover.mime,cover.checksum,cover.width,cover.height,cover.byte_size,cover.created_at FROM title_cover_assets cover JOIN titles title ON title.id=cover.title_id AND title.cover_asset_id=cover.id WHERE cover.id=$1`, id).Scan(&asset.ID, &asset.ObjectKey, &asset.Mime, &asset.Checksum, &asset.Width, &asset.Height, &asset.Bytes, &asset.ModifiedAt)
+	if failure == nil {
+		asset.Public = true
+		asset.Tier = "eco"
+		return asset, nil
+	}
+	if failure != pgx.ErrNoRows {
+		return asset, failure
+	}
 	var projectID string
 	var public bool
-	failure := repository.pool.QueryRow(ctx, `SELECT variant.id,variant.page_id,variant.tier,variant.object_key,variant.mime,variant.checksum,variant.width,variant.height,variant.offset_y,variant.byte_size,publication.project_id,coalesce(publication.status='published' AND publication.current_revision_id=revision.id AND revision.status='published',false),revision.updated_at FROM page_variants variant JOIN pages page ON page.id=variant.page_id JOIN revisions revision ON revision.id=page.revision_id JOIN releases publication ON publication.id=revision.release_id WHERE variant.id=$1 AND page.status='ready'`, id).Scan(&asset.ID, &asset.PageID, &asset.Tier, &asset.ObjectKey, &asset.Mime, &asset.Checksum, &asset.Width, &asset.Height, &asset.Top, &asset.Bytes, &projectID, &public, &asset.ModifiedAt)
+	failure = repository.pool.QueryRow(ctx, `SELECT variant.id,variant.page_id,variant.tier,variant.object_key,variant.mime,variant.checksum,variant.width,variant.height,variant.offset_y,variant.byte_size,publication.project_id,coalesce(publication.status='published' AND publication.current_revision_id=revision.id AND revision.status='published',false),revision.updated_at FROM page_variants variant JOIN pages page ON page.id=variant.page_id JOIN revisions revision ON revision.id=page.revision_id JOIN releases publication ON publication.id=revision.release_id WHERE variant.id=$1 AND page.status='ready'`, id).Scan(&asset.ID, &asset.PageID, &asset.Tier, &asset.ObjectKey, &asset.Mime, &asset.Checksum, &asset.Width, &asset.Height, &asset.Top, &asset.Bytes, &projectID, &public, &asset.ModifiedAt)
 	if failure != nil {
 		return asset, translate(failure)
 	}
-	if !public {
+	if !public || asset.Tier == "original" {
 		if failure = access(ctx, repository.pool, actor, projectID, "read_draft"); failure != nil {
 			return application.Asset{}, domain.ErrNotFound
 		}

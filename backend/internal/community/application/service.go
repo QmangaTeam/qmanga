@@ -18,7 +18,19 @@ type Discussion struct {
 	Score    float64
 	Ratings  int
 }
+type ReportDecision struct {
+	Status    string    `json:"status"`
+	Action    string    `json:"action"`
+	ActorName string    `json:"actor_name"`
+	Reason    string    `json:"reason"`
+	CreatedAt time.Time `json:"created_at"`
+}
 type Report struct {
+	TitleName, TitleSlug, TeamName, TeamSlug, ChapterLabel, ReleaseStatus, RevisionID                  string
+	CommentBody, CommentAuthor                                                                         string
+	CommentHidden, CommentDeleted                                                                      bool
+	PagePosition                                                                                       int
+	History                                                                                            []ReportDecision
 	ContactEmail                                                                                       string
 	ID, UserID, TitleID, ReleaseID, PageID, TargetType, TargetID, Category, Reason, Status, Resolution string
 	CreatedAt                                                                                          time.Time

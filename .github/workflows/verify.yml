@@ -24,6 +24,7 @@ jobs:
         shell: pwsh
         run: |
           ./scripts/test-setup.ps1
+          ./scripts/test-go-test-events.ps1
           ./scripts/setup.ps1 -ProjectName qmanga-ci
           ./scripts/check-compose.ps1
       - name: Check shell setup
@@ -35,11 +36,7 @@ jobs:
         run: |
           docker compose --profile tools run --rm go-tests go test ./... -count=1 -json > tmp-go-tests.jsonl
           if ($LASTEXITCODE -ne 0) { Get-Content tmp-go-tests.jsonl -Tail 40; throw 'Go suite failed' }
-          $events = Get-Content tmp-go-tests.jsonl | ForEach-Object { $_ | ConvertFrom-Json }
-          $skipped = @($events | Where-Object { $_.Action -eq 'skip' -and $_.Test })
-          if ($skipped.Count) { $skipped | Select-Object Package,Test | Format-Table; throw 'Go integration/codec test was skipped' }
-          $withoutTests = @($events | Where-Object { $_.Action -eq 'skip' -and -not $_.Test })
-          Write-Output "No actual test skips; $($withoutTests.Count) packages have no test files."
+          ./scripts/check-go-test-events.ps1 -Path tmp-go-tests.jsonl
       - name: Auth, publishing and reading acceptance
         shell: pwsh
         run: |

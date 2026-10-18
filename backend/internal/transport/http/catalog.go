@@ -276,7 +276,7 @@ func (handler *CatalogHandler) team(request *gin.Context) {
 	for _, member := range team.Members {
 		members = append(members, gin.H{"name": member.Name, "role": member.Role})
 	}
-	request.JSON(200, gin.H{"members": members, "id": team.ID, "slug": team.Slug, "name": team.Name, "description": team.Description, "projects": projectViews(team.Projects)})
+	request.JSON(200, gin.H{"members": members, "id": team.ID, "slug": team.Slug, "name": team.Name, "description": team.Description, "telegram_url": team.TelegramURL, "projects": projectViews(team.Projects)})
 }
 func (handler *CatalogHandler) studioProjects(request *gin.Context) {
 	account, _ := CurrentAccount(request)

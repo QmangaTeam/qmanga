@@ -13,6 +13,11 @@ type Invitation struct {
 	Role                    domain.Role
 	ExpiresAt               time.Time
 }
+type InvitationSummary struct {
+	ID, Email, Status string
+	Role              domain.Role
+	ExpiresAt         time.Time
+}
 type Member struct {
 	UserID, Email string
 	Role          domain.Role
@@ -31,6 +36,8 @@ type Repository interface {
 	Reject(context.Context, string, string, string) error
 	Update(context.Context, string, domain.Team) error
 	SaveInvitation(context.Context, string, Invitation) error
+	Invitations(context.Context, string, string, ...int) ([]InvitationSummary, error)
+	RevokeInvitation(context.Context, string, string, string) error
 	AcceptInvitation(context.Context, string, string, time.Time) (string, error)
 	Members(context.Context, string, string, ...int) ([]Member, error)
 	RemoveMember(context.Context, string, string, string) error
@@ -53,8 +60,8 @@ type Service struct {
 func New(repository Repository, tokens Tokens, mailer Mailer, origin string) *Service {
 	return &Service{repository: repository, tokens: tokens, mailer: mailer, origin: origin}
 }
-func (service *Service) Create(ctx context.Context, actorID, slug, name, description string) (domain.Team, error) {
-	team, failure := domain.NewTeam(service.tokens.NewID(), slug, name, description)
+func (service *Service) Create(ctx context.Context, actorID, slug, name, description string, telegram ...string) (domain.Team, error) {
+	team, failure := domain.NewTeam(service.tokens.NewID(), slug, name, description, telegram...)
 	if failure != nil {
 		return team, failure
 	}
@@ -130,10 +137,16 @@ func (service *Service) Reject(ctx context.Context, actor, id, reason string) er
 	}
 	return service.repository.Reject(ctx, actor, id, reason)
 }
-func (service *Service) Update(ctx context.Context, actor, id, slug, name, description string) error {
-	team, failure := domain.NewTeam(id, slug, name, description)
+func (service *Service) Update(ctx context.Context, actor, id, slug, name, description string, telegram ...string) error {
+	team, failure := domain.NewTeam(id, slug, name, description, telegram...)
 	if failure != nil {
 		return failure
 	}
 	return service.repository.Update(ctx, actor, team)
+}
+func (service *Service) Invitations(ctx context.Context, actor, team string, offset ...int) ([]InvitationSummary, error) {
+	return service.repository.Invitations(ctx, actor, team, offset...)
+}
+func (service *Service) RevokeInvitation(ctx context.Context, actor, team, id string) error {
+	return service.repository.RevokeInvitation(ctx, actor, team, id)
 }

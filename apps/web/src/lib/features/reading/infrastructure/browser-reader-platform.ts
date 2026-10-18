@@ -2,6 +2,7 @@ import type { ReaderPlatform, ReaderPreferences, Viewport } from '../application
 import type { Position } from '../domain/policies';
 const key='qmanga:reader:preferences:v1';
 export class BrowserReaderPlatform implements ReaderPlatform {
+ openRelease(releaseId:string){window.location.assign('/read/'+encodeURIComponent(releaseId));}
  preferences(kind: string): ReaderPreferences {
   let saved: Partial<ReaderPreferences>={};try{saved=JSON.parse(localStorage.getItem(key)||'{}');}catch{}
   return {quality:['auto','eco','standard','high'].includes(saved.quality||'')?saved.quality!:'auto',mode:saved.mode==='pages'||saved.mode==='strip'?saved.mode:kind==='manga'?'pages':'strip',theme:['dark','light','system'].includes(saved.theme||'')?saved.theme!:'dark',fit:saved.fit==='height'?'height':'width',maxWidth:Math.max(320,Math.min(1600,Number(saved.maxWidth)||1024)),brightness:Math.max(40,Math.min(100,Number(saved.brightness)||100)),numbers:saved.numbers!==false,direction:saved.direction==='ltr'||saved.direction==='rtl'?saved.direction:'auto'};

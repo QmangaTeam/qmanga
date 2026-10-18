@@ -19,7 +19,7 @@ func manifestView(item application.Manifest) gin.H {
 		}
 		pages = append(pages, gin.H{"id": page.ID, "position": page.Position, "width": page.Width, "height": page.Height, "variants": variants})
 	}
-	return gin.H{"source_note": item.Source, "credits": item.Credits, "cover_url": coverURL(item.CoverID), "release_id": item.ReleaseID, "revision_id": item.RevisionID, "title_id": item.TitleID, "title_slug": item.TitleSlug, "title_name": item.TitleName, "chapter_label": item.ChapterLabel, "chapter_order": item.ChapterOrder, "project_id": item.ProjectID, "kind": item.Kind, "team": gin.H{"id": item.TeamID, "name": item.TeamName}, "direction": item.Direction, "previous_release_id": item.PreviousID, "next_release_id": item.NextID, "pages": pages}
+	return gin.H{"preparation_method": item.PreparationMethod, "human_reviewed": item.HumanReviewed, "human_reviewer": item.HumanReviewer, "human_reviewed_at": item.HumanReviewedAt, "source_note": item.Source, "credits": item.Credits, "cover_url": coverURL(item.CoverID), "release_id": item.ReleaseID, "revision_id": item.RevisionID, "title_id": item.TitleID, "title_slug": item.TitleSlug, "title_name": item.TitleName, "chapter_label": item.ChapterLabel, "chapter_order": item.ChapterOrder, "project_id": item.ProjectID, "kind": item.Kind, "team": gin.H{"id": item.TeamID, "name": item.TeamName}, "direction": item.Direction, "previous_release_id": item.PreviousID, "next_release_id": item.NextID, "pages": pages}
 }
 func (handler *PublishingHandler) manifest(request *gin.Context) {
 	item, failure := handler.service.Manifest(request.Request.Context(), handler.actor(request), request.Param("id"), "")

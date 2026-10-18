@@ -5,6 +5,6 @@ import type { PageServerLoad } from './$types';
 export const load: PageServerLoad=async({params,url,fetch,request,setHeaders})=>{
  const preview=url.searchParams.get('preview')||'';
  setHeaders({'Cache-Control':preview?'private, no-store':'public, max-age=0, must-revalidate'});
- try{return {manifest:await createServerReader(fetch,request.headers.get('cookie')||'',!!preview).manifest(params.id,preview),preview};}
+ try{return {manifest:await createServerReader(fetch,request.headers.get('cookie')||'',!!preview).manifest(params.id,preview),preview,initialPage:url.searchParams.get('page')||''};}
  catch(failure){if(failure instanceof ApiFailure)error(failure.status>=400&&failure.status<=599?failure.status:503,failure.message);error(503,'Тарауды жүктеу мүмкін болмады. Қайта көріңіз.');}
 };

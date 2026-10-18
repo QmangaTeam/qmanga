@@ -97,9 +97,16 @@ func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 	if failure != nil || result.Progress.Version != 1 || result.Progress.FurthestOrder != 10 {
 		testingTarget.Fatal(result, failure)
 	}
+	if result.Progress.PagePosition != 1 || result.Progress.ChapterLabel != "1" || result.Progress.TeamName != "Топ" || result.Progress.UpdatedAt <= 0 {
+		testingTarget.Fatal("accepted progress lacks context", result.Progress)
+	}
 	replay, failure := repository.Advance(ctx, "first", event)
 	if failure != nil || replay.Outcome != "duplicate" || replay.Progress.Version != 1 {
 		testingTarget.Fatal(replay, failure)
+	}
+	contextual, failure := repository.Progress(ctx, "first", "title")
+	if failure != nil || contextual.ChapterLabel != "1" || contextual.TeamName != "Топ" || contextual.PagePosition != 1 || contextual.UpdatedAt <= 0 {
+		testingTarget.Fatal("missing readable progress context", contextual, failure)
 	}
 	event.ID = "event2"
 	event.DeviceID = "tablet"

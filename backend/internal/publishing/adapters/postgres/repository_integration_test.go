@@ -65,7 +65,7 @@ func TestPublicationIsolationAndAtomicReplacement(testingTarget *testing.T) {
 	if _, failure = repository.Revision(ctx, "other", draft.ID); !errors.Is(failure, domain.ErrForbidden) {
 		testingTarget.Fatal("foreign draft exposed", failure)
 	}
-	input := application.Upload{RevisionID: draft.ID, PageID: uuid.NewString(), Key: "file-1", SourceKey: uuid.NewString(), Position: 1, Bytes: 20, Width: 100, Height: 200, Format: "png", Checksum: strings.Repeat("a", 64)}
+	input := application.Upload{OriginalName: "page-01.png", RevisionID: draft.ID, PageID: uuid.NewString(), Key: "file-1", SourceKey: uuid.NewString(), Position: 1, Bytes: 20, Width: 100, Height: 200, Format: "png", Checksum: strings.Repeat("a", 64)}
 	reservation, failure := repository.Reserve(ctx, "owner", input, "claim")
 	if failure != nil {
 		testingTarget.Fatal(failure)
@@ -112,7 +112,7 @@ func TestPublicationIsolationAndAtomicReplacement(testingTarget *testing.T) {
 	if failure = repository.Submit(ctx, "owner", draft.ID, draft.Version); failure == nil {
 		testingTarget.Fatal("publication without rights confirmation accepted")
 	}
-	if failure = repository.SaveAttribution(ctx, "owner", draft.ID, draft.Version, domain.Attribution{Source: "Permission from rights holder", Credits: "Translation team", Confirmed: true}); failure != nil {
+	if failure = repository.SaveAttribution(ctx, "owner", draft.ID, draft.Version, domain.Attribution{Source: "Permission from rights holder", Credits: "Translation team", Confirmed: true, PreparationMethod: "machine_assisted", HumanReviewed: true}); failure != nil {
 		testingTarget.Fatal(failure)
 	}
 	draft, failure = repository.Revision(ctx, "owner", draft.ID)
@@ -155,12 +155,34 @@ func TestPublicationIsolationAndAtomicReplacement(testingTarget *testing.T) {
 		testingTarget.Fatal("decision crossed team", foreignDecisions, failure)
 	}
 	manifest, failure := repository.Manifest(ctx, "", draft.ReleaseID, "")
-	if failure != nil || manifest.RevisionID != draft.ID || len(manifest.Pages) != 1 {
+	if failure != nil || manifest.RevisionID != draft.ID || len(manifest.Pages) != 1 || manifest.PreparationMethod != "machine_assisted" || !manifest.HumanReviewed || manifest.HumanReviewedAt == nil {
 		testingTarget.Fatal("published manifest missing", failure)
 	}
 	replacement, failure := repository.CreateDraft(ctx, "owner", "project", "chapter", uuid.NewString())
 	if failure != nil {
 		testingTarget.Fatal(failure)
+	}
+	if len(replacement.Pages) != 1 || replacement.Pages[0].ID == draft.Pages[0].ID || replacement.Pages[0].OriginalName != "page-01.png" || replacement.Pages[0].ThumbnailID == "" || replacement.Credits != draft.Credits || replacement.State != "ready" || replacement.HumanReviewed || replacement.HumanReviewedAt != nil {
+		testingTarget.Fatal("correction did not clone pages and credits", replacement)
+	}
+	if _, err := repository.Asset(ctx, "", replacement.Pages[0].ThumbnailID); err == nil {
+		testingTarget.Fatal("draft derivative exposed")
+	}
+	if _, err := repository.Asset(ctx, "", variants[3].ID); err == nil {
+		testingTarget.Fatal("private original exposed")
+	}
+	if err := repository.SelectCover(ctx, "other", "project", replacement.Pages[0].ID); !errors.Is(err, domain.ErrForbidden) {
+		testingTarget.Fatal("foreign cover accepted", err)
+	}
+	if err := repository.SelectCover(ctx, "owner", "project", replacement.Pages[0].ID); err != nil {
+		testingTarget.Fatal(err)
+	}
+	var coverID string
+	if err := database.Pool().QueryRow(ctx, "SELECT cover_asset_id FROM titles WHERE id='title'").Scan(&coverID); err != nil {
+		testingTarget.Fatal(err)
+	}
+	if _, err := repository.Asset(ctx, "", coverID); err != nil {
+		testingTarget.Fatal("managed cover unavailable", err)
 	}
 	if failure = repository.Review(ctx, "admin", replacement.ID, "publish", ""); failure == nil {
 		testingTarget.Fatal("incomplete replacement published")
@@ -179,6 +201,43 @@ func TestPublicationIsolationAndAtomicReplacement(testingTarget *testing.T) {
 		testingTarget.Fatal("withdrawn manifest exposed", failure)
 	}
 
+	if _, err := repository.Asset(ctx, "", coverID); err != nil {
+		testingTarget.Fatal("withdrawal removed independently selected cover", err)
+	}
+	if err := repository.Restore(ctx, "owner", draft.ReleaseID, "Rights checked"); !errors.Is(err, domain.ErrForbidden) {
+		testingTarget.Fatal("owner restored release", err)
+	}
+	if err := repository.Restore(ctx, "admin", draft.ReleaseID, ""); !errors.Is(err, domain.ErrTransition) {
+		testingTarget.Fatal("reasonless restore accepted", err)
+	}
+	if err := repository.Restore(ctx, "admin", draft.ReleaseID, "Rights checked"); err != nil {
+		testingTarget.Fatal(err)
+	}
+	if restored, err := repository.Manifest(ctx, "", draft.ReleaseID, ""); err != nil || restored.RevisionID != draft.ID {
+		testingTarget.Fatal("restore changed revision", err)
+	}
+	if err := repository.Submit(ctx, "owner", replacement.ID, replacement.Version); err != nil {
+		testingTarget.Fatal(err)
+	}
+	if err := repository.Review(ctx, "admin", replacement.ID, "publish", ""); err != nil {
+		testingTarget.Fatal(err)
+	}
+	if active, err := repository.Manifest(ctx, "", draft.ReleaseID, ""); err != nil || active.RevisionID != replacement.ID || active.CoverID != coverID {
+		testingTarget.Fatal("replacement changed managed cover or failed to switch active revision", err)
+	}
+	if _, err := repository.Asset(ctx, "", variants[0].ID); err == nil {
+		testingTarget.Fatal("superseded publication page remained public")
+	}
+	replacement, failure = repository.CreateDraft(ctx, "owner", "project", "chapter", uuid.NewString())
+	if failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	if err := repository.Reorder(ctx, "owner", replacement.ID, replacement.Version, []string{}); err != nil {
+		testingTarget.Fatal(err)
+	}
+	if _, err := repository.Asset(ctx, "", coverID); err != nil {
+		testingTarget.Fatal("draft deletion removed independent cover", err)
+	}
 	testingTarget.Run("staged page deletion is atomic and versioned", func(testingTarget *testing.T) {
 		for position := 1; position <= 2; position++ {
 			pageInput := input
@@ -194,6 +253,22 @@ func TestPublicationIsolationAndAtomicReplacement(testingTarget *testing.T) {
 			if failure = repository.Uploaded(ctx, "owner", reserved.PageID, "order-claim"); failure != nil {
 				testingTarget.Fatal(failure)
 			}
+		}
+		var failedPage string
+		if err := database.Pool().QueryRow(ctx, "SELECT id FROM pages WHERE revision_id=$1 AND position=2", replacement.ID).Scan(&failedPage); err != nil {
+			testingTarget.Fatal(err)
+		}
+		execute("UPDATE pages SET status='failed',failure_code='processing_failed' WHERE id=$1", failedPage)
+		execute("UPDATE jobs SET status='failed',attempts=max_attempts WHERE dedupe_key=$1", "page:"+failedPage)
+		if err := repository.RetryPage(ctx, "other", replacement.ID, failedPage); !errors.Is(err, domain.ErrForbidden) {
+			testingTarget.Fatal("foreign retry accepted", err)
+		}
+		if err := repository.RetryPage(ctx, "owner", replacement.ID, failedPage); err != nil {
+			testingTarget.Fatal(err)
+		}
+		var retried string
+		if err := database.Pool().QueryRow(ctx, "SELECT status FROM jobs WHERE dedupe_key=$1", "page:"+failedPage).Scan(&retried); err != nil || retried != "pending" {
+			testingTarget.Fatal("retry did not schedule processing", retried, err)
 		}
 		before, failure := repository.Revision(ctx, "owner", replacement.ID)
 		if failure != nil || len(before.Pages) != 2 {

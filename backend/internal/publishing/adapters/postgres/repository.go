@@ -112,7 +112,16 @@ func editable(revision domain.Revision) bool {
 	return revision.State() == domain.Draft || revision.State() == domain.Processing || revision.State() == domain.Ready
 }
 func audit(ctx context.Context, transaction pgx.Tx, actor, action, entityID, reason string) error {
-	metadata, _ := json.Marshal(map[string]string{"reason": reason})
+	details := map[string]any{"reason": reason}
+	if action == "withdraw" {
+		details["before"] = map[string]string{"status": "published"}
+		details["after"] = map[string]string{"status": "withdrawn"}
+	}
+	if action == "restore" {
+		details["before"] = map[string]string{"status": "withdrawn"}
+		details["after"] = map[string]string{"status": "published"}
+	}
+	metadata, _ := json.Marshal(details)
 	_, failure := transaction.Exec(ctx, "INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,metadata) VALUES($1,$2,$3,'release',$4,$5)", uuid.NewString(), actor, action, entityID, metadata)
 	return failure
 }
@@ -136,7 +145,10 @@ func (repository *Repository) CreateDraft(ctx context.Context, actor, projectID,
 		}
 		actualID = id
 		_, failure = transaction.Exec(ctx, "INSERT INTO revisions(id,release_id,revision_num) SELECT $1::varchar,$2::varchar,coalesce(max(revision_num),0)+1 FROM revisions WHERE release_id=$2::varchar", id, releaseID)
-		return failure
+		if failure != nil {
+			return failure
+		}
+		return cloneRevision(ctx, transaction, id, releaseID)
 	})
 	if failure != nil {
 		return application.StudioRevision{}, failure
@@ -172,11 +184,14 @@ func (repository *Repository) Reserve(ctx context.Context, actor string, input a
 		if failure = revision.ReservePage(input.Bytes, input.Width, input.Height, input.Format); failure != nil {
 			return failure
 		}
-		_, failure = transaction.Exec(ctx, `INSERT INTO pages(id,revision_id,position,width,height,byte_size,source_key,checksum,image_format,upload_key,lease_token,leased_until)VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,now()+interval '15 minutes')`, input.PageID, input.RevisionID, input.Position, input.Width, input.Height, input.Bytes, input.SourceKey, input.Checksum, input.Format, input.Key, claim)
+		_, failure = transaction.Exec(ctx, `INSERT INTO pages(id,revision_id,position,width,height,byte_size,source_key,checksum,image_format,upload_key,lease_token,original_name,leased_until)VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,now()+interval '15 minutes')`, input.PageID, input.RevisionID, input.Position, input.Width, input.Height, input.Bytes, input.SourceKey, input.Checksum, input.Format, input.Key, claim, input.OriginalName)
 		if failure != nil {
 			return failure
 		}
 		result = application.Reservation{PageID: input.PageID, SourceKey: input.SourceKey}
+		if _, failure = transaction.Exec(ctx, "UPDATE revisions SET human_reviewed=false,human_reviewed_by=NULL,human_reviewed_at=NULL WHERE id=$1", input.RevisionID); failure != nil {
+			return failure
+		}
 		return persist(ctx, transaction, revision)
 	})
 	return result, failure
@@ -242,14 +257,17 @@ func (repository *Repository) Reorder(ctx context.Context, actor, id string, ver
 				return domain.ErrForbidden
 			}
 		}
-		_, failure := transaction.Exec(ctx, "UPDATE revisions SET status=CASE WHEN NOT EXISTS(SELECT 1 FROM pages WHERE revision_id=$1) THEN 'draft' WHEN NOT EXISTS(SELECT 1 FROM pages WHERE revision_id=$1 AND status<>'ready') THEN 'ready' ELSE 'processing' END,version=version+1,updated_at=now() WHERE id=$1", id)
+		_, failure := transaction.Exec(ctx, "UPDATE revisions SET human_reviewed=false,human_reviewed_by=NULL,human_reviewed_at=NULL,status=CASE WHEN NOT EXISTS(SELECT 1 FROM pages WHERE revision_id=$1) THEN 'draft' WHEN NOT EXISTS(SELECT 1 FROM pages WHERE revision_id=$1 AND status<>'ready') THEN 'ready' ELSE 'processing' END,version=version+1,updated_at=now() WHERE id=$1", id)
 		return failure
 	})
 }
-func (repository *Repository) DeletePage(ctx context.Context, actor, id, pageID string) error {
+func (repository *Repository) DeletePage(ctx context.Context, actor, id, pageID string, version int64) error {
 	return repository.withRevision(ctx, actor, id, "upload", func(transaction pgx.Tx, revision domain.Revision) error {
 		if !editable(revision) {
 			return domain.ErrImmutable
+		}
+		if revision.Version() != version {
+			return domain.ErrConflict
 		}
 		result, failure := transaction.Exec(ctx, "DELETE FROM pages WHERE id=$1 AND revision_id=$2", pageID, id)
 		if failure != nil {
@@ -264,7 +282,7 @@ func (repository *Repository) DeletePage(ctx context.Context, actor, id, pageID 
 		if _, failure = transaction.Exec(ctx, "UPDATE pages SET position=ordered.position FROM(SELECT id,row_number()OVER(ORDER BY position)position FROM pages WHERE revision_id=$1)ordered WHERE pages.id=ordered.id", id); failure != nil {
 			return failure
 		}
-		_, failure = transaction.Exec(ctx, `UPDATE revisions SET status=CASE WHEN NOT EXISTS(SELECT 1 FROM pages WHERE revision_id=$1)THEN 'draft' WHEN NOT EXISTS(SELECT 1 FROM pages WHERE revision_id=$1 AND status<>'ready')THEN 'ready' ELSE 'processing' END,version=version+1,updated_at=now() WHERE id=$1`, id)
+		_, failure = transaction.Exec(ctx, `UPDATE revisions SET human_reviewed=false,human_reviewed_by=NULL,human_reviewed_at=NULL,status=CASE WHEN NOT EXISTS(SELECT 1 FROM pages WHERE revision_id=$1)THEN 'draft' WHEN NOT EXISTS(SELECT 1 FROM pages WHERE revision_id=$1 AND status<>'ready')THEN 'ready' ELSE 'processing' END,version=version+1,updated_at=now() WHERE id=$1`, id)
 		return failure
 	})
 }
@@ -326,9 +344,10 @@ func (repository *Repository) Review(ctx context.Context, actor, id, decision, r
 		if _, failure := transaction.Exec(ctx, "UPDATE releases SET current_revision_id=$2,status='published',updated_at=now() WHERE id=$1", release.ID, id); failure != nil {
 			return failure
 		}
-		if _, failure := transaction.Exec(ctx, `UPDATE titles SET updated_at=now(),cover_asset_id=coalesce((SELECT variant.id FROM page_variants variant JOIN pages page ON page.id=variant.page_id WHERE page.revision_id=$1 AND variant.tier='eco' ORDER BY page.position,variant.offset_y LIMIT 1),'') WHERE id=(SELECT title_id FROM chapters WHERE id=$2)`, id, release.ChapterID); failure != nil {
+		if failure := ensureDefaultCover(ctx, transaction, actor, release.ChapterID, id); failure != nil {
 			return failure
 		}
+
 		payload, _ := json.Marshal(map[string]string{"release_id": release.ID, "revision_id": id})
 		if _, failure := transaction.Exec(ctx, "INSERT INTO outbox_events(id,event_type,payload)VALUES($1,'release_published',$2)", uuid.NewString(), payload); failure != nil {
 			return failure
@@ -349,13 +368,14 @@ func (repository *Repository) Withdraw(ctx context.Context, actor, releaseID, re
 		if failure := release.Withdraw(reason); failure != nil {
 			return failure
 		}
-		if _, failure := transaction.Exec(ctx, "UPDATE releases SET status='withdrawn',updated_at=now() WHERE id=$1", releaseID); failure != nil {
+		result, failure := transaction.Exec(ctx, "UPDATE releases SET status='withdrawn',updated_at=now() WHERE id=$1 AND current_revision_id=$2 AND status='published'", releaseID, id)
+		if failure != nil {
 			return failure
+		}
+		if result.RowsAffected() != 1 {
+			return domain.ErrConflict
 		}
 		if _, failure := transaction.Exec(ctx, "UPDATE titles SET cover_asset_id='' WHERE cover_asset_id IN(SELECT variant.id FROM page_variants variant JOIN pages page ON page.id=variant.page_id WHERE page.revision_id=$1)", id); failure != nil {
-			return failure
-		}
-		if _, failure := transaction.Exec(ctx, "UPDATE titles SET is_listed=false WHERE id=(SELECT chapter.title_id FROM chapters chapter JOIN releases publication ON publication.chapter_id=chapter.id WHERE publication.id=$1)", releaseID); failure != nil {
 			return failure
 		}
 		if failure := publicationDecision(ctx, transaction, id, "withdrawn", reason); failure != nil {

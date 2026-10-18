@@ -84,7 +84,7 @@ export class HttpCatalogGateway implements CatalogGateway {
  async team(slug: string): Promise<PublicTeam | null> {
   try {
    const item = object(await this.api.call('/api/v1/teams/' + encodeURIComponent(slug)));
-   return { id: text(item.id), name: text(item.name), slug: text(item.slug), description: text(item.description), members:array(item.members||[],value=>{const member=object(value);return {name:text(member.name),role:text(member.role)};}),projects: array(item.projects, project) };
+   return { id: text(item.id), name: text(item.name), slug: text(item.slug), description: text(item.description),telegramURL:typeof item.telegram_url==='string'&&/^https:\/\/t\.me\/[A-Za-z][A-Za-z0-9_]{4,31}$/.test(item.telegram_url)?item.telegram_url:'', members:array(item.members||[],value=>{const member=object(value);return {name:text(member.name),role:text(member.role)};}),projects: array(item.projects, project) };
   } catch (failure) { if (failure instanceof ApiFailure && failure.status === 404) return null; throw failure; }
  }
 }

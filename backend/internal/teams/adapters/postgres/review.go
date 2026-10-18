@@ -22,7 +22,7 @@ func (repository *Repository) Reject(ctx context.Context, actor, id, reason stri
 }
 func (repository *Repository) Update(ctx context.Context, actor string, team domain.Team) error {
 	return repository.withAccess(ctx, actor, team.ID, domain.Manage, func(transaction pgx.Tx) error {
-		_, failure := transaction.Exec(ctx, "UPDATE teams SET slug=$2,name=$3,description=$4,review_status=CASE WHEN is_approved THEN 'approved' ELSE 'pending' END,review_note='' WHERE id=$1", team.ID, team.Slug, team.Name, team.Description)
+		_, failure := transaction.Exec(ctx, "UPDATE teams SET slug=$2,name=$3,description=$4,telegram_url=$5,review_status=CASE WHEN is_approved THEN 'approved' ELSE 'pending' END,review_note='' WHERE id=$1", team.ID, team.Slug, team.Name, team.Description, team.TelegramURL)
 		return failure
 	})
 }

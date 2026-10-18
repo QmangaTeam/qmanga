@@ -6,7 +6,7 @@ import (
 	"time"
 )
 
-type Reference struct{ TitleID, Name, Slug, CoverID, ReleaseID, RevisionID, ChapterLabel string }
+type Reference struct{ TitleID, Name, Slug, CoverID, ReleaseID, RevisionID, ChapterLabel, TeamName string }
 type RecentEntry struct {
 	Reference
 	Progress     domain.Progress

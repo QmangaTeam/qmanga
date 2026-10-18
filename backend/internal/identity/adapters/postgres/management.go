@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"github.com/google/uuid"
+	"net/url"
 	"qmanga/internal/identity/application"
 	"qmanga/internal/identity/domain"
 )
@@ -94,7 +95,20 @@ func (repository *Repository) Audit(ctx context.Context, actor, after string) ([
 	if failure != nil || role != "admin" {
 		return nil, domain.ErrForbidden
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT id,coalesce(user_id,''),action,entity_type,entity_id,coalesce(metadata->>'reason',''),created_at FROM audit_logs WHERE ($1='' OR (created_at,id)<(SELECT created_at,id FROM audit_logs WHERE id=$1)) ORDER BY created_at DESC,id DESC LIMIT 50", after)
+	rows, failure := repository.pool.Query(ctx, `SELECT audit.id,coalesce(audit.user_id,''),audit.action,audit.entity_type,audit.entity_id,coalesce(audit.metadata->>'reason',''),audit.created_at,
+ coalesce(actor.display_name,''),coalesce(target_user.display_name,title.name_kk,team.name,''),audit.metadata,
+ coalesce(title.slug,''),coalesce(team.slug,''),coalesce(release.id,''),coalesce(chapter.label,''),coalesce(comment.id,''),coalesce(report.id,''),coalesce(revision.id,release.current_revision_id,'')
+ FROM audit_logs audit LEFT JOIN users actor ON actor.id=audit.user_id
+ LEFT JOIN users target_user ON audit.entity_type='user' AND target_user.id=audit.entity_id
+ LEFT JOIN revisions revision ON audit.entity_type IN('release','revision') AND revision.id=audit.entity_id
+ LEFT JOIN releases release ON audit.entity_type IN('release','revision') AND release.id=coalesce(revision.release_id,audit.entity_id)
+ LEFT JOIN comments comment ON audit.entity_type='community' AND comment.id=audit.entity_id
+ LEFT JOIN reports report ON audit.entity_type='community' AND report.id=audit.entity_id
+ LEFT JOIN projects project ON audit.entity_type='project' AND project.id=audit.entity_id
+ LEFT JOIN chapters chapter ON chapter.id=CASE WHEN audit.entity_type='chapter' THEN audit.entity_id ELSE release.chapter_id END
+ LEFT JOIN teams team ON team.id=CASE WHEN audit.entity_type='team' THEN audit.entity_id ELSE coalesce(release.team_id,project.team_id) END
+ LEFT JOIN titles title ON title.id=CASE WHEN audit.entity_type='title' THEN audit.entity_id ELSE coalesce(chapter.title_id,project.title_id,comment.title_id,report.title_id) END
+ WHERE ($1='' OR (audit.created_at,audit.id)<(SELECT created_at,id FROM audit_logs WHERE id=$1)) ORDER BY audit.created_at DESC,audit.id DESC LIMIT 50`, after)
 	if failure != nil {
 		return nil, failure
 	}
@@ -102,10 +116,70 @@ func (repository *Repository) Audit(ctx context.Context, actor, after string) ([
 	items := []application.AuditEntry{}
 	for rows.Next() {
 		var item application.AuditEntry
-		if failure = rows.Scan(&item.ID, &item.Actor, &item.Action, &item.EntityType, &item.EntityID, &item.Reason, &item.CreatedAt); failure != nil {
+		var metadata []byte
+		var titleSlug, teamSlug, releaseID, chapterLabel, commentID, reportID, revisionID string
+		if failure = rows.Scan(&item.ID, &item.Actor, &item.Action, &item.EntityType, &item.EntityID, &item.Reason, &item.CreatedAt, &item.ActorName, &item.TargetName, &metadata, &titleSlug, &teamSlug, &releaseID, &chapterLabel, &commentID, &reportID, &revisionID); failure != nil {
 			return nil, failure
+		}
+		var details map[string]any
+		if failure = json.Unmarshal(metadata, &details); failure != nil {
+			return nil, failure
+		}
+		item.Before, item.After = auditStates(details)
+		switch {
+		case item.EntityType == "user":
+			item.TargetPath = "/moderation/accounts?q=" + url.QueryEscape(item.EntityID)
+		case item.EntityType == "team" && teamSlug != "":
+			item.TargetPath = "/teams/" + url.PathEscape(teamSlug)
+		case releaseID != "":
+			item.TargetPath = "/read/" + url.PathEscape(releaseID)
+			if revisionID != "" {
+				item.TargetPath += "?preview=" + url.QueryEscape(revisionID)
+			}
+			if chapterLabel != "" {
+				item.TargetName += " · " + chapterLabel
+			}
+		case titleSlug != "":
+			item.TargetPath = "/titles/" + url.PathEscape(titleSlug)
+			if commentID != "" {
+				item.TargetPath += "?tab=comments"
+			}
+		case item.EntityType == "project_request":
+			item.TargetPath = "/admin/requests"
 		}
 		items = append(items, item)
 	}
 	return items, rows.Err()
+}
+
+// Audit is deliberately a safe projection, never an arbitrary metadata dump.
+func auditStates(metadata map[string]any) (map[string]any, map[string]any) {
+	before, after := map[string]any{}, map[string]any{}
+	allowed := map[string]bool{"role": true, "blocked": true, "hidden": true, "status": true, "revision_status": true, "release_status": true, "cover_asset_id": true}
+	for key, destination := range map[string]map[string]any{"before": before, "after": after} {
+		if state, ok := metadata[key].(map[string]any); ok {
+			for field, value := range state {
+				if allowed[field] {
+					switch value.(type) {
+					case string, bool, float64:
+						destination[field] = value
+					}
+				}
+			}
+		}
+	}
+	if value, ok := metadata["old_role"].(string); ok {
+		before["role"] = value
+	}
+	if value, ok := metadata["was_blocked"].(bool); ok {
+		before["blocked"] = value
+	}
+	if value, ok := metadata["role"].(string); ok {
+		after["role"] = value
+	}
+	if value, ok := metadata["blocked"].(bool); ok {
+		after["blocked"] = value
+	}
+
+	return before, after
 }

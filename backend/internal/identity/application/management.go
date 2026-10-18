@@ -19,6 +19,8 @@ type AccountChange struct {
 	Version      int64
 }
 type AuditEntry struct {
+	ActorName, TargetName, TargetPath               string
+	Before, After                                   map[string]any
 	ID, Actor, Action, EntityType, EntityID, Reason string
 	CreatedAt                                       time.Time
 }

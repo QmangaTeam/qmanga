@@ -1,5 +1,6 @@
 <script lang="ts">
  import {onMount} from 'svelte';
+ import {page} from '$app/state';
  import type {Account} from '../domain/account';
  import type {ManagedAccount,ManagementGateway} from '../application/management';
  import {useLocale,text} from '$lib/shared/presentation/locale';
@@ -8,7 +9,7 @@
  let {user,gateway}:{user:Account|null;gateway:ManagementGateway}=$props();
  const {locale}=useLocale();
  const roles=$derived<Record<string,string>>({reader:text($locale,'Оқырман','Читатель'),moderator:text($locale,'Модератор','Модератор'),admin:text($locale,'Әкімші','Администратор')});
- let query=$state(''),items=$state<ManagedAccount[]>([]),hasMore=$state(false),busy=$state(false),message=$state(''),selected=$state<ManagedAccount|null>(null),reason=$state(''),saved=$state(false);
+ let query=$state(page.url.searchParams.get('q')||''),items=$state<ManagedAccount[]>([]),hasMore=$state(false),busy=$state(false),message=$state(''),selected=$state<ManagedAccount|null>(null),reason=$state(''),saved=$state(false);
  const allowed=$derived(user?.role==='admin'||user?.role==='moderator');
  async function load(after=''){if(!user)return;busy=true;message='';try{const result=await gateway.accounts(user.id,query,after);items=after?[...items,...result.items]:result.items;hasMore=result.hasMore;}catch(failure){message=failureCode(failure);}finally{busy=false;}}
  async function save(){if(!user||!selected)return;busy=true;message='';saved=false;try{await gateway.change(user.id,selected,reason);selected=null;reason='';await load();saved=true;}catch(failure){message=failureCode(failure);}finally{busy=false;}}

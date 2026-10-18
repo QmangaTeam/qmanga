@@ -42,6 +42,8 @@ func (handler *PublishingHandler) Register(router *gin.Engine, identity *Identit
 	studio.GET("/projects/:id/chapters", handler.projectChapters)
 	studio.GET("/projects/:id/revisions", handler.projectRevisions)
 	studio.POST("/projects/:id/revisions", handler.createDraft)
+	studio.PUT("/projects/:id/cover", handler.selectCover)
+	studio.POST("/revisions/:id/pages/:page_id/retry", handler.retryPage)
 	studio.GET("/revisions/:id", handler.revision)
 	studio.PUT("/revisions/:id/pages", handler.upload)
 	studio.PUT("/revisions/:id/order", handler.reorder)
@@ -53,6 +55,7 @@ func (handler *PublishingHandler) Register(router *gin.Engine, identity *Identit
 	moderation.GET("/revisions", handler.queue)
 	moderation.POST("/revisions/:id/review", handler.review)
 	moderation.POST("/releases/:id/withdraw", handler.withdraw)
+	moderation.POST("/releases/:id/restore", handler.restore)
 }
 func (handler *PublishingHandler) actor(request *gin.Context) string {
 	if account, exists := CurrentAccount(request); exists {
@@ -74,9 +77,9 @@ func (handler *PublishingHandler) actor(request *gin.Context) string {
 func revisionView(item application.StudioRevision) gin.H {
 	pages := []gin.H{}
 	for _, page := range item.Pages {
-		pages = append(pages, gin.H{"id": page.ID, "position": page.Position, "width": page.Width, "height": page.Height, "bytes": page.Bytes, "status": page.Status, "failure": page.Failure, "upload_key": page.UploadKey})
+		pages = append(pages, gin.H{"id": page.ID, "position": page.Position, "width": page.Width, "height": page.Height, "bytes": page.Bytes, "status": page.Status, "failure": page.Failure, "upload_key": page.UploadKey, "original_name": page.OriginalName, "thumbnail_id": page.ThumbnailID})
 	}
-	return gin.H{"source_note": item.Source, "credits": item.Credits, "rights_confirmed": item.RightsConfirmed, "confirmed_by": item.ConfirmedBy, "id": item.ID, "release_id": item.ReleaseID, "project_id": item.ProjectID, "chapter_id": item.ChapterID, "title_id": item.TitleID, "title_name": item.TitleName, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "state": item.State, "note": item.Note, "version": item.Version, "pages": pages}
+	return gin.H{"cover_id": item.CoverID, "release_status": item.ReleaseStatus, "preparation_method": item.PreparationMethod, "human_reviewed": item.HumanReviewed, "human_reviewer": item.HumanReviewer, "human_reviewed_at": item.HumanReviewedAt, "source_note": item.Source, "credits": item.Credits, "rights_confirmed": item.RightsConfirmed, "confirmed_by": item.ConfirmedBy, "id": item.ID, "release_id": item.ReleaseID, "project_id": item.ProjectID, "chapter_id": item.ChapterID, "title_id": item.TitleID, "title_name": item.TitleName, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "state": item.State, "note": item.Note, "version": item.Version, "pages": pages}
 }
 func (handler *PublishingHandler) projectChapters(request *gin.Context) {
 	items, failure := handler.service.ProjectChapters(request.Request.Context(), handler.actor(request), request.Param("id"), requestOffset(request))
@@ -170,7 +173,7 @@ func (handler *PublishingHandler) upload(request *gin.Context) {
 		publicationError(request, failure)
 		return
 	}
-	reservation, failure := handler.service.Upload(request.Request.Context(), handler.actor(request), application.Upload{RevisionID: request.Param("id"), Key: request.Query("key"), Position: position, Bytes: size, Width: configuration.Width, Height: configuration.Height, Format: format, Checksum: fmt.Sprintf("%x", hash.Sum(nil))}, file)
+	reservation, failure := handler.service.Upload(request.Request.Context(), handler.actor(request), application.Upload{OriginalName: request.Query("name"), RevisionID: request.Param("id"), Key: request.Query("key"), Position: position, Bytes: size, Width: configuration.Width, Height: configuration.Height, Format: format, Checksum: fmt.Sprintf("%x", hash.Sum(nil))}, file)
 	if failure != nil {
 		publicationError(request, failure)
 		return
@@ -196,7 +199,11 @@ func (handler *PublishingHandler) reorder(request *gin.Context) {
 	request.Status(204)
 }
 func (handler *PublishingHandler) deletePage(request *gin.Context) {
-	if failure := handler.service.DeletePage(request.Request.Context(), handler.actor(request), request.Param("id"), request.Param("page_id")); failure != nil {
+	version, valid := queryInteger(request, "version", 1, 2147483647)
+	if !valid {
+		return
+	}
+	if failure := handler.service.DeletePage(request.Request.Context(), handler.actor(request), request.Param("id"), request.Param("page_id"), int64(version)); failure != nil {
 		publicationError(request, failure)
 		return
 	}
@@ -275,16 +282,52 @@ func publicationError(request *gin.Context, failure error) {
 }
 func (handler *PublishingHandler) attribution(request *gin.Context) {
 	var input struct {
-		Version   int64  `json:"version"`
-		Source    string `json:"source_note"`
-		Credits   string `json:"credits"`
-		Confirmed bool   `json:"rights_confirmed"`
+		Version           int64  `json:"version"`
+		Source            string `json:"source_note"`
+		Credits           string `json:"credits"`
+		Confirmed         bool   `json:"rights_confirmed"`
+		PreparationMethod string `json:"preparation_method"`
+		HumanReviewed     bool   `json:"human_reviewed"`
 	}
 	if !decode(request, &input) {
 		return
 	}
-	if failure := handler.service.SaveAttribution(request.Request.Context(), handler.actor(request), request.Param("id"), input.Version, domain.Attribution{Source: input.Source, Credits: input.Credits, Confirmed: input.Confirmed}); failure != nil {
+	if failure := handler.service.SaveAttribution(request.Request.Context(), handler.actor(request), request.Param("id"), input.Version, domain.Attribution{Source: input.Source, Credits: input.Credits, Confirmed: input.Confirmed, PreparationMethod: input.PreparationMethod, HumanReviewed: input.HumanReviewed}); failure != nil {
 		publicationError(request, failure)
+		return
+	}
+	request.Status(204)
+}
+
+func (handler *PublishingHandler) restore(request *gin.Context) {
+	var input struct {
+		Reason string `json:"reason"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	if err := handler.service.Restore(request.Request.Context(), handler.actor(request), request.Param("id"), input.Reason); err != nil {
+		publicationError(request, err)
+		return
+	}
+	request.Status(204)
+}
+func (handler *PublishingHandler) selectCover(request *gin.Context) {
+	var input struct {
+		PageID string `json:"page_id"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	if err := handler.service.SelectCover(request.Request.Context(), handler.actor(request), request.Param("id"), input.PageID); err != nil {
+		publicationError(request, err)
+		return
+	}
+	request.Status(204)
+}
+func (handler *PublishingHandler) retryPage(request *gin.Context) {
+	if err := handler.service.RetryPage(request.Request.Context(), handler.actor(request), request.Param("id"), request.Param("page_id")); err != nil {
+		publicationError(request, err)
 		return
 	}
 	request.Status(204)

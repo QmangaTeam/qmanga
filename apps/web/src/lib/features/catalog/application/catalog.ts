@@ -16,7 +16,7 @@ export interface TitleDetail {listed?:boolean; authors?:string[]; featured?:bool
 }
 export interface Release { id: string; projectId: string; teamId: string; teamName: string; teamSlug: string; publishedAt: string }
 export interface Chapter { id: string; label: string; volume: string; name: string; order: number; releases: Release[] }
-export interface PublicTeam {members?:{name:string;role:string}[]; id: string; name: string; slug: string; description: string; projects: Project[] }
+export interface PublicTeam {members?:{name:string;role:string}[]; id: string; name: string; slug: string; description: string;telegramURL?:string; projects: Project[] }
 export interface ResultPage<Item> { items: Item[]; nextCursor: string | null }
 export interface ReleaseUpdate {releaseId:string;titleId:string;titleName:string;titleSlug:string;chapterLabel:string;teamName:string;teamSlug:string;demo:boolean;publishedAt:string;coverURL?:string}
 export interface CatalogGateway {

@@ -7,7 +7,7 @@ function number(value: unknown) { if (typeof value !== 'number' || !Number.isSaf
 function array<Item>(value: unknown, map: (item: unknown) => Item): Item[] { if (!Array.isArray(value)) throw new AppFailure('unavailable'); return value.map(map); }
 function revision(value: unknown): Revision {
  const item = object(value);
- return {source:typeof item.source_note==='string'?item.source_note:'',credits:typeof item.credits==='string'?item.credits:'',rightsConfirmed:item.rights_confirmed===true,confirmedBy:typeof item.confirmed_by==='string'?item.confirmed_by:'', id: text(item.id), releaseId: text(item.release_id), projectId: text(item.project_id), chapterId: text(item.chapter_id), titleId: text(item.title_id), titleName: text(item.title_name), chapterLabel: text(item.chapter_label), teamName: text(item.team_name), state: text(item.state), note: text(item.note), version: number(item.version), pages: array(item.pages, value => { const page = object(value); return { id: text(page.id), position: number(page.position), width: number(page.width), height: number(page.height), bytes: number(page.bytes), status: text(page.status), failure: text(page.failure), uploadKey: text(page.upload_key) }; }) };
+ return {coverId:typeof item.cover_id==='string'?item.cover_id:'',humanReviewer:typeof item.human_reviewer==='string'?item.human_reviewer:'',humanReviewedAt:typeof item.human_reviewed_at==='string'?item.human_reviewed_at:'',releaseStatus:typeof item.release_status==='string'?item.release_status:'draft',preparationMethod:typeof item.preparation_method==='string'?item.preparation_method:'unspecified',humanReviewed:item.human_reviewed===true,source:typeof item.source_note==='string'?item.source_note:'',credits:typeof item.credits==='string'?item.credits:'',rightsConfirmed:item.rights_confirmed===true,confirmedBy:typeof item.confirmed_by==='string'?item.confirmed_by:'', id: text(item.id), releaseId: text(item.release_id), projectId: text(item.project_id), chapterId: text(item.chapter_id), titleId: text(item.title_id), titleName: text(item.title_name), chapterLabel: text(item.chapter_label), teamName: text(item.team_name), state: text(item.state), note: text(item.note), version: number(item.version), pages: array(item.pages, value => { const page = object(value); return { originalName:typeof page.original_name==='string'?page.original_name:'',thumbnailId:typeof page.thumbnail_id==='string'?page.thumbnail_id:'',id: text(page.id), position: number(page.position), width: number(page.width), height: number(page.height), bytes: number(page.bytes), status: text(page.status), failure: text(page.failure), uploadKey: text(page.upload_key) }; }) };
 }
 export class HttpPublishingGateway implements PublishingGateway {
  constructor(private api: ApiClient) {}
@@ -36,7 +36,7 @@ export class HttpPublishingGateway implements PublishingGateway {
    const token = await this.api.csrfToken();
    if (cancelled) throw new AppFailure('upload_cancelled');
    return new Promise<void>((resolve, reject) => {
-    request.open('PUT', '/api/v1/studio/revisions/' + encodeURIComponent(id) + '/pages?key=' + encodeURIComponent(source.key) + '&position=' + position);
+    request.open('PUT', '/api/v1/studio/revisions/' + encodeURIComponent(id) + '/pages?key=' + encodeURIComponent(source.key) + '&position=' + position + '&name=' + encodeURIComponent(source.name));
     request.withCredentials = true; request.timeout = 600000;
     request.setRequestHeader('X-CSRF-Token', token); request.setRequestHeader('Content-Type', 'application/octet-stream');
     request.upload.onprogress = event => { if (event.lengthComputable) progress(event.loaded / event.total); };
@@ -53,10 +53,13 @@ export class HttpPublishingGateway implements PublishingGateway {
   return { done, cancel: () => { cancelled = true; request.abort(); } };
  }
  async reorder(id: string, version: number, pageIds: string[]) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/order', 'PUT', { version, page_ids: pageIds }); }
- async remove(id: string, pageId: string) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/pages/' + encodeURIComponent(pageId), 'DELETE'); }
- async attribution(id:string,version:number,source:string,credits:string,confirmed:boolean){await this.api.call('/api/v1/studio/revisions/'+encodeURIComponent(id)+'/attribution','PUT',{version,source_note:source,credits,rights_confirmed:confirmed});}
+ async remove(id: string, pageId: string,version:number) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/pages/' + encodeURIComponent(pageId)+'?version='+version, 'DELETE'); }
+ async attribution(id:string,version:number,source:string,credits:string,confirmed:boolean,preparationMethod='unspecified',humanReviewed=false){await this.api.call('/api/v1/studio/revisions/'+encodeURIComponent(id)+'/attribution','PUT',{version,source_note:source,credits,rights_confirmed:confirmed,preparation_method:preparationMethod,human_reviewed:humanReviewed});}
  async submit(id: string, version: number) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/submit', 'POST', { version }); }
  async pending(offset=0) { return this.items('/api/v1/moderation/revisions?offset='+offset, revision); }
  async review(id: string, decision: 'publish' | 'reject', reason: string) { await this.api.call('/api/v1/moderation/revisions/' + encodeURIComponent(id) + '/review', 'POST', { decision, reason }); }
+ async selectCover(projectId:string,pageId:string){await this.api.call('/api/v1/studio/projects/'+encodeURIComponent(projectId)+'/cover','PUT',{page_id:pageId});}
+ async retryPage(revisionId:string,pageId:string){await this.api.call('/api/v1/studio/revisions/'+encodeURIComponent(revisionId)+'/pages/'+encodeURIComponent(pageId)+'/retry','POST',{});}
+ async restore(id:string,reason:string){await this.api.call('/api/v1/moderation/releases/'+encodeURIComponent(id)+'/restore','POST',{reason});}
  async withdraw(id: string, reason: string) { await this.api.call('/api/v1/moderation/releases/' + encodeURIComponent(id) + '/withdraw', 'POST', { reason }); }
 }

@@ -153,9 +153,15 @@ func (handler *CommunityHandler) reports(request *gin.Context) {
 	}
 	result := []gin.H{}
 	for _, item := range items {
-		result = append(result, gin.H{"id": item.ID, "title_id": item.TitleID, "release_id": item.ReleaseID, "page_id": item.PageID, "target_type": item.TargetType, "target_id": item.TargetID, "category": item.Category, "reason": item.Reason, "contact_email": item.ContactEmail, "status": item.Status, "created_at": item.CreatedAt})
+		result = append(result, gin.H{"id": item.ID, "title_id": item.TitleID, "release_id": item.ReleaseID, "page_id": item.PageID, "target_type": item.TargetType, "target_id": item.TargetID, "category": item.Category, "reason": item.Reason, "contact_email": item.ContactEmail, "status": item.Status, "created_at": item.CreatedAt,
+			"title_name": item.TitleName, "title_slug": item.TitleSlug, "team_name": item.TeamName, "team_slug": item.TeamSlug, "chapter_label": item.ChapterLabel, "release_status": item.ReleaseStatus, "revision_id": item.RevisionID, "page_position": item.PagePosition, "comment_body": item.CommentBody, "comment_author": item.CommentAuthor, "comment_hidden": item.CommentHidden, "comment_deleted": item.CommentDeleted, "history": item.History})
 	}
-	request.JSON(200, gin.H{"items": result, "has_more": len(items) == 50})
+	next := ""
+	if len(items) == 50 {
+		next = items[len(items)-1].ID
+	}
+	request.Header("Cache-Control", "no-store")
+	request.JSON(200, gin.H{"items": result, "has_more": next != "", "next": next})
 }
 func (handler *CommunityHandler) resolve(request *gin.Context) {
 	var input struct {

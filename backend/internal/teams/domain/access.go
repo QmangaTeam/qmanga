@@ -70,21 +70,32 @@ func (access Access) Allows(action Action) bool {
 
 type Team struct {
 	ID, Slug, Name, Description string
+	TelegramURL                 string
 	ReviewStatus, ReviewNote    string
 	Approved                    bool
 }
 
 var slugPattern = regexp.MustCompile("^[a-z0-9]+(-[a-z0-9]+)*$")
 
-func NewTeam(id, slug, name, description string) (Team, error) {
+func NewTeam(id, slug, name, description string, telegram ...string) (Team, error) {
 	slug = strings.TrimSpace(slug)
 	name = strings.TrimSpace(name)
 	description = strings.TrimSpace(description)
 	if id == "" || len(slug) < 3 || len(slug) > 64 || !slugPattern.MatchString(slug) || utf8.RuneCountInString(name) < 2 || utf8.RuneCountInString(name) > 80 || strings.ContainsAny(name, "\r\n\t") || utf8.RuneCountInString(description) > 2000 {
 		return Team{}, ErrInvalid
 	}
-	return Team{ID: id, Slug: slug, Name: name, Description: description, ReviewStatus: "pending"}, nil
+	link := ""
+	if len(telegram) > 0 {
+		link = strings.TrimSuffix(strings.TrimSpace(telegram[0]), "/")
+	}
+	if link != "" && !telegramPattern.MatchString(link) {
+		return Team{}, ErrInvalid
+	}
+	return Team{ID: id, Slug: slug, Name: name, Description: description, TelegramURL: link, ReviewStatus: "pending"}, nil
 }
+
+var telegramPattern = regexp.MustCompile(`^https://t\.me/[A-Za-z][A-Za-z0-9_]{4,31}$`)
+
 func InvitationEmail(value string) (string, error) {
 	value = strings.ToLower(strings.TrimSpace(value))
 	parsed, failure := mail.ParseAddress(value)
