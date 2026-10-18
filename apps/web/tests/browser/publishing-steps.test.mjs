@@ -106,7 +106,7 @@ test('new chapter input requires confirmation before leaving and survives cancel
   let confirmations=0;const cancel=async dialog=>{confirmations++;assert.equal(dialog.type(),'confirm');await dialog.dismiss();};
   page.on('dialog',cancel);
   // The initially selected existing chapter is saved state, so leaving is unrestricted.
-  await page.getByRole('link',{name:'← Все проекты'}).click();await page.waitForURL('**/studio/projects');assert.equal(confirmations,0);
+  await page.getByRole('link',{name:'← Все проекты'}).click();await page.waitForURL('**/studio/projects');assert.equal(confirmations,0);page.off('dialog',cancel);
   await page.goto(editorPath);await page.locator('.chapter-sidebar select').first().selectOption({label:'Добавить новую главу'});
   await page.getByRole('textbox',{name:'Номер или обозначение главы'}).fill('Unsaved number');
   await page.getByRole('textbox',{name:'Название главы · необязательно'}).fill('Unsaved title');
@@ -114,12 +114,13 @@ test('new chapter input requires confirmation before leaving and survives cancel
   await page.getByRole('button',{name:'Добавить главу и открыть черновик'}).click();await page.getByRole('alert').first().waitFor();
   await page.unroute('**/api/v1/studio/projects/*/chapters');
   assert.equal(await page.getByRole('textbox',{name:'Название главы · необязательно'}).inputValue(),'Unsaved title','failed chapter save must retain edits');
+  const cancellation=page.waitForEvent('dialog');
   await page.getByRole('link',{name:'← Все проекты'}).click();
-  assert.equal(confirmations,1,'new chapter edits must prompt before navigation');
+  const cancelDialog=await cancellation;assert.equal(cancelDialog.type(),'confirm');await cancelDialog.dismiss();
   assert.equal(new URL(page.url()).pathname,editorPath);
   assert.equal(await page.getByRole('textbox',{name:'Номер или обозначение главы'}).inputValue(),'Unsaved number');
   assert.equal(await page.getByRole('textbox',{name:'Название главы · необязательно'}).inputValue(),'Unsaved title');
-  page.off('dialog',cancel);page.once('dialog',async dialog=>{assert.equal(dialog.type(),'confirm');await dialog.accept();});
-  await page.getByRole('link',{name:'← Все проекты'}).click();await page.waitForURL('**/studio/projects');
+  const leaving=page.waitForEvent('dialog');
+  await page.getByRole('link',{name:'← Все проекты'}).click();const leaveDialog=await leaving;assert.equal(leaveDialog.type(),'confirm');await leaveDialog.accept();await page.waitForURL('**/studio/projects');
  }finally{await context.close();}
 });
