@@ -36,4 +36,6 @@ ordinal: 10
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented persistent right sidebar at desktop and native right-hand modal drawer on mobile, sharing fields and GET contract. Committed URL values are restored on opening; canceled edits do not leak. Search preserves applied filters; Apply clears pagination cursor. Escape, close button, backdrop, focus return, desktop resize, reduced motion and fixed Apply covered. Visual inspection: 320px light drawer and 1280px dark sidebar. Docker build passes: 91 application + 28 SSR tests, Svelte checks 0 errors/warnings, architecture and contrast checks. Full isolated browser integration: 26/26 passing, 0 skipped (tmp/filter-full-browser.log), including age-rating compatibility. Root and isolated sandbox rebuilt successfully. Existing verify workflow discovers the new regression automatically. Local acceptance only: remote CI, staging and release of this SHA remain required; do not mark Done.
+
+Implementation commit: 7958579. Age classification commits: 070824b and 91d2ba9. All 26 browser scenarios passed together against the rebuilt Docker integration stack.
 <!-- SECTION:NOTES:END -->
