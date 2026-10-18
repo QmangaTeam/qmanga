@@ -91,3 +91,9 @@ apps/web/src/
 ## Immediate migration
 
 The initial flat scaffold has been replaced by platform adapters, a Gin HTTP transport and explicit composition. Publication state and media limits live in a pure Go domain; reader quality, position and offline completeness policies live in pure TypeScript. Application scenarios consume ports; concrete persistence/network adapters are wired at the composition roots. Existing product documents remain the functional acceptance checklist.
+
+## Catalogue age classification contract
+
+`age_rating` is an integer: `0` means unclassified, and `12`, `16`, `18` are explicit editorial classifications. Existing titles default to `0`; the migration never assumes `12+`. Public summaries and details return the value. `GET /api/v1/titles?age_rating=18` filters the exact classification; `0` selects unclassified titles, and omission/empty value selects all classifications. Invalid values are rejected.
+
+Only an administrator may change title metadata. On an update, omitted `age_rating` preserves the stored classification for older clients; explicit `0` clears it. This additive field does not introduce a reader access gate, a new genre, or automatic content classification.

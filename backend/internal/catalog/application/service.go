@@ -10,6 +10,7 @@ import (
 
 type Genre struct{ ID, Name, Slug string }
 type Summary struct {
+	AgeRating                                                        int
 	ID, Slug, Name, Kind, OriginalStatus, TranslationStatus, CoverID string
 	Demo                                                             bool
 	ChapterCount, RatingCount                                        int
@@ -21,6 +22,7 @@ type Cursor struct {
 	Name, ID  string
 }
 type Filter struct {
+	AgeRating                                                   *int
 	HasChapters                                                 bool
 	Featured                                                    bool
 	Query, Kind, Genre, OriginalStatus, TranslationStatus, Sort string
@@ -121,6 +123,9 @@ func New(repository Repository, newID func() string) *Service {
 	return &Service{repository: repository, newID: newID}
 }
 func (service *Service) List(ctx context.Context, filter Filter) (Page, error) {
+	if filter.AgeRating != nil && !domain.ValidAgeRating(*filter.AgeRating) {
+		return Page{}, domain.ErrInvalid
+	}
 	filter.Query = strings.ToLower(strings.TrimSpace(filter.Query))
 	if utf8.RuneCountInString(filter.Query) > 80 {
 		return Page{}, domain.ErrInvalid

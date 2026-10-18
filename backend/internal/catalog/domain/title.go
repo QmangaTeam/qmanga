@@ -16,6 +16,8 @@ var (
 )
 
 type Metadata struct {
+	// nil preserves the current rating on updates from older clients; 0 explicitly means unspecified.
+	AgeRating                                                                                 *int
 	Publication                                                                               Publication
 	Listed                                                                                    bool
 	Slug, Name, OriginalName, Kind, OriginalStatus, TranslationStatus, Description, Direction string
@@ -38,7 +40,12 @@ func oneOf(value string, choices ...string) bool {
 	}
 	return false
 }
+func ValidAgeRating(value int) bool { return value == 0 || value == 12 || value == 16 || value == 18 }
+
 func NewTitle(id string, input Metadata) (Title, error) {
+	if input.AgeRating != nil && !ValidAgeRating(*input.AgeRating) {
+		return Title{}, ErrInvalid
+	}
 	if !input.Publication.Valid() {
 		return Title{}, ErrInvalid
 	}

@@ -25,3 +25,18 @@ func TestKazakhMetadataAndChapterLabels(testingTarget *testing.T) {
 		}
 	}
 }
+
+func TestAgeRatingDoesNotAssumeAClassification(t *testing.T) {
+	base := Metadata{Slug: "age-test", Name: "Age test", Kind: "manga", OriginalStatus: "ongoing", TranslationStatus: "ongoing", Direction: "ltr"}
+	if title, err := NewTitle("id", base); err != nil || title.AgeRating != nil {
+		t.Fatal("legacy metadata must remain unspecified", err)
+	}
+	for _, age := range []int{0, 12, 16, 18, -1, 1, 14, 19, 99} {
+		base.AgeRating = &age
+		_, err := NewTitle("id", base)
+		valid := age == 0 || age == 12 || age == 16 || age == 18
+		if (err == nil) != valid {
+			t.Fatalf("age %d: %v", age, err)
+		}
+	}
+}

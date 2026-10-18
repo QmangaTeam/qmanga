@@ -28,7 +28,7 @@ const titleVisible = "(title.is_listed OR " + hasChapters + ")"
 const summaryColumns = `title.id,title.slug,title.name_kk,title.type,title.status_original,title.status_translation,title.cover_asset_id,title.is_demo,title.created_at,title.updated_at,
  (SELECT count(DISTINCT chapter.id)` + publicationJoins + `WHERE chapter.title_id=title.id AND ` + publicationVisible + `),
  (SELECT count(*) FROM ratings rating JOIN users rating_user ON rating_user.id=rating.user_id AND NOT rating_user.is_blocked WHERE rating.title_id=title.id) AS rating_count,
- coalesce((SELECT avg(rating.score)::float8 FROM ratings rating JOIN users rating_user ON rating_user.id=rating.user_id AND NOT rating_user.is_blocked WHERE rating.title_id=title.id),0) AS score`
+ coalesce((SELECT avg(rating.score)::float8 FROM ratings rating JOIN users rating_user ON rating_user.id=rating.user_id AND NOT rating_user.is_blocked WHERE rating.title_id=title.id),0) AS score,title.age_rating`
 
 func translate(failure error) error {
 	if errors.Is(failure, pgx.ErrNoRows) {
@@ -48,7 +48,7 @@ func translate(failure error) error {
 
 func scanSummary(row pgx.Row) (application.Summary, error) {
 	var item application.Summary
-	failure := row.Scan(&item.ID, &item.Slug, &item.Name, &item.Kind, &item.OriginalStatus, &item.TranslationStatus, &item.CoverID, &item.Demo, &item.CreatedAt, &item.UpdatedAt, &item.ChapterCount, &item.RatingCount, &item.Score)
+	failure := row.Scan(&item.ID, &item.Slug, &item.Name, &item.Kind, &item.OriginalStatus, &item.TranslationStatus, &item.CoverID, &item.Demo, &item.CreatedAt, &item.UpdatedAt, &item.ChapterCount, &item.RatingCount, &item.Score, &item.AgeRating)
 	return item, failure
 }
 
@@ -64,6 +64,9 @@ func (repository *Repository) List(ctx context.Context, filter application.Filte
 	bind := func(value any) string {
 		arguments = append(arguments, value)
 		return fmt.Sprintf("$%d", len(arguments))
+	}
+	if filter.AgeRating != nil {
+		conditions = append(conditions, "title.age_rating="+bind(*filter.AgeRating))
 	}
 	if filter.Query != "" {
 		escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(filter.Query)
@@ -137,8 +140,8 @@ func (repository *Repository) AdminDetail(ctx context.Context, actorID, id strin
 func (repository *Repository) detail(ctx context.Context, condition, id string, public bool) (application.Detail, error) {
 	detail := application.Detail{Genres: []application.Genre{}, Projects: []application.Project{}}
 	title := &detail.Title
-	failure := repository.pool.QueryRow(ctx, `SELECT title.id,title.slug,title.name_kk,title.name_original,title.aliases,title.type,title.status_original,title.status_translation,title.description_kk,title.direction,title.is_demo,title.authors,title.is_featured,title.is_listed,title.cover_asset_id,title.publication,
- coalesce((SELECT avg(score)::float8 FROM ratings JOIN users rating_user ON rating_user.id=ratings.user_id AND NOT rating_user.is_blocked WHERE title_id=title.id),0),(SELECT count(*) FROM ratings JOIN users rating_user ON rating_user.id=ratings.user_id AND NOT rating_user.is_blocked WHERE title_id=title.id) FROM titles title WHERE `+condition, id).Scan(&title.ID, &title.Slug, &title.Name, &title.OriginalName, &title.Aliases, &title.Kind, &title.OriginalStatus, &title.TranslationStatus, &title.Description, &title.Direction, &title.Demo, &title.Authors, &title.Featured, &title.Listed, &detail.CoverID, &title.Publication, &detail.Score, &detail.RatingCount)
+	failure := repository.pool.QueryRow(ctx, `SELECT title.id,title.slug,title.name_kk,title.name_original,title.aliases,title.type,title.status_original,title.status_translation,title.description_kk,title.direction,title.is_demo,title.authors,title.is_featured,title.is_listed,title.cover_asset_id,title.publication,title.age_rating,
+ coalesce((SELECT avg(score)::float8 FROM ratings JOIN users rating_user ON rating_user.id=ratings.user_id AND NOT rating_user.is_blocked WHERE title_id=title.id),0),(SELECT count(*) FROM ratings JOIN users rating_user ON rating_user.id=ratings.user_id AND NOT rating_user.is_blocked WHERE title_id=title.id) FROM titles title WHERE `+condition, id).Scan(&title.ID, &title.Slug, &title.Name, &title.OriginalName, &title.Aliases, &title.Kind, &title.OriginalStatus, &title.TranslationStatus, &title.Description, &title.Direction, &title.Demo, &title.Authors, &title.Featured, &title.Listed, &detail.CoverID, &title.Publication, &title.AgeRating, &detail.Score, &detail.RatingCount)
 	if failure != nil {
 		return detail, translate(failure)
 	}
@@ -196,7 +199,7 @@ func (repository *Repository) detail(ctx context.Context, condition, id string, 
 func (repository *Repository) UpdateTitle(ctx context.Context, actorID string, title domain.Title) error {
 	return repository.withAdmin(ctx, actorID, func(transaction pgx.Tx) error {
 		search := strings.ToLower(title.Name + " " + title.OriginalName + " " + strings.Join(title.Aliases, " "))
-		result, failure := transaction.Exec(ctx, `UPDATE titles SET slug=$2,name_kk=$3,name_original=$4,aliases=$5,type=$6,status_original=$7,status_translation=$8,description_kk=$9,direction=$10,is_demo=$11,search_text=$12,authors=$13,is_featured=$14,is_listed=$15,publication=$16,updated_at=now() WHERE id=$1`, title.ID, title.Slug, title.Name, title.OriginalName, title.Aliases, title.Kind, title.OriginalStatus, title.TranslationStatus, title.Description, title.Direction, title.Demo, search, title.Authors, title.Featured, title.Listed, title.Publication)
+		result, failure := transaction.Exec(ctx, `UPDATE titles SET slug=$2,name_kk=$3,name_original=$4,aliases=$5,type=$6,status_original=$7,status_translation=$8,description_kk=$9,direction=$10,is_demo=$11,search_text=$12,authors=$13,is_featured=$14,is_listed=$15,publication=$16,age_rating=COALESCE($17::smallint,age_rating),updated_at=now() WHERE id=$1`, title.ID, title.Slug, title.Name, title.OriginalName, title.Aliases, title.Kind, title.OriginalStatus, title.TranslationStatus, title.Description, title.Direction, title.Demo, search, title.Authors, title.Featured, title.Listed, title.Publication, title.AgeRating)
 		if failure != nil {
 			return failure
 		}
@@ -397,7 +400,7 @@ func audit(ctx context.Context, transaction pgx.Tx, actorID, kind, entityID stri
 func (repository *Repository) CreateTitle(ctx context.Context, actorID string, title domain.Title) error {
 	return repository.withAdmin(ctx, actorID, func(transaction pgx.Tx) error {
 		search := strings.ToLower(title.Name + " " + title.OriginalName + " " + strings.Join(title.Aliases, " "))
-		_, failure := transaction.Exec(ctx, `INSERT INTO titles(id,slug,name_kk,name_original,aliases,type,status_original,status_translation,description_kk,direction,is_demo,search_text,authors,is_featured,is_listed,publication) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)`, title.ID, title.Slug, title.Name, title.OriginalName, title.Aliases, title.Kind, title.OriginalStatus, title.TranslationStatus, title.Description, title.Direction, title.Demo, search, title.Authors, title.Featured, title.Listed, title.Publication)
+		_, failure := transaction.Exec(ctx, `INSERT INTO titles(id,slug,name_kk,name_original,aliases,type,status_original,status_translation,description_kk,direction,is_demo,search_text,authors,is_featured,is_listed,publication,age_rating) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,COALESCE($17::smallint,0))`, title.ID, title.Slug, title.Name, title.OriginalName, title.Aliases, title.Kind, title.OriginalStatus, title.TranslationStatus, title.Description, title.Direction, title.Demo, search, title.Authors, title.Featured, title.Listed, title.Publication, title.AgeRating)
 		if failure != nil {
 			return failure
 		}

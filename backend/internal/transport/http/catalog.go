@@ -49,6 +49,7 @@ func (handler *CatalogHandler) Register(api *gin.RouterGroup, identity *Identity
 }
 
 type titleSummaryDTO struct {
+	AgeRating         int       `json:"age_rating"`
 	ID                string    `json:"id"`
 	Slug              string    `json:"slug"`
 	Name              string    `json:"name"`
@@ -70,7 +71,7 @@ func coverURL(id string) string {
 	return "/api/v1/media/" + url.PathEscape(id)
 }
 func summaryView(item application.Summary) titleSummaryDTO {
-	return titleSummaryDTO{ID: item.ID, Slug: item.Slug, Name: item.Name, Kind: item.Kind, OriginalStatus: item.OriginalStatus, TranslationStatus: item.TranslationStatus, CoverURL: coverURL(item.CoverID), Demo: item.Demo, ChapterCount: item.ChapterCount, RatingCount: item.RatingCount, Score: item.Score, UpdatedAt: item.UpdatedAt}
+	return titleSummaryDTO{AgeRating: item.AgeRating, ID: item.ID, Slug: item.Slug, Name: item.Name, Kind: item.Kind, OriginalStatus: item.OriginalStatus, TranslationStatus: item.TranslationStatus, CoverURL: coverURL(item.CoverID), Demo: item.Demo, ChapterCount: item.ChapterCount, RatingCount: item.RatingCount, Score: item.Score, UpdatedAt: item.UpdatedAt}
 }
 
 type catalogueCursor struct {
@@ -105,6 +106,14 @@ func (handler *CatalogHandler) list(request *gin.Context) {
 		return
 	}
 	filter := application.Filter{Query: request.Query("q"), Kind: request.Query("kind"), Genre: request.Query("genre"), OriginalStatus: request.Query("original_status"), TranslationStatus: request.Query("translation_status"), Sort: request.DefaultQuery("sort", "updated"), Featured: request.Query("featured") == "true", HasChapters: request.Query("has_chapters") == "true", Limit: limit}
+	if raw := request.Query("age_rating"); raw != "" {
+		age, err := strconv.Atoi(raw)
+		if err != nil {
+			Error(request, 400, "invalid_query", "Invalid age rating")
+			return
+		}
+		filter.AgeRating = &age
+	}
 	if raw := request.Query("cursor"); raw != "" {
 		decoded, failure := base64.RawURLEncoding.DecodeString(raw)
 		var cursor catalogueCursor
@@ -184,7 +193,11 @@ func (handler *CatalogHandler) detail(request *gin.Context) {
 }
 func detailView(detail application.Detail) gin.H {
 	title := detail.Title
-	return gin.H{"id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "publication": title.Publication, "chapter_count": detail.ChapterCount, "reader_count": detail.ReaderCount, "rating_distribution": detail.RatingDistribution, "aliases": title.Aliases, "authors": title.Authors, "featured": title.Featured, "listed": title.Listed, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
+	ageRating := 0
+	if title.AgeRating != nil {
+		ageRating = *title.AgeRating
+	}
+	return gin.H{"age_rating": ageRating, "id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "publication": title.Publication, "chapter_count": detail.ChapterCount, "reader_count": detail.ReaderCount, "rating_distribution": detail.RatingDistribution, "aliases": title.Aliases, "authors": title.Authors, "featured": title.Featured, "listed": title.Listed, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
 }
 func (handler *CatalogHandler) adminDetail(request *gin.Context) {
 	account, _ := CurrentAccount(request)
@@ -311,6 +324,7 @@ func (handler *CatalogHandler) adminTitles(request *gin.Context) {
 }
 func (handler *CatalogHandler) createTitle(request *gin.Context) {
 	var input struct {
+		AgeRating         *int               `json:"age_rating"`
 		Publication       domain.Publication `json:"publication"`
 		Slug              string             `json:"slug"`
 		Name              string             `json:"name"`
@@ -331,7 +345,7 @@ func (handler *CatalogHandler) createTitle(request *gin.Context) {
 		return
 	}
 	account, _ := CurrentAccount(request)
-	metadata := domain.Metadata{Publication: input.Publication, Slug: input.Slug, Name: input.Name, OriginalName: input.OriginalName, Kind: input.Kind, OriginalStatus: input.OriginalStatus, TranslationStatus: input.TranslationStatus, Description: input.Description, Direction: input.Direction, Authors: input.Authors, Featured: input.Featured, Listed: input.Listed, Aliases: input.Aliases, GenreIDs: input.GenreIDs, Demo: input.Demo}
+	metadata := domain.Metadata{AgeRating: input.AgeRating, Publication: input.Publication, Slug: input.Slug, Name: input.Name, OriginalName: input.OriginalName, Kind: input.Kind, OriginalStatus: input.OriginalStatus, TranslationStatus: input.TranslationStatus, Description: input.Description, Direction: input.Direction, Authors: input.Authors, Featured: input.Featured, Listed: input.Listed, Aliases: input.Aliases, GenreIDs: input.GenreIDs, Demo: input.Demo}
 	var title domain.Title
 	var failure error
 	if request.Request.Method == "PUT" {
