@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-18 21:26'
-updated_date: '2026-10-18 21:35'
+updated_date: '2026-10-18 22:31'
 labels:
   - process
   - ci
@@ -38,4 +38,8 @@ ordinal: 3026
 Уточнён единый порядок в существующем RUNBOOK.md, AGENTS.md ссылается на него. Добавлена таблица контрактов UI/application/API/PostgreSQL/media/offline и матрица проверок, переходы Review/Done, привязка выпуска к SHA, staging и rollback. В Verify добавлены setup-bun 1.4.3 и locked install + backlog doctor; полный прежний CI сохранён, новые browser/*.test.mjs включаются автоматически. Локально выполнены точные shell-команды нового шага на Bun 1.4.3; doctor без ошибок. YAML и ссылки валидны; bash syntax, offsite backup checksum regression и shell setup recovery прошли. Начальный вариант запуска backlog в Alpine выявил glibc ELF несовместимость; итоговый workflow запускает CLI на Ubuntu runner через официальный setup-bun, не внутри Alpine. Remote Actions в этой сессии не запускались. Review до наблюдаемого CI для нового коммита.
 
 Контракт и CI: cb0150c. Дополнительно реально выполнены полный Go/PostgreSQL/codec прогон и полный browser suite дважды; обнаруженная проблема тестовой изоляции оформлена TASK-30 и исправлена в 4b1b9af. Local evidence не заменяет ещё не наблюдавшийся Actions run для этих SHA.
+
+Ревью владельца завершено для23 карточек на базе3302515: проверены реализация, права доступа, границы API/хранилищ и интеграция. Итоговые локальные проверки:106 Go-тестов/подтестов,114 прикладных и29 SSR-тестов,40/40 браузерных сценариев;0 ошибок и0 пропусков, Svelte0 ошибок/предупреждений. Логи tmp/review-complete-go.jsonl, tmp/review-complete-web-build.log, tmp/review-final-browser-acceptance.log. Точные auth/publishing/reading CI smoke пройдены на настоящих PostgreSQL/MinIO/Mailpit. Это локальная приёмка; Review сохранён до удалённого CI, staging и наблюдаемого выпуска того же SHA. Для TASK17 дополнительно нужны утверждение правовых текстов владельцем и действующий ящик поддержки; для TASK26 остаётся предрелизная проверка consent/contact.
+
+Review corrected exact CI auth registration payload d044eea and isolated smoke/browser auth phases9aa2d19; real PowerShell auth→publishing→reading smoke passed. f75f1f3 serializes browser files with real production auth limits; full40/40 acceptance passed in79s. Same-image API recreation preserves session, manifests and streamed media checksums. Backup deletion guard and fail-closed shell acceptance419641b are included in CI. No remote pipeline/release claimed.
 <!-- SECTION:NOTES:END -->

@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-18 21:21'
-updated_date: '2026-10-18 21:35'
+updated_date: '2026-10-18 22:31'
 labels:
   - ui
   - typography
@@ -43,4 +43,6 @@ Manrope проверен по реальному cmap: отсутствуют Ә
 Финально: Onest подключён; Docker build прошёл 90 frontend + 26 SSR тестов, app/preview 0 errors/warnings, architecture/contrast. Браузерная проверка подтвердила один same-origin запрос WOFF2 (84056 байт), загрузку regular/bold, fallback при отказе загрузки, главную/каталог/меню/регистрацию/реальный reader на 320/360/1280 в kk/ru × light/dark. Скриншоты осмотрены; переносов за пределы экрана в проверенных видах нет. Все 21 browser tests прошли дважды подряд на одной отдельной fixture. Логи tmp/font-build.log и tmp/integration/browser-repeat-{1,2}.log; скриншоты tmp/integration/final-screenshots/font-*.png. Общий Go/PostgreSQL/codec прогон: 73 test/subtest, 23 packages, без actual skips. Remote CI/выпуск и физические устройства не проверялись. Следующий шаг — наблюдаемый CI и приёмка тестового домена.
 
 Код и тесты шрифта: 8722348. При проверке diff найдён пробел в исходном OFL.txt; в следующем служебном коммите убран только конечный пробел строки, текст лицензии сохранён.
+
+Ревью владельца завершено для23 карточек на базе3302515: проверены реализация, права доступа, границы API/хранилищ и интеграция. Итоговые локальные проверки:106 Go-тестов/подтестов,114 прикладных и29 SSR-тестов,40/40 браузерных сценариев;0 ошибок и0 пропусков, Svelte0 ошибок/предупреждений. Логи tmp/review-complete-go.jsonl, tmp/review-complete-web-build.log, tmp/review-final-browser-acceptance.log. Точные auth/publishing/reading CI smoke пройдены на настоящих PostgreSQL/MinIO/Mailpit. Это локальная приёмка; Review сохранён до удалённого CI, staging и наблюдаемого выпуска того же SHA. Для TASK17 дополнительно нужны утверждение правовых текстов владельцем и действующий ящик поддержки; для TASK26 остаётся предрелизная проверка consent/contact.
 <!-- SECTION:NOTES:END -->

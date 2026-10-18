@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-18 21:21'
-updated_date: '2026-10-18 21:35'
+updated_date: '2026-10-18 22:31'
 labels:
   - ui
   - bug
@@ -40,4 +40,6 @@ ordinal: 1026
 Причина: глобальный :focus-visible рисовал отдельный контур input внутри составного search-field. У input контур убран, focus-within на контейнере показывает единую рамку. Новый тест до исправления падал во всех kk/ru × light/dark сочетаниях. На обновлённом локальном Docker: 90 frontend + 26 SSR тестов, app/preview 0 errors/warnings, architecture/contrast/build прошли; 4 поисковые браузерные проверки прошли, включая 320/360/1280, Tab, Escape, кнопку закрытия и реальный GET /catalog?q= с кодированием строки. Во время первого запуска одновременно с пересозданием web был один timeout; повтор после полной готовности сервисов прошёл. Полная интеграция выполняется отдельно на qmanga-stage4-integration; до её результата статус In Progress.
 
 Итоговый код: d6f9a0b. Полный Go/PostgreSQL/codec прогон прошёл (73 test/subtest, 23 packages, actual skips 0). Полный browser suite на финальном Docker образе со шрифтом Onest прошёл дважды: 21/21, без ошибок и skips; поисковые 4 сочетания включены. Обнаруженная при интеграции изоляция fixture исправлена в TASK-30 (4b1b9af), продуктовая библиотека не менялась. Финальные логи tmp/integration/browser-repeat-{1,2}.log; скриншоты search-*.png в tmp/integration/final-screenshots. Review до remote CI и выпуска.
+
+Ревью владельца завершено для23 карточек на базе3302515: проверены реализация, права доступа, границы API/хранилищ и интеграция. Итоговые локальные проверки:106 Go-тестов/подтестов,114 прикладных и29 SSR-тестов,40/40 браузерных сценариев;0 ошибок и0 пропусков, Svelte0 ошибок/предупреждений. Логи tmp/review-complete-go.jsonl, tmp/review-complete-web-build.log, tmp/review-final-browser-acceptance.log. Точные auth/publishing/reading CI smoke пройдены на настоящих PostgreSQL/MinIO/Mailpit. Это локальная приёмка; Review сохранён до удалённого CI, staging и наблюдаемого выпуска того же SHA. Для TASK17 дополнительно нужны утверждение правовых текстов владельцем и действующий ящик поддержки; для TASK26 остаётся предрелизная проверка consent/contact.
 <!-- SECTION:NOTES:END -->

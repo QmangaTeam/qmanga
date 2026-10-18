@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-identity'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 22:05'
+updated_date: '2026-10-18 22:31'
 labels:
   - stage-5
 dependencies: []
@@ -22,7 +22,7 @@ ordinal: 19
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Пользователь и команда загружают аватар через Go-медиа шлюз: JPEG/PNG/WebP, лимит размера, кадрирование/уменьшение и удаление метаданных. Свой аватар меняет владелец аккаунта, командный — её владелец/редактор по правам. Пустое состояние использует инициалы.
+- [x] #1 Пользователь и команда загружают аватар через Go-медиа шлюз: JPEG/PNG/WebP, лимит размера, кадрирование/уменьшение и удаление метаданных. Свой аватар меняет владелец аккаунта, командный — её владелец/редактор по правам. Пустое состояние использует инициалы.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -45,4 +45,10 @@ Implementation SHAs:22c8b47 (avatar pipeline/UI) andef70106 (accountbinding, dur
 Final cleanup review: added public DrainAvatarGarbage(ctx), at most20keys and5second derived deadline, retry errors preserve durable queue entries. Worker drains at startup and every minute independently of uploads/image jobs, including crash-reserved objects after their safety horizon. Added regressions for failed storage deletion followed by independent successful drain, cancellation and20key bound; existing PostgreSQL test excludes current keys. Verified go identity/bootstrap/worker tests; parent current-stack rebuild and full browser acceptance remain pending.
 
 Actual disposable-stack browser verification passed (identity-avatars.test.mjs,1test0fail): valid nickname registration/login; PNGupload through Go to sanitized256pxJPEG; same-originimage requests; GET/HEAD; byte206/multirange416; missing404; settings at320/360/1280 inboth themes withnooverflow. Captured ignoredtmp/all16-identity-screenshots and visually inspected dark320. Existing gateway+API duplicate nosniff header values arebothsafe; test validates everytoken. This browser stack preceded f87f2a7 workerdrain rebuild, so parent still validates finalSHA.
+
+Owner-requested review found two integration gaps: changing selectedteam reused avatar-editor failure/pending state; physicalavatarGC could race DB-before-object backup procedure. Fix keyed identity UI and mutual exclusion for backup/GC, with real regressions, before returning Review.
+
+Owner review fixes confirmed:419641b serializes physical avatar GC with DB/object backup using a live PostgreSQL guard, with real PG/shell exclusion and lost-lock tests.6e05758 keys avatar editors by account/team; real browser regression first reproduced A404→Bmissingavatar, then passed with actual upload and delayed in-flight team switch. Final full-suite acceptance tracked below; release remains pending.
+
+Ревью владельца завершено для23 карточек на базе3302515: проверены реализация, права доступа, границы API/хранилищ и интеграция. Итоговые локальные проверки:106 Go-тестов/подтестов,114 прикладных и29 SSR-тестов,40/40 браузерных сценариев;0 ошибок и0 пропусков, Svelte0 ошибок/предупреждений. Логи tmp/review-complete-go.jsonl, tmp/review-complete-web-build.log, tmp/review-final-browser-acceptance.log. Точные auth/publishing/reading CI smoke пройдены на настоящих PostgreSQL/MinIO/Mailpit. Это локальная приёмка; Review сохранён до удалённого CI, staging и наблюдаемого выпуска того же SHA. Для TASK17 дополнительно нужны утверждение правовых текстов владельцем и действующий ящик поддержки; для TASK26 остаётся предрелизная проверка consent/contact.
 <!-- SECTION:NOTES:END -->

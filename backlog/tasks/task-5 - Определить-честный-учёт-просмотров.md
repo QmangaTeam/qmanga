@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 21:58'
+updated_date: '2026-10-18 22:31'
 labels:
   - stage-2
 dependencies: []
@@ -35,4 +35,6 @@ Define truthful event/privacy contracts in ARCHITECTURE; persist transactional d
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented contract in docs/ARCHITECTURE.md. No public views counter: media/image hits, preloads and anonymous requests excluded. Dashboard completion is explicitly self-reported accepted last-page progress, deduplicated account/translation/UTC-day, not proof of human reading. 90-day activity retention and no IP/email/fingerprint collection. Code d809ebd, 8ead0ae, ee4ed3e; actual PostgreSQL/reading/HTTP tests passed 2026-10-19. Release/acceptance of same SHA remains pending.
+
+Ревью владельца завершено для23 карточек на базе3302515: проверены реализация, права доступа, границы API/хранилищ и интеграция. Итоговые локальные проверки:106 Go-тестов/подтестов,114 прикладных и29 SSR-тестов,40/40 браузерных сценариев;0 ошибок и0 пропусков, Svelte0 ошибок/предупреждений. Логи tmp/review-complete-go.jsonl, tmp/review-complete-web-build.log, tmp/review-final-browser-acceptance.log. Точные auth/publishing/reading CI smoke пройдены на настоящих PostgreSQL/MinIO/Mailpit. Это локальная приёмка; Review сохранён до удалённого CI, staging и наблюдаемого выпуска того же SHA. Для TASK17 дополнительно нужны утверждение правовых текстов владельцем и действующий ящик поддержки; для TASK26 остаётся предрелизная проверка consent/contact.
 <!-- SECTION:NOTES:END -->

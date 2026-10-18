@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 21:52'
+updated_date: '2026-10-18 22:31'
 labels:
   - stage-3
 dependencies: []
@@ -38,4 +38,8 @@ ordinal: 10
 Implemented persistent right sidebar at desktop and native right-hand modal drawer on mobile, sharing fields and GET contract. Committed URL values are restored on opening; canceled edits do not leak. Search preserves applied filters; Apply clears pagination cursor. Escape, close button, backdrop, focus return, desktop resize, reduced motion and fixed Apply covered. Visual inspection: 320px light drawer and 1280px dark sidebar. Docker build passes: 91 application + 28 SSR tests, Svelte checks 0 errors/warnings, architecture and contrast checks. Full isolated browser integration: 26/26 passing, 0 skipped (tmp/filter-full-browser.log), including age-rating compatibility. Root and isolated sandbox rebuilt successfully. Existing verify workflow discovers the new regression automatically. Local acceptance only: remote CI, staging and release of this SHA remain required; do not mark Done.
 
 Implementation commit: 7958579. Age classification commits: 070824b and 91d2ba9. All 26 browser scenarios passed together against the rebuilt Docker integration stack.
+
+Ревью владельца завершено для23 карточек на базе3302515: проверены реализация, права доступа, границы API/хранилищ и интеграция. Итоговые локальные проверки:106 Go-тестов/подтестов,114 прикладных и29 SSR-тестов,40/40 браузерных сценариев;0 ошибок и0 пропусков, Svelte0 ошибок/предупреждений. Логи tmp/review-complete-go.jsonl, tmp/review-complete-web-build.log, tmp/review-final-browser-acceptance.log. Точные auth/publishing/reading CI smoke пройдены на настоящих PostgreSQL/MinIO/Mailpit. Это локальная приёмка; Review сохранён до удалённого CI, staging и наблюдаемого выпуска того же SHA. Для TASK17 дополнительно нужны утверждение правовых текстов владельцем и действующий ящик поддержки; для TASK26 остаётся предрелизная проверка consent/contact.
+
+Review added failure-only screenshot/DOM/browser-error diagnostics88d9566 after an intermittent parallel-load sidebar timeout. Two focused4/4 runs and finalserial4/4 catalogue cases pass; no catalogue production defect was reproduced or claimed fixed.
 <!-- SECTION:NOTES:END -->
