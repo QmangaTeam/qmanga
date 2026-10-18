@@ -13,6 +13,7 @@ type Notification struct {
 type Repository interface {
 	List(context.Context, string, string) ([]Notification, error)
 	Read(context.Context, string, string) error
+	Unread(context.Context, string) (int, error)
 	Deliver(context.Context) (bool, error)
 }
 type Service struct{ repository Repository }
@@ -26,4 +27,8 @@ func (service *Service) Read(ctx context.Context, user, id string) error {
 }
 func (service *Service) Deliver(ctx context.Context) (bool, error) {
 	return service.repository.Deliver(ctx)
+}
+
+func (service *Service) Unread(ctx context.Context, user string) (int, error) {
+	return service.repository.Unread(ctx, user)
 }

@@ -64,3 +64,10 @@ func (repository *Repository) Deliver(ctx context.Context) (bool, error) {
 	}
 	return true, transaction.Commit(ctx)
 }
+
+// Only unread rows for the authenticated account are counted; delivery remains idempotent.
+func (repository *Repository) Unread(ctx context.Context, user string) (int, error) {
+	var count int
+	failure := repository.pool.QueryRow(ctx, `SELECT count(*) FROM notifications WHERE user_id=$1 AND NOT is_read`, user).Scan(&count)
+	return count, failure
+}

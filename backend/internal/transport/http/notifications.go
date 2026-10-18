@@ -13,6 +13,7 @@ func NewNotificationHandler(service *application.Service) *NotificationHandler {
 func (handler *NotificationHandler) Register(api *gin.RouterGroup, identity *IdentityHandler) {
 	group := api.Group("/notifications", identity.RequireUser(), expectedAccount())
 	group.GET("", handler.list)
+	group.GET("/unread-count", handler.unread)
 	group.PUT("/:id/read", handler.read)
 }
 func (handler *NotificationHandler) list(request *gin.Context) {
@@ -35,4 +36,14 @@ func (handler *NotificationHandler) read(request *gin.Context) {
 		return
 	}
 	request.Status(204)
+}
+
+func (handler *NotificationHandler) unread(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	count, failure := handler.service.Unread(request.Request.Context(), account.ID)
+	if failure != nil {
+		Error(request, 503, "unavailable", "Хабарлар уақытша қолжетімсіз")
+		return
+	}
+	request.JSON(200, gin.H{"count": count})
 }
