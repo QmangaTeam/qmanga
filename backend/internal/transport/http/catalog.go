@@ -184,7 +184,7 @@ func (handler *CatalogHandler) detail(request *gin.Context) {
 }
 func detailView(detail application.Detail) gin.H {
 	title := detail.Title
-	return gin.H{"id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "publication": title.Publication, "chapter_count": detail.ChapterCount, "reader_count": detail.ReaderCount, "aliases": title.Aliases, "authors": title.Authors, "featured": title.Featured, "listed": title.Listed, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
+	return gin.H{"id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "publication": title.Publication, "chapter_count": detail.ChapterCount, "reader_count": detail.ReaderCount, "rating_distribution": detail.RatingDistribution, "aliases": title.Aliases, "authors": title.Authors, "featured": title.Featured, "listed": title.Listed, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
 }
 func (handler *CatalogHandler) adminDetail(request *gin.Context) {
 	account, _ := CurrentAccount(request)

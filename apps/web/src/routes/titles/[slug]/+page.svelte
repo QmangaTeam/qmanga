@@ -3,6 +3,7 @@
  import LibrarySelection from '$lib/features/reading/presentation/LibrarySelection.svelte';
  import {createReading,createCommunity} from '$lib/composition/browser';
  import Discussion from '$lib/features/community/presentation/Discussion.svelte';
+ import RatingDialog from '$lib/features/community/presentation/RatingDialog.svelte';
  import ReportForm from '$lib/features/community/presentation/ReportForm.svelte';
  const community=createCommunity();
  const reading=createReading();
@@ -13,7 +14,8 @@
 <Title title={data.title} chapters={data.chapters} nextURL={data.nextURL} firstChapter={data.firstChapter} chapterFilter={data.chapterFilter} tab={data.tab}>
  {#snippet library()}<LibrarySelection title={data.title} readingGateway={reading.readingGateway} librarySync={reading.librarySync}/>{/snippet}
  {#snippet discussion()}<Discussion titleId={data.title.id} titleSlug={data.title.slug} gateway={community} showReport={false}/>{/snippet}
- {#snippet report()}<ReportForm titleId={data.title.id} targetId={data.title.id} gateway={community}/>{/snippet}
+ {#snippet rating()}<RatingDialog titleId={data.title.id} titleSlug={data.title.slug} score={data.title.score} ratingCount={data.title.ratingCount} gateway={community}/>{/snippet}
+ {#snippet report()}<ReportForm titleId={data.title.id} targetId={data.title.id} gateway={community} embedded/>{/snippet}
 </Title>
 
 {/key}

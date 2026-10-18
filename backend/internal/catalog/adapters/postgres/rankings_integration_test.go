@@ -69,6 +69,10 @@ func TestHomeRankingsUseActualReadersRatingsAndPublishedTitles(testingTarget *te
 	if failure != nil || len(mostRead) != 3 || mostRead[0].ID != "most-read" || mostRead[1].ID != "best-rated" {
 		testingTarget.Fatal("ranking did not count only actual unblocked readers", mostRead, failure)
 	}
+	detail, failure := service.Detail(ctx, "most-read")
+	if failure != nil || detail.RatingCount != 1 || detail.RatingDistribution[7] != 1 || detail.RatingDistribution[9] != 0 {
+		testingTarget.Fatal("rating distribution included blocked ratings or lost real ratings", detail.RatingDistribution, failure)
+	}
 	top, failure := service.Rankings(ctx, "manhwa", 16)
 	if failure != nil || len(top) != 2 || top[0].ID != "best-rated" || top[0].Score != 9 || top[1].Score != 8 {
 		testingTarget.Fatal("type ranking did not use actual unblocked ratings/publications", top, failure)

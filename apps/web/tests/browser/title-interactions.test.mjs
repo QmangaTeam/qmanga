@@ -1,0 +1,116 @@
+import {before,after,test} from 'node:test';
+import assert from 'node:assert/strict';
+import {readFile,mkdir} from 'node:fs/promises';
+import {join} from 'node:path';
+import {chromium} from 'playwright';
+
+if(!process.env.QMANGA_FIXTURE_FILE)throw Error('QMANGA_FIXTURE_FILE required');
+const fixture=JSON.parse(await readFile(process.env.QMANGA_FIXTURE_FILE,'utf8'));
+if(!['localhost','127.0.0.1'].includes(new URL(fixture.app_url).hostname))throw Error('Disposable local fixture required');
+let browser;
+before(async()=>{browser=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});});
+after(async()=>{await browser?.close();});
+
+test('title stats live inside facts and comments load without an extra click', {timeout:30000},async()=>{
+ const context=await browser.newContext({baseURL:fixture.app_url,viewport:{width:320,height:750}});
+ try{
+  await context.addCookies([{name:'qmanga_locale',value:'ru',url:fixture.app_url}]);
+  const list=await (await context.request.get('/api/v1/titles')).json();
+  const title=list.items.find(item=>item.id===fixture.title_id);
+  assert.ok(title?.slug);
+  const page=await context.newPage();
+  await page.goto('/titles/'+title.slug);
+  assert.equal(await page.locator('.title-tabs a').count(),3);
+  assert.equal(await page.locator('.status-dot.ongoing').count(),1);
+  await page.getByRole('button',{name:/Статистика/}).click();
+  const dialog=page.getByRole('dialog',{name:'Статистика тайтла'});
+  await dialog.waitFor();
+  assert.equal(await dialog.getByText('Оценок пока нет').count(),1);
+  if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'title-stats-320.png')});}
+  await dialog.getByRole('button',{name:'Закрыть'}).click();
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+  const request=page.waitForResponse(response=>response.url().includes('/api/v1/community/titles/')&&response.request().method()==='GET');
+  await page.getByRole('link',{name:'Комментарии'}).click();
+  assert.equal((await request).status(),200);
+  await page.locator('.discussion h2').waitFor();
+  assert.equal(await page.getByRole('button',{name:'Открыть комментарии'}).count(),0);
+ }finally{await context.close();}
+});
+
+test('title rating saves independently and updates its distribution', {timeout:30000},async()=>{
+ const context=await browser.newContext({baseURL:fixture.app_url,viewport:{width:1280,height:800}});
+ let original=0,headers={};
+ try{
+  await context.addCookies([{name:'qmanga_locale',value:'ru',url:fixture.app_url}]);
+  const login=await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.owner_email,password:fixture.owner_password}});
+  assert.equal(login.status(),200);
+  const account=(await login.json()).user;
+  const csrf=(await context.cookies(fixture.app_url)).find(cookie=>cookie.name==='qmanga_csrf')?.value;
+  headers={Origin:fixture.app_url,'X-Qmanga-Account':account.id,'X-CSRF-Token':csrf};
+  const list=await (await context.request.get('/api/v1/titles')).json();
+  const title=list.items.find(item=>item.id===fixture.title_id);
+  assert.ok(title?.slug);
+  const current=await context.request.get('/api/v1/community/titles/'+fixture.title_id+'/rating',{headers});
+  assert.equal(current.status(),200);
+  original=(await current.json()).score;
+  const page=await context.newPage();
+  await page.goto('/titles/'+title.slug);
+  await page.getByRole('button',{name:'Оценить тайтл'}).click();
+  const dialog=page.getByRole('dialog',{name:'Оценить тайтл'});
+  await dialog.getByRole('combobox',{name:'Ваша оценка'}).selectOption('7');
+  await dialog.getByRole('button',{name:'Сохранить'}).click();
+  await dialog.waitFor({state:'hidden'});
+  await page.getByRole('button',{name:/Статистика/}).click();
+  const bar=page.locator('.stats-dialog .rating-bar').filter({has:page.locator('span').filter({hasText:/^7$/})});
+  assert.equal(await bar.count()>0,true);
+  const detail=await (await context.request.get('/api/v1/titles/'+title.slug)).json();
+  assert.ok(detail.rating_distribution[6]>=1);
+  await page.goto('/titles/'+title.slug+'?tab=comments');
+  await page.getByRole('textbox',{name:'Написать комментарий'}).waitFor();
+  assert.equal(await page.locator('.format-actions button').count(),4);
+  if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'comments-editor-1280.png')});}
+  await page.setViewportSize({width:320,height:750});
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+  if(process.env.QMANGA_SCREENSHOT_DIR){await page.locator('.discussion').scrollIntoViewIfNeeded();await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'comments-editor-320.png')});}
+ }finally{
+  await context.request.put('/api/v1/community/titles/'+fixture.title_id+'/rating',{headers,data:{score:original}}).catch(()=>{});
+  await context.close();
+ }
+});
+
+test('title actions open dialogs and library status saves with one choice', {timeout:30000},async()=>{
+ const context=await browser.newContext({baseURL:fixture.app_url,viewport:{width:360,height:780}});
+ let headers={},original=null,changed=null;
+ try{
+  await context.addCookies([{name:'qmanga_locale',value:'ru',url:fixture.app_url}]);
+  const login=await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.owner_email,password:fixture.owner_password}});
+  assert.equal(login.status(),200);
+  const account=(await login.json()).user;
+  const csrf=(await context.cookies(fixture.app_url)).find(cookie=>cookie.name==='qmanga_csrf')?.value;
+  headers={Origin:fixture.app_url,'X-Qmanga-Account':account.id,'X-CSRF-Token':csrf};
+  const list=await (await context.request.get('/api/v1/titles')).json();
+  const title=list.items.find(item=>item.id===fixture.title_id);
+  assert.ok(title?.slug);
+  original=(await (await context.request.get('/api/v1/library/'+title.id,{headers})).json()).entry;
+  const page=await context.newPage();
+  await page.goto('/titles/'+title.slug);
+  await page.getByRole('button',{name:'Добавить в список'}).click();
+  const dialog=page.getByRole('dialog',{name:'Мой список'});
+  await dialog.getByRole('button',{name:'В планах'}).click();
+  await dialog.getByRole('button',{name:'В планах'}).waitFor({state:'visible'});
+  changed=(await (await context.request.get('/api/v1/library/'+title.id,{headers})).json()).entry;
+  assert.equal(changed.status,'planned');
+  await dialog.getByRole('button',{name:'Закрыть'}).click();
+  await page.getByRole('button',{name:'Сообщить о проблеме'}).click();
+  const report=page.getByRole('dialog',{name:'Сообщить о проблеме'});
+  await report.getByRole('button',{name:'Отправить жалобу'}).waitFor();
+  assert.equal(await report.locator('summary').count(),0);
+  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+ }finally{
+  if(changed){
+   if(original)await context.request.put('/api/v1/library/'+fixture.title_id,{headers,data:{version:changed.version,removed:false,status:original.status,favorite:original.favorite,preferred_team_id:original.preferred_team_id,notify:original.notify}}).catch(()=>{});
+   else await context.request.delete('/api/v1/library/'+fixture.title_id,{headers}).catch(()=>{});
+  }
+  await context.close();
+ }
+});

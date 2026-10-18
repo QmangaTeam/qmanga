@@ -142,6 +142,25 @@ func (repository *Repository) detail(ctx context.Context, condition, id string, 
 	if failure != nil {
 		return detail, translate(failure)
 	}
+	ratingRows, failure := repository.pool.Query(ctx, `SELECT rating.score,count(*) FROM ratings rating JOIN users rating_user ON rating_user.id=rating.user_id AND NOT rating_user.is_blocked WHERE rating.title_id=$1 GROUP BY rating.score`, title.ID)
+	if failure != nil {
+		return detail, failure
+	}
+	for ratingRows.Next() {
+		var score, count int
+		if failure = ratingRows.Scan(&score, &count); failure != nil {
+			ratingRows.Close()
+			return detail, failure
+		}
+		if score >= 1 && score <= 10 {
+			detail.RatingDistribution[score-1] = count
+		}
+	}
+	failure = ratingRows.Err()
+	ratingRows.Close()
+	if failure != nil {
+		return detail, failure
+	}
 	rows, failure := repository.pool.Query(ctx, `SELECT genre.id,genre.name_kk,genre.slug FROM genres genre JOIN title_genres mapping ON mapping.genre_id=genre.id WHERE mapping.title_id=$1 ORDER BY genre.name_kk`, title.ID)
 	if failure != nil {
 		return detail, failure

@@ -10,7 +10,7 @@ func TestCommentOwnershipAndDepth(testingTarget *testing.T) {
 	if failure := comment.Edit("owner", "   ", false); failure != ErrInvalid {
 		testingTarget.Fatal("empty accepted")
 	}
-	if !CanReply("title", "release", "title", "release", false) || CanReply("title", "release", "title", "release", true) || CanReply("other", "release", "title", "release", false) {
+	if !CanReply("title", "release", "title", "release") || CanReply("other", "release", "title", "release") {
 		testingTarget.Fatal("invalid reply depth/context")
 	}
 }

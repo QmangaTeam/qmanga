@@ -1,5 +1,5 @@
 import type {PersonalReport} from './rights';
-export interface Comment {displayName?:string;id:string;userId:string;parentId:string;body:string;spoiler:boolean;hidden:boolean;createdAt:string;replies:number}
+export interface Comment {displayName?:string;id:string;userId:string;parentId:string;rootId:string;body:string;spoiler:boolean;hidden:boolean;createdAt:string;replies:number}
 export interface Discussion {comments:Comment[];next:string;score:number;ratings:number}
 export interface Report {titleId:string;releaseId:string;pageId:string;targetType:'title'|'release'|'page'|'comment';targetId:string;category:string;reason:string}
 export interface ReportDecision {action:string;status:string;actorName:string;reason:string;createdAt:string}

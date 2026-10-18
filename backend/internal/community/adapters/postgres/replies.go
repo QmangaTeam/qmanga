@@ -19,14 +19,14 @@ func (repository *Repository) Replies(ctx context.Context, parent, after string)
 	if !valid {
 		return result, domain.ErrNotFound
 	}
-	rows, failure := repository.pool.Query(ctx, `SELECT id,user_id,title_id,COALESCE(release_id,''),parent_id,CASE WHEN is_hidden OR deleted_at IS NOT NULL THEN '' ELSE body END,is_spoiler,is_hidden OR deleted_at IS NOT NULL,created_at,(SELECT display_name FROM users WHERE id=comments.user_id) FROM comments WHERE parent_id=$1 AND ($2::varchar='' OR (created_at,id)>(SELECT created_at,id FROM comments WHERE id=$2::varchar AND parent_id=$1))ORDER BY created_at,id LIMIT 20`, parent, after)
+	rows, failure := repository.pool.Query(ctx, `SELECT id,user_id,title_id,COALESCE(release_id,''),parent_id,COALESCE(root_id,parent_id,''),CASE WHEN is_hidden OR deleted_at IS NOT NULL THEN '' ELSE body END,is_spoiler,is_hidden OR deleted_at IS NOT NULL,created_at,(SELECT display_name FROM users WHERE id=comments.user_id) FROM comments WHERE (root_id=$1 OR (root_id IS NULL AND parent_id=$1)) AND ($2::varchar='' OR (created_at,id)>(SELECT created_at,id FROM comments WHERE id=$2::varchar AND (root_id=$1 OR (root_id IS NULL AND parent_id=$1))))ORDER BY created_at,id LIMIT 20`, parent, after)
 	if failure != nil {
 		return result, failure
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var item application.Comment
-		if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.ParentID, &item.Body, &item.Spoiler, &item.Hidden, &item.CreatedAt, &item.DisplayName); failure != nil {
+		if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.ParentID, &item.RootID, &item.Body, &item.Spoiler, &item.Hidden, &item.CreatedAt, &item.DisplayName); failure != nil {
 			return result, failure
 		}
 		result.Comments = append(result.Comments, item)

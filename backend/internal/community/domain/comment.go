@@ -12,8 +12,8 @@ var ErrNotFound = errors.New("community target not found")
 var ErrLimited = errors.New("community rate limited")
 
 type Comment struct {
-	ID, UserID, TitleID, ReleaseID, ParentID, Body string
-	Spoiler, Hidden                                bool
+	ID, UserID, TitleID, ReleaseID, ParentID, RootID, Body string
+	Spoiler, Hidden                                        bool
 }
 
 func ValidBody(body string) bool {
@@ -30,8 +30,8 @@ func (comment *Comment) Edit(actor, body string, spoiler bool) error {
 	comment.Spoiler = spoiler
 	return nil
 }
-func CanReply(title, release, parentTitle, parentRelease string, nested bool) bool {
-	return title == parentTitle && release == parentRelease && !nested
+func CanReply(title, release, parentTitle, parentRelease string) bool {
+	return title == parentTitle && release == parentRelease
 }
 func ValidCategory(value string) bool {
 	switch value {

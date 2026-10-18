@@ -44,7 +44,7 @@ func (handler *CommunityHandler) discussion(request *gin.Context) {
 	request.JSON(200, gin.H{"comments": items, "next": result.Next, "score": result.Score, "ratings": result.Ratings})
 }
 func commentView(item application.Comment) gin.H {
-	return gin.H{"id": item.ID, "user_id": item.UserID, "display_name": item.DisplayName, "parent_id": item.ParentID, "body": item.Body, "spoiler": item.Spoiler, "hidden": item.Hidden, "created_at": item.CreatedAt, "replies": item.Replies}
+	return gin.H{"id": item.ID, "user_id": item.UserID, "display_name": item.DisplayName, "parent_id": item.ParentID, "root_id": item.RootID, "body": item.Body, "spoiler": item.Spoiler, "hidden": item.Hidden, "created_at": item.CreatedAt, "replies": item.Replies}
 }
 func (handler *CommunityHandler) replies(request *gin.Context) {
 	result, failure := handler.service.Replies(request.Request.Context(), request.Param("id"), request.Query("after"))

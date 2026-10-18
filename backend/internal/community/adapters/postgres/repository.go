@@ -72,12 +72,12 @@ func (repository *Repository) Discussion(ctx context.Context, title, release, af
 	 ORDER BY created_at DESC,id DESC LIMIT 20
 	), selected AS(
 	 SELECT id FROM roots UNION ALL SELECT reply.id FROM roots CROSS JOIN LATERAL(
-	 SELECT id FROM comments WHERE parent_id=roots.id ORDER BY created_at,id LIMIT 10)reply
+	 SELECT id FROM comments WHERE (root_id=roots.id OR (root_id IS NULL AND parent_id=roots.id)) ORDER BY created_at,id LIMIT 10)reply
 	)
-	SELECT comment.id,comment.user_id,comment.title_id,COALESCE(comment.release_id,''),COALESCE(comment.parent_id,''),
+	 SELECT comment.id,comment.user_id,comment.title_id,COALESCE(comment.release_id,''),COALESCE(comment.parent_id,''),COALESCE(comment.root_id,comment.parent_id,''),
 	CASE WHEN comment.is_hidden OR comment.deleted_at IS NOT NULL THEN '' ELSE comment.body END,
 	comment.is_spoiler,comment.is_hidden OR comment.deleted_at IS NOT NULL,comment.created_at,
-	(SELECT count(*) FROM comments reply WHERE reply.parent_id=comment.id),(SELECT display_name FROM users WHERE id=comment.user_id)
+	(SELECT count(*) FROM comments reply WHERE reply.root_id=comment.id OR (reply.root_id IS NULL AND reply.parent_id=comment.id)),(SELECT display_name FROM users WHERE id=comment.user_id)
 	FROM comments comment WHERE comment.id IN(SELECT id FROM selected) ORDER BY comment.created_at,comment.id`, title, release, after)
 	if failure != nil {
 		return result, failure
@@ -87,7 +87,7 @@ func (repository *Repository) Discussion(ctx context.Context, title, release, af
 	var oldest application.Comment
 	for rows.Next() {
 		var item application.Comment
-		if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.ParentID, &item.Body, &item.Spoiler, &item.Hidden, &item.CreatedAt, &item.Replies, &item.DisplayName); failure != nil {
+		if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.ParentID, &item.RootID, &item.Body, &item.Spoiler, &item.Hidden, &item.CreatedAt, &item.Replies, &item.DisplayName); failure != nil {
 			return result, failure
 		}
 		result.Comments = append(result.Comments, item)
@@ -115,16 +115,16 @@ func (repository *Repository) Comment(ctx context.Context, user string, input do
 		if count >= 5 {
 			return domain.ErrLimited
 		}
-		var replyUser string
+		var replyUser, rootID string
 		if input.ParentID != "" {
-			var title, release, parent string
+			var title, release string
 			var hidden bool
-			failure := transaction.QueryRow(ctx, `SELECT title_id,COALESCE(release_id,''),COALESCE(parent_id,''),user_id,is_hidden OR deleted_at IS NOT NULL FROM comments WHERE id=$1 FOR SHARE`, input.ParentID).Scan(&title, &release, &parent, &replyUser, &hidden)
-			if failure != nil || hidden || !domain.CanReply(input.TitleID, input.ReleaseID, title, release, parent != "") {
+			failure := transaction.QueryRow(ctx, `SELECT title_id,COALESCE(release_id,''),COALESCE(root_id,parent_id,id),user_id,is_hidden OR deleted_at IS NOT NULL FROM comments WHERE id=$1 FOR SHARE`, input.ParentID).Scan(&title, &release, &rootID, &replyUser, &hidden)
+			if failure != nil || hidden || !domain.CanReply(input.TitleID, input.ReleaseID, title, release) {
 				return domain.ErrInvalid
 			}
 		}
-		if _, failure := transaction.Exec(ctx, `INSERT INTO comments(id,user_id,title_id,release_id,parent_id,body,is_spoiler)VALUES($1,$2,$3,NULLIF($4,''),NULLIF($5,''),$6,$7)`, input.ID, user, input.TitleID, input.ReleaseID, input.ParentID, strings.TrimSpace(input.Body), input.Spoiler); failure != nil {
+		if _, failure := transaction.Exec(ctx, `INSERT INTO comments(id,user_id,title_id,release_id,parent_id,root_id,body,is_spoiler)VALUES($1,$2,$3,NULLIF($4,''),NULLIF($5,''),NULLIF($6,''),$7,$8)`, input.ID, user, input.TitleID, input.ReleaseID, input.ParentID, rootID, strings.TrimSpace(input.Body), input.Spoiler); failure != nil {
 			return failure
 		}
 		if replyUser != "" && replyUser != user {
