@@ -1,0 +1,53 @@
+name: Promote Qmanga
+on:
+  workflow_dispatch:
+    inputs:
+      release_sha:
+        description: Tested 40-character commit SHA already serving staging
+        required: true
+        type: string
+permissions:
+  contents: read
+  actions: read
+concurrency:
+  group: qmanga-production-deploy
+  cancel-in-progress: false
+jobs:
+  promote-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 35
+    environment: production
+    steps:
+      - name: Verify release belongs to main and passed CI
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+          REPOSITORY: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_SHA" =~ ^[0-9a-f]{40}$ ]]
+          git init -q verify-release
+          git -C verify-release remote add origin "https://github.com/$REPOSITORY.git"
+          git -C verify-release fetch -q --filter=blob:none origin main
+          git -C verify-release cat-file -e "$RELEASE_SHA^{commit}"
+          git -C verify-release merge-base --is-ancestor "$RELEASE_SHA" refs/remotes/origin/main
+          runs=$(gh api "repos/$REPOSITORY/actions/workflows/verify.yml/runs?head_sha=$RELEASE_SHA&event=push&per_page=50")
+          jq -e --arg sha "$RELEASE_SHA" \
+            '[.workflow_runs[] | select(.head_sha == $sha and .conclusion == "success")] | length > 0' <<< "$runs"
+      - name: Promote staging image to production
+        env:
+          DEPLOY_HOST: ${{ vars.QMANGA_DEPLOY_HOST }}
+          DEPLOY_USER: ${{ vars.QMANGA_DEPLOY_USER }}
+          DEPLOY_KEY: ${{ secrets.QMANGA_DEPLOY_KEY }}
+          KNOWN_HOSTS: ${{ secrets.QMANGA_SSH_KNOWN_HOSTS }}
+          RELEASE_SHA: ${{ inputs.release_sha }}
+        run: |
+          set -euo pipefail
+          test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER" && test -n "$DEPLOY_KEY" && test -n "$KNOWN_HOSTS"
+          install -d -m 700 "$HOME/.ssh"
+          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/qmanga_deploy"
+          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/qmanga_deploy" "$HOME/.ssh/known_hosts"
+          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/qmanga_deploy" \
+            "$DEPLOY_USER@$DEPLOY_HOST" \
+            "grep -Eq '^[a-z]+ $RELEASE_SHA$' /opt/qmanga/state/staging.active && bash /opt/qmanga/repo/deploy/release.sh production '$RELEASE_SHA'"

@@ -84,6 +84,12 @@ func Initialize(parentContext context.Context) (*Application, error) {
 
 	readinessCheck := readiness.NewCheckHealthUseCase("0.1.0", postgresClient, storageClient)
 	httpRouter := transport.NewRouter(readinessCheck)
+	if appConfig.TrustedProxyHost != "" {
+		if proxyError := transport.TrustProxyHost(httpRouter, appConfig.TrustedProxyHost); proxyError != nil {
+			postgresClient.Close()
+			return nil, fmt.Errorf("configuring trusted gateway: %w", proxyError)
+		}
+	}
 	smtpHost, _, _ := net.SplitHostPort(appConfig.SMTPAddress)
 	mailer := identitySMTP.New(identitySMTP.Config{Address: appConfig.SMTPAddress, Host: smtpHost, From: appConfig.SMTPFrom, Username: appConfig.SMTPUsername, Password: appConfig.SMTPPassword, RequireTLS: appConfig.Environment == "production"})
 	identityService := identityApp.New(identityPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)

@@ -12,6 +12,8 @@ Fresh installations have an empty catalogue until a team uploads and a moderator
 
 ## Local start
 
+For Oracle staging/production setup and safe releases, see the [deployment runbook](docs/deployment/RUNBOOK.md).
+
 Use Docker Desktop/Engine with Compose v2. Windows PowerShell 7, from this repository:
 
 ```powershell

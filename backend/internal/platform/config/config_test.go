@@ -136,6 +136,7 @@ func TestLoad_ValidConfigurationLoadsCorrectly(testingTarget *testing.T) {
 	testingTarget.Setenv("SESSION_SECRET", "12345678901234567890123456789012")
 	testingTarget.Setenv("CSRF_SECRET", "09876543210987654321098765432109")
 	testingTarget.Setenv("APP_ORIGIN", "https://qmanga.kz")
+	testingTarget.Setenv("TRUSTED_PROXY_HOST", "gateway")
 
 	configInstance, err := Load()
 	if err != nil {

@@ -1,0 +1,82 @@
+services:
+  gateway:
+    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-gateway:${RELEASE_SHA:?set RELEASE_SHA}
+    pull_policy: missing
+    ports:
+      - "127.0.0.1:${GATEWAY_PORT:?set GATEWAY_PORT}:8080"
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 10s
+      timeout: 4s
+      retries: 12
+    restart: unless-stopped
+    stop_grace_period: 20s
+    networks: [default]
+  api:
+    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-api:${RELEASE_SHA:?set RELEASE_SHA}
+    pull_policy: missing
+    environment: &api-environment
+      APP_ENV: production
+      APP_ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
+      PORT: "8080"
+      DATABASE_URL: postgres://qmanga:${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD}@postgres:5432/qmanga?sslmode=disable
+      S3_ENDPOINT: minio:9000
+      S3_ACCESS_KEY: ${S3_ACCESS_KEY:?set S3_ACCESS_KEY}
+      S3_SECRET_KEY: ${S3_SECRET_KEY:?set S3_SECRET_KEY}
+      S3_BUCKET_MEDIA: qmanga-media
+      S3_BUCKET_SOURCE: qmanga-source
+      S3_USE_SSL: "false"
+      SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
+      CSRF_SECRET: ${CSRF_SECRET:?set CSRF_SECRET}
+      SMTP_ADDRESS: ${SMTP_ADDRESS:?set SMTP_ADDRESS}
+      SMTP_FROM: ${SMTP_FROM:?set SMTP_FROM}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      TRUSTED_PROXY_HOST: gateway
+    depends_on:
+      gateway: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/api/v1/health"]
+      interval: 10s
+      timeout: 4s
+      retries: 12
+    restart: unless-stopped
+    stop_grace_period: 20s
+    networks: [default, data]
+  web:
+    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-web:${RELEASE_SHA:?set RELEASE_SHA}
+    pull_policy: missing
+    environment:
+      ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
+      API_INTERNAL_URL: http://api:8080
+    depends_on:
+      api: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "bun", "-e", "if (!(await fetch('http://127.0.0.1:3000/')).ok) process.exit(1)"]
+      interval: 10s
+      timeout: 4s
+      retries: 12
+    restart: unless-stopped
+    networks: [default]
+  worker:
+    profiles: [worker]
+    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-api:${RELEASE_SHA:?set RELEASE_SHA}
+    pull_policy: missing
+    environment: *api-environment
+    entrypoint: ["/usr/local/bin/qmanga-worker"]
+    depends_on:
+      api: {condition: service_healthy}
+    volumes:
+      - worker-temp:/tmp
+    mem_limit: 768m
+    cpus: 1
+    pids_limit: 64
+    restart: unless-stopped
+    stop_grace_period: 20s
+    networks: [default, data]
+volumes:
+  worker-temp:
+networks:
+  data:
+    external: true
+    name: qmanga-${DEPLOY_TARGET:?set DEPLOY_TARGET}-data

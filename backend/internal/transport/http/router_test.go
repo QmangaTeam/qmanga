@@ -39,3 +39,24 @@ func TestGinTransportAndDependencyFailures(testingTarget *testing.T) {
 		}
 	}
 }
+
+func TestTrustedGatewayForwardsClientIPButDirectPeerCannotSpoof(testingTarget *testing.T) {
+	router := NewRouter(nil)
+	if err := TrustProxyHost(router, "localhost"); err != nil {
+		testingTarget.Fatal(err)
+	}
+	router.GET("/client-ip", func(request *gin.Context) { request.String(200, request.ClientIP()) })
+	for _, example := range []struct{ peer, want string }{
+		{"127.0.0.1:1234", "203.0.113.8"},
+		{"198.51.100.5:1234", "198.51.100.5"},
+	} {
+		recorder := httptest.NewRecorder()
+		request := httptest.NewRequest("GET", "/client-ip", nil)
+		request.RemoteAddr = example.peer
+		request.Header.Set("X-Forwarded-For", "203.0.113.8")
+		router.ServeHTTP(recorder, request)
+		if recorder.Body.String() != example.want {
+			testingTarget.Fatalf("peer %s was attributed to %q, want %q", example.peer, recorder.Body.String(), example.want)
+		}
+	}
+}

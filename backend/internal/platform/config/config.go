@@ -11,22 +11,23 @@ import (
 )
 
 type Config struct {
-	Environment    string
-	HTTPPort       string
-	DatabaseURL    string
-	S3Endpoint     string
-	S3AccessKey    string
-	S3SecretKey    string
-	S3BucketMedia  string
-	S3BucketSource string
-	S3UseSSL       bool
-	SessionSecret  string
-	CSRFSecret     string
-	AppOrigin      string
-	SMTPAddress    string
-	SMTPFrom       string
-	SMTPUsername   string
-	SMTPPassword   string
+	Environment      string
+	HTTPPort         string
+	DatabaseURL      string
+	S3Endpoint       string
+	S3AccessKey      string
+	S3SecretKey      string
+	S3BucketMedia    string
+	S3BucketSource   string
+	S3UseSSL         bool
+	SessionSecret    string
+	CSRFSecret       string
+	AppOrigin        string
+	SMTPAddress      string
+	SMTPFrom         string
+	SMTPUsername     string
+	SMTPPassword     string
+	TrustedProxyHost string
 }
 
 func Load() (Config, error) {
@@ -44,6 +45,7 @@ func Load() (Config, error) {
 	appOrigin := strings.TrimSpace(os.Getenv("APP_ORIGIN"))
 	smtpAddress := strings.TrimSpace(os.Getenv("SMTP_ADDRESS"))
 	smtpFrom := strings.TrimSpace(os.Getenv("SMTP_FROM"))
+	trustedProxyHost := strings.TrimSpace(os.Getenv("TRUSTED_PROXY_HOST"))
 	if smtpAddress == "" && environment != "production" {
 		smtpAddress = "mailpit:1025"
 	}
@@ -61,6 +63,9 @@ func Load() (Config, error) {
 
 	if environment != "development" && environment != "test" && environment != "production" {
 		validationErrors = append(validationErrors, "APP_ENV must be explicitly set to 'development', 'test', or 'production'")
+	}
+	if environment == "production" && trustedProxyHost == "" {
+		validationErrors = append(validationErrors, "TRUSTED_PROXY_HOST is required in production")
 	}
 
 	if portString == "" {
@@ -157,22 +162,23 @@ func Load() (Config, error) {
 	}
 
 	configInstance := Config{
-		Environment:    environment,
-		HTTPPort:       portString,
-		DatabaseURL:    databaseURL,
-		S3Endpoint:     s3Endpoint,
-		S3AccessKey:    s3AccessKey,
-		S3SecretKey:    s3SecretKey,
-		S3BucketMedia:  s3BucketMedia,
-		S3BucketSource: s3BucketSource,
-		S3UseSSL:       useSSL,
-		SessionSecret:  sessionSecret,
-		CSRFSecret:     csrfSecret,
-		AppOrigin:      appOrigin,
-		SMTPAddress:    smtpAddress,
-		SMTPFrom:       smtpFrom,
-		SMTPUsername:   os.Getenv("SMTP_USERNAME"),
-		SMTPPassword:   os.Getenv("SMTP_PASSWORD"),
+		Environment:      environment,
+		HTTPPort:         portString,
+		DatabaseURL:      databaseURL,
+		S3Endpoint:       s3Endpoint,
+		S3AccessKey:      s3AccessKey,
+		S3SecretKey:      s3SecretKey,
+		S3BucketMedia:    s3BucketMedia,
+		S3BucketSource:   s3BucketSource,
+		S3UseSSL:         useSSL,
+		SessionSecret:    sessionSecret,
+		CSRFSecret:       csrfSecret,
+		AppOrigin:        appOrigin,
+		SMTPAddress:      smtpAddress,
+		SMTPFrom:         smtpFrom,
+		SMTPUsername:     os.Getenv("SMTP_USERNAME"),
+		SMTPPassword:     os.Getenv("SMTP_PASSWORD"),
+		TrustedProxyHost: trustedProxyHost,
 	}
 
 	if len(validationErrors) > 0 {

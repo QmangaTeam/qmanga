@@ -1,0 +1,16 @@
+services:
+  caddy:
+    image: caddy@sha256:4c6e91c6ed0e2fa03efd5b44747b625fec79bc9cd06ac5235a779726618e530d
+    network_mode: host
+    command: ["caddy", "run", "--config", "/etc/caddy/config/Caddyfile", "--adapter", "caddyfile"]
+    volumes:
+      - .:/etc/caddy/config:ro
+      - ${QMANGA_HOST_ROOT:-/opt/qmanga}/state/sites:/etc/caddy/sites:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    restart: unless-stopped
+volumes:
+  caddy-data:
+    name: qmanga-caddy-data
+  caddy-config:
+    name: qmanga-caddy-config
