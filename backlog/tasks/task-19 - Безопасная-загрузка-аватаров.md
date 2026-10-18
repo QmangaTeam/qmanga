@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-identity'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 22:00'
+updated_date: '2026-10-18 22:01'
 labels:
   - stage-5
 dependencies: []
@@ -39,4 +39,6 @@ Implemented bounded 5 MiB JPEG/PNG/WebP upload, 8M pixel cap, center crop to 256
 Follow-up: bootstrap/browser composition wired; svelte-check zero errors. Added application ownership-before-processing tests, image decoder tests, PostgreSQL visibility test and real browser register/avatar/media suite. Parent will run current real stack before acceptance; no deployed release confirmed.
 
 Security follow-up: uploads require original rendered actor via X-Qmanga-Account; fresh CSRF after cookie switch cannot overwrite a different account. Added typed actor header regression. Objects get durable pending-GC reservation before upload; replacement transaction queues only old key, failed persistence queues unreferenced new key, cleanup retries boundedly and excludes active keys; added migration000028 and cleanup tests. Absent avatar returns local404/HEAD no body. Confirmed Go identity/HTTP/S3 tests and svelte-check0errors0warnings. Header refresh hint published after successful own-avatar upload.
+
+Implementation SHAs:22c8b47 (avatar pipeline/UI) andef70106 (accountbinding, durable garbage cleanup, missing-avatar404). Remaining review: parent current-build real browser suite and deployed release; public team-avatar presentation delegated to catalog owner if included in this acceptance.
 <!-- SECTION:NOTES:END -->

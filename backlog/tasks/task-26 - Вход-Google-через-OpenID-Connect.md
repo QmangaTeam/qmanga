@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-identity'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 21:59'
+updated_date: '2026-10-18 22:01'
 labels:
   - stage-7
 dependencies:
@@ -38,4 +38,6 @@ ordinal: 26
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented server-only Google OIDC via coreos/go-oidc and oauth2: RS256 signature/issuer/audience/expiry, azp, nonce, verified email/stable sub; state cookie binding, ten-minute one-use PostgreSQL flow, S256 PKCE, ordinary Qmanga sessions. Existing email match explicitly refuses linking (email/password remains available), no access/refresh tokens persisted. New account requires nickname; cancellation restores safe original path. Google status/button disabled with absent server config; partial config rejected. Verified signed-token rejection tests, application replay/claims/redirect tests, HTTP disabled/cookie checks, Go identity/config/transport/bootstrap pass; frontend check zero errors (one concurrent Footer fixture warning). PostgreSQL integration and browser tests added for parent current-stack run. External owner Cloud client/consent/test-user and deployment acceptance remain pending TASK-25; not released.
+
+Implementation SHA:d170196. Server bootstrap/Compose wiring belongs to parent integration commit. Real Google owner-project consent/client verification remains external; locally test signed mock-provider behavior and disabled UI only. Existing email accounts are never auto-linked; self-service linking is deliberately unavailable.
 <!-- SECTION:NOTES:END -->
