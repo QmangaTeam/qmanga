@@ -18,7 +18,7 @@ function Token([string]$Email){
 function Account([bool]$Admin=$false){
  $client=New-Client;$email="reading-$([guid]::NewGuid().ToString('N'))@example.test";$password=[guid]::NewGuid().ToString('N')+'-Aa1'
  if($Admin){$password|docker @compose exec -T -e "ADMIN_EMAIL=$email" api qmanga-admin|Out-Null;if($LASTEXITCODE -ne 0){throw 'Admin setup failed.'}}else{$null=Send $client POST auth/register @{email=$email;password=$password;display_name='Reader Test'} -Expected 202;$null=Send $client POST auth/verify-email @{token=(Token $email)}}
- $null=Send $client POST auth/login @{email=$email;password=$password;display_name='Reader Test'};$user=(Send $client GET auth/me).user;$csrf=(Send $client GET auth/csrf).csrf_token;$client.DefaultRequestHeaders.Add('X-Qmanga-Account',$user.id);return @{Client=$client;Id=$user.id;Csrf=$csrf;Email=$email}
+ $null=Send $client POST auth/login @{email=$email;password=$password};$user=(Send $client GET auth/me).user;$csrf=(Send $client GET auth/csrf).csrf_token;$client.DefaultRequestHeaders.Add('X-Qmanga-Account',$user.id);return @{Client=$client;Id=$user.id;Csrf=$csrf;Email=$email}
 }
 try{
  $anonymous=New-Client;$manifest=Send $anonymous GET "releases/$ReleaseId/manifest";$title=$manifest.title_id;$page=$manifest.pages[0].id

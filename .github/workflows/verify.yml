@@ -74,6 +74,10 @@ jobs:
         run: |
           docker run --rm --mount "type=bind,source=$PWD/apps/web,target=/app" -w /app oven/bun@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373 bun install --frozen-lockfile
           node apps/web/node_modules/playwright/cli.js install --with-deps chromium
+      # The smoke phase shares an in-memory per-IP auth budget with browser tests.
+      # Recreate only the same API image: retain sessions, fixture data and private media.
+      - name: Isolate browser auth budget and verify API restart
+        run: docker compose up -d --force-recreate --no-deps --no-build --pull never --wait --wait-timeout 120 api
       - name: Browser integration and interaction regressions
         working-directory: apps/web
         env:
