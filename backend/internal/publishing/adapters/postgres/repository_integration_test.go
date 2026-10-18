@@ -174,6 +174,16 @@ func TestPublicationIsolationAndAtomicReplacement(testingTarget *testing.T) {
 	if err := repository.SelectCover(ctx, "other", "project", replacement.Pages[0].ID); !errors.Is(err, domain.ErrForbidden) {
 		testingTarget.Fatal("foreign cover accepted", err)
 	}
+	separate := application.CoverAsset{ID: uuid.NewString(), ObjectKey: "independent-cover", Mime: "image/webp", Checksum: strings.Repeat("a", 64), Width: 600, Height: 900, Bytes: 100}
+	if err := repository.SaveCover(ctx, "other", "project", separate); !errors.Is(err, domain.ErrForbidden) {
+		testingTarget.Fatal("foreign standalone cover accepted", err)
+	}
+	if err := repository.SaveCover(ctx, "owner", "project", separate); err != nil {
+		testingTarget.Fatal("standalone cover rejected", err)
+	}
+	if asset, err := repository.Asset(ctx, "", separate.ID); err != nil || asset.ObjectKey != separate.ObjectKey || !asset.Public {
+		testingTarget.Fatal("standalone cover is not publicly readable", asset, err)
+	}
 	if err := repository.SelectCover(ctx, "owner", "project", replacement.Pages[0].ID); err != nil {
 		testingTarget.Fatal(err)
 	}

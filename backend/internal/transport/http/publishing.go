@@ -43,6 +43,7 @@ func (handler *PublishingHandler) Register(router *gin.Engine, identity *Identit
 	studio.GET("/projects/:id/revisions", handler.projectRevisions)
 	studio.POST("/projects/:id/revisions", handler.createDraft)
 	studio.PUT("/projects/:id/cover", handler.selectCover)
+	studio.PUT("/projects/:id/cover-file", handler.uploadCover)
 	studio.POST("/revisions/:id/pages/:page_id/retry", handler.retryPage)
 	studio.GET("/revisions/:id", handler.revision)
 	studio.PUT("/revisions/:id/pages", handler.upload)
@@ -324,6 +325,36 @@ func (handler *PublishingHandler) selectCover(request *gin.Context) {
 		return
 	}
 	request.Status(204)
+}
+func (handler *PublishingHandler) uploadCover(request *gin.Context) {
+	select {
+	case handler.uploads <- struct{}{}:
+		defer func() { <-handler.uploads }()
+	default:
+		request.Header("Retry-After", "2")
+		Error(request, 429, "busy", "Жүктеу кезегі толы. Қайта көріңіз.")
+		return
+	}
+	if request.Request.ContentLength > 25<<20 {
+		Error(request, 413, "upload_size", "Мұқаба 25 MiB-тан аспауы керек")
+		return
+	}
+	controller := http.NewResponseController(request.Writer)
+	_ = controller.SetReadDeadline(time.Now().Add(10 * time.Minute))
+	defer controller.SetReadDeadline(time.Time{})
+	request.Request.Body = http.MaxBytesReader(request.Writer, request.Request.Body, 25<<20)
+	id, failure := handler.service.UploadCover(request.Request.Context(), handler.actor(request), request.Param("id"), request.Request.Body)
+	if failure != nil {
+		var tooLarge *http.MaxBytesError
+		if errors.As(failure, &tooLarge) {
+			Error(request, 413, "upload_size", "Мұқаба 25 MiB-тан аспауы керек")
+			return
+		}
+		publicationError(request, failure)
+		return
+	}
+	request.Header("Cache-Control", "no-store")
+	request.JSON(201, gin.H{"cover_id": id, "url": coverURL(id)})
 }
 func (handler *PublishingHandler) retryPage(request *gin.Context) {
 	if err := handler.service.RetryPage(request.Request.Context(), handler.actor(request), request.Param("id"), request.Param("page_id")); err != nil {

@@ -5,7 +5,7 @@ export interface Revision { coverId?:string;humanReviewer?:string;humanReviewedA
 export interface ChapterChoice { id: string; label: string; name: string; order: number }
 export interface UploadSource { name: string; size: number; key: string; content: unknown }
 export interface UploadTask { done: Promise<void>; cancel(): void }
-export interface StudioProject {id:string;titleId:string;titleName:string;teamId:string;teamName:string;role:string;approved:boolean;status:string}
+export interface StudioProject {id:string;titleId:string;titleName:string;teamId:string;teamName:string;role:string;approved:boolean;status:string;coverId:string}
 export interface ProjectPage {items:{id:string;titleName:string;teamName:string;teamId?:string}[];nextCursor:string;total:number}
 export interface ProjectFilter {query?:string;teamId?:string}
 export interface PublishingGateway {
@@ -26,6 +26,7 @@ export interface PublishingGateway {
  pending(offset?:number): Promise<Revision[]>;
  review(id: string, decision: 'publish' | 'reject', reason: string): Promise<void>;
  selectCover(projectId:string,pageId:string):Promise<void>;
+ uploadCover(projectId:string,file:unknown):Promise<string>;
  retryPage(revisionId:string,pageId:string):Promise<void>;
  restore(releaseId:string,reason:string):Promise<void>;
  withdraw(releaseId: string, reason: string): Promise<void>;

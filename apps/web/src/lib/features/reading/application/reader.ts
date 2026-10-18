@@ -6,13 +6,14 @@ export interface Manifest {preparationMethod?:string;humanReviewed?:boolean;huma
 export interface ReaderGateway { manifest(releaseId: string, preview?: string): Promise<Manifest>; original(releaseId: string, pageId: string): Promise<Fragment> }
 export interface ImageReference { url: string }
 export interface ImageTask { done: Promise<ImageReference>; cancel(): void }
-export interface ImageLoader { load(fragment: Fragment): ImageTask; release(image: ImageReference): void }
+export interface ImageLoader { load(fragment: Fragment,priority?:number): ImageTask; cached?(fragment:Fragment):ImageReference|undefined; release(image: ImageReference): void }
 export interface Timer { later(callback: () => void, milliseconds: number): () => void }
 export class MediaFailure extends Error { constructor(message: string, readonly terminal = false, readonly retryAfter = 0, readonly code='media_unavailable') { super(message); } }
 export interface ReaderPreferences { quality: Exclude<QualityPreference,'original'>; mode: 'pages' | 'strip'; theme: 'dark' | 'light' | 'system'; fit: 'width' | 'height'; maxWidth: number; brightness: number; numbers: boolean; direction: 'auto' | 'ltr' | 'rtl' }
 export interface Viewport { width: number; height: number; top: number }
 export interface ReaderPlatform {
  openRelease(releaseId:string):void;
+ prefetchRelease?(releaseId:string):Promise<Manifest|null>;
  preferences(kind: string): ReaderPreferences;
  savePreferences(value: ReaderPreferences): void;
  connection(): {saveData: boolean; slowConnection: boolean; lowMemory: boolean};

@@ -111,7 +111,7 @@ func Initialize(parentContext context.Context) (*Application, error) {
 	catalogService := catalogApp.New(catalogPostgres.New(postgresClient.Pool()), uuid.NewString)
 	transport.NewCatalogHandler(catalogService).Register(httpRouter.Group("/api/v1"), identityHandler)
 	publicationRepository := publicationPostgres.New(postgresClient.Pool())
-	publicationService := publicationApp.New(publicationRepository, storageClient, uuid.NewString)
+	publicationService := publicationApp.New(publicationRepository, storageClient, imagemagick.New(), uuid.NewString)
 	transport.NewPublishingHandler(publicationService).Register(httpRouter, identityHandler)
 	transport.NewReadingHandler(readingApp.New(readingPostgres.New(postgresClient.Pool()))).Register(httpRouter.Group("/api/v1"), identityHandler)
 	transport.NewCommunityHandler(communityApp.New(communityPostgres.New(postgresClient.Pool()), uuid.NewString)).Register(httpRouter.Group("/api/v1"), identityHandler)

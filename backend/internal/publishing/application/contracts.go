@@ -79,6 +79,19 @@ type Batch struct {
 	Items []Generated
 	Close func()
 }
+type CoverAsset struct {
+	ID, ObjectKey, Mime, Checksum string
+	Width, Height                 int
+	Bytes                         int64
+}
+type ProcessedCover struct {
+	CoverAsset
+	Content io.Reader
+	Close   func()
+}
+type CoverProcessor interface {
+	ProcessCover(context.Context, io.Reader) (ProcessedCover, error)
+}
 
 type Repository interface {
 	CreateDraft(context.Context, string, string, string, string) (StudioRevision, error)
@@ -96,6 +109,8 @@ type Repository interface {
 	Withdraw(context.Context, string, string, string) error
 	Restore(context.Context, string, string, string) error
 	SelectCover(context.Context, string, string, string) error
+	CanUploadCover(context.Context, string, string) error
+	SaveCover(context.Context, string, string, CoverAsset) error
 	RetryPage(context.Context, string, string, string) error
 	ModerationQueue(context.Context, string, ...int) ([]StudioRevision, error)
 	LeaseJob(context.Context, string) (Job, bool, error)

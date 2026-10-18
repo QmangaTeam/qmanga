@@ -15,3 +15,15 @@ test('eco scheduler bounds requests, cancels irrelevant work and releases decode
  queue.close();
  expect(maximum).toBeLessThanOrEqual(2);
 });
+
+test('previously verified image is ready without starting another request', () => {
+ let networkLoads=0, releases=0;
+ const fragment={id:'next-page',url:'/api/v1/media/next-page',width:720,height:900,bytes:100,checksum:'a'.repeat(64),mime:'image/webp',offset:0};
+ const queue=new ImageQueue({cached:()=>({url:'blob:verified'}),load:()=>{networkLoads++;throw new Error('should not fetch cached image');},release:()=>{releases++;}}, {later:()=>()=>{}},()=>{});
+ queue.want([fragment]);
+ expect(queue.entries.get(fragment.id)?.status).toBe('ready');
+ expect(queue.entries.get(fragment.id)?.image?.url).toBe('blob:verified');
+ expect(networkLoads).toBe(0);
+ queue.close();
+ expect(releases).toBe(1);
+});

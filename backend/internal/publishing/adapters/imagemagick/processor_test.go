@@ -99,6 +99,33 @@ func TestRealImageProcessingAndTruncatedRejection(testingTarget *testing.T) {
 	}
 }
 
+func TestSeparateCoverIsSanitizedAndBounded(testingTarget *testing.T) {
+	if _, failure := exec.LookPath("magick"); failure != nil {
+		testingTarget.Skip("ImageMagick available in tools image")
+	}
+	var source bytes.Buffer
+	if failure := png.Encode(&source, image.NewRGBA(image.Rect(0, 0, 900, 1500))); failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	cover, failure := New().ProcessCover(context.Background(), bytes.NewReader(source.Bytes()))
+	if failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	defer cover.Close()
+	content, failure := io.ReadAll(cover.Content)
+	if failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	configuration, format, failure := image.DecodeConfig(bytes.NewReader(content))
+	if failure != nil || format != "webp" || cover.Mime != "image/webp" || configuration.Width > 720 || configuration.Height > 1200 || configuration.Width != cover.Width || configuration.Height != cover.Height || cover.Bytes != int64(len(content)) || cover.Checksum != fmt.Sprintf("%x", sha256.Sum256(content)) {
+		testingTarget.Fatalf("invalid independent cover: %+v %v", cover, failure)
+	}
+	if invalid, failure := New().ProcessCover(context.Background(), bytes.NewReader([]byte("not an image"))); failure == nil {
+		invalid.Close()
+		testingTarget.Fatal("invalid cover accepted")
+	}
+}
+
 func TestRealJPEGProcessing(testingTarget *testing.T) {
 	if _, failure := exec.LookPath("magick"); failure != nil {
 		testingTarget.Skip("ImageMagick available in tools image")

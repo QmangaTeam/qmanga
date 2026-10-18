@@ -1,8 +1,10 @@
 import type { ReaderPlatform, ReaderPreferences, Viewport } from '../application/reader';
+import type {Manifest} from '../application/reader';
 import type { Position } from '../domain/policies';
 const key='qmanga:reader:preferences:v1';
 export class BrowserReaderPlatform implements ReaderPlatform {
- openRelease(releaseId:string){window.location.assign('/read/'+encodeURIComponent(releaseId));}
+ openRelease(releaseId:string){const path='/read/'+encodeURIComponent(releaseId);void import('$app/navigation').then(({goto})=>goto(path)).catch(()=>window.location.assign(path));}
+ async prefetchRelease(releaseId:string):Promise<Manifest|null>{try{const {preloadData}=await import('$app/navigation');const result=await preloadData('/read/'+encodeURIComponent(releaseId));return result.type==='loaded'&&result.data&&'manifest' in result.data?result.data.manifest as Manifest:null;}catch{return null;}}
  preferences(kind: string): ReaderPreferences {
   let saved: Partial<ReaderPreferences>={};try{saved=JSON.parse(localStorage.getItem(key)||'{}');}catch{}
   return {quality:['auto','eco','standard','high'].includes(saved.quality||'')?saved.quality!:'auto',mode:saved.mode==='pages'||saved.mode==='strip'?saved.mode:kind==='manga'?'pages':'strip',theme:['dark','light','system'].includes(saved.theme||'')?saved.theme!:'dark',fit:saved.fit==='height'?'height':'width',maxWidth:Math.max(320,Math.min(1600,Number(saved.maxWidth)||1024)),brightness:Math.max(40,Math.min(100,Number(saved.brightness)||100)),numbers:saved.numbers!==false,direction:saved.direction==='ltr'||saved.direction==='rtl'?saved.direction:'auto'};

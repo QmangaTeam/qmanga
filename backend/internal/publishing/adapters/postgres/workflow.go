@@ -6,6 +6,7 @@ import (
 	"errors"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
+	"qmanga/internal/publishing/application"
 	"qmanga/internal/publishing/domain"
 	"strings"
 )
@@ -105,6 +106,31 @@ func (repository *Repository) SelectCover(ctx context.Context, actor, project, p
 		}
 		metadata, _ := json.Marshal(map[string]any{"before": map[string]string{"cover_asset_id": previous}, "after": map[string]string{"cover_asset_id": id}})
 		_, err = tx.Exec(ctx, `INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,metadata) VALUES($1,$2,'select_cover','title',$3,$4)`, uuid.NewString(), actor, title, metadata)
+		return err
+	})
+}
+
+func (repository *Repository) CanUploadCover(ctx context.Context, actor, project string) error {
+	return repository.withProject(ctx, actor, project, "submit", func(pgx.Tx) error { return nil })
+}
+
+func (repository *Repository) SaveCover(ctx context.Context, actor, project string, cover application.CoverAsset) error {
+	if cover.ID == "" || cover.ObjectKey == "" || cover.Mime != "image/webp" || len(cover.Checksum) != 64 || cover.Width <= 0 || cover.Height <= 0 || cover.Bytes <= 0 {
+		return domain.ErrInvalidImage
+	}
+	return repository.withProject(ctx, actor, project, "submit", func(tx pgx.Tx) error {
+		var title, previous string
+		if err := tx.QueryRow(ctx, `SELECT title.id,coalesce(title.cover_asset_id,'') FROM titles title JOIN projects project ON project.title_id=title.id WHERE project.id=$1 FOR UPDATE OF title`, project).Scan(&title, &previous); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `INSERT INTO title_cover_assets(id,title_id,object_key,mime,checksum,width,height,byte_size,selected_by) VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9)`, cover.ID, title, cover.ObjectKey, cover.Mime, cover.Checksum, cover.Width, cover.Height, cover.Bytes, actor); err != nil {
+			return err
+		}
+		if _, err := tx.Exec(ctx, `UPDATE titles SET cover_asset_id=$2,cover_managed=true,updated_at=now() WHERE id=$1`, title, cover.ID); err != nil {
+			return err
+		}
+		metadata, _ := json.Marshal(map[string]any{"before": map[string]string{"cover_asset_id": previous}, "after": map[string]string{"cover_asset_id": cover.ID}})
+		_, err := tx.Exec(ctx, `INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,metadata) VALUES($1,$2,'upload_cover','title',$3,$4)`, uuid.NewString(), actor, title, metadata)
 		return err
 	})
 }

@@ -9,6 +9,7 @@ import (
 
 type StudioProject struct {
 	Project  Project
+	CoverID  string
 	Role     string
 	Approved bool
 }

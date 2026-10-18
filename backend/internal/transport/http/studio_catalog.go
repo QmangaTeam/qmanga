@@ -77,7 +77,7 @@ func (handler *CatalogHandler) studioProject(request *gin.Context) {
 		catalogError(request, failure)
 		return
 	}
-	request.JSON(200, gin.H{"id": item.Project.ID, "title_id": item.Project.TitleID, "title_name": item.Project.TitleName, "team_id": item.Project.TeamID, "team_name": item.Project.TeamName, "role": item.Role, "approved": item.Approved, "status": item.Project.Status})
+	request.JSON(200, gin.H{"id": item.Project.ID, "title_id": item.Project.TitleID, "title_name": item.Project.TitleName, "team_id": item.Project.TeamID, "team_name": item.Project.TeamName, "role": item.Role, "approved": item.Approved, "status": item.Project.Status, "cover_id": item.CoverID})
 }
 func (handler *CatalogHandler) adminProject(request *gin.Context) {
 	account, _ := CurrentAccount(request)

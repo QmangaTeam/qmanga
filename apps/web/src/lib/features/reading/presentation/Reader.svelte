@@ -12,6 +12,7 @@
  import type {Download,Downloads} from '../../offline/application/downloads';
  import ProgressPosition from './ProgressPosition.svelte';
  import {initializeReaderPosition,resolveReaderProgress} from '../application/position-navigation';
+ import {prefetchChapter} from '../application/chapter-prefetch';
  import {ReadingSession,type ProgressStorage,type ReadingGateway} from '../application/progress';
  import type {CommunityGateway} from '../../community/application/community';
  import Discussion from '../../community/presentation/Discussion.svelte';
@@ -19,7 +20,7 @@
  import {ThrottledSave} from '../application/throttled-save';
  import {ChapterDirectory} from '../application/chapter-directory';
  import type {Position} from '../domain/policies';
- let {manifest,initialPage='',preview='',offlineTier,downloads,readingGateway,progressStorage,community,gateway,catalogue,platform,images,timer}:{manifest:Manifest;initialPage?:string;preview?:string;offlineTier?:Tier;downloads?:Downloads;readingGateway?:ReadingGateway;progressStorage?:ProgressStorage;community?:CommunityGateway;gateway:ReaderGateway;catalogue:CatalogGateway;platform:ReaderPlatform;images:(first?:HTMLImageElement)=>ImageLoader;timer:Timer}=$props();
+ let {manifest,initialPage='',preview='',offlineTier,downloads,readingGateway,progressStorage,community,gateway,catalogue,platform,images,timer}:{manifest:Manifest;initialPage?:string;preview?:string;offlineTier?:Tier;downloads?:Downloads;readingGateway?:ReadingGateway;progressStorage?:ProgressStorage;community?:CommunityGateway;gateway:ReaderGateway;catalogue:CatalogGateway;platform:ReaderPlatform;images:(first?:HTMLImageElement,cacheable?:boolean)=>ImageLoader;timer:Timer}=$props();
  let preferences=$state<ReaderPreferences>({quality:'auto',mode:untrack(()=>manifest.kind)==='manga'?'pages':'strip',theme:'dark',fit:'width',maxWidth:1024,brightness:100,numbers:true,direction:'auto'});
  let tier=$state<Tier>(untrack(()=>offlineTier)||'standard'),pageIndex=$state(0),viewport=$state<Viewport>({width:360,height:640,top:0});
  let stage=$state<HTMLDivElement>(),firstImage=$state<HTMLImageElement>(),dialog=$state<HTMLDialogElement>(),shell=$state<HTMLDivElement>();
@@ -51,11 +52,21 @@
  $effect(()=>{if(mounted)platform.savePreferences(offlineTier?{...preferences,quality:onlineQuality}:preferences);});
  onMount(()=>{
   const linkedIndex=manifest.pages.findIndex(page=>page.id===initialPage);if(linkedIndex>=0)userNavigated=true;
-  queue=new ImageQueue(images(firstImage),timer,()=>version++);
+  queue=new ImageQueue(images(firstImage,!preview&&!offlineTier),timer,()=>version++);
   saver=new ThrottledSave(timer,async value=>{if(session)await session.record(value.manifest,value.position,value.completed);else if(!readingGateway)platform.savePosition(value.manifest.releaseId,value.position);});mounted=true;
   let observed=false;const stopObserve=platform.observe(stage,value=>{const position=current.position,resized=observed&&Math.abs(value.width-viewport.width)>.5;observed=true;viewport=value;if(preferences.mode==='strip'){navigation.observe(visible(sheet.items,value).pageIndex);pageIndex=navigation.index;}if(resized&&position.pageId)void tick().then(()=>platform.scroll(stage,anchorOffset(sheet.items,position,value.width)));}),stopVisibility=platform.visibility(hidden=>{queue?.pause(hidden);if(hidden)void saver?.flush().then(()=>session?.flush());}),stopKeyboard=platform.keyboard(action=>{if(panel)return;if(action==='menu')void openPanel('settings');else step(pageStep(action,direction));});
   preferences=platform.preferences(manifest.kind);onlineQuality=preferences.quality;
   if(offlineTier){preferences={...preferences,quality:offlineTier};tier=offlineTier;}
+  const prefetchController=new AbortController();
+  const stopPrefetch=timer.later(()=>{
+   const connection=platform.connection();
+   if(!mounted||preview||offlineTier||!manifest.nextId||connection.saveData||connection.slowConnection||connection.lowMemory)return;
+   void (async()=>{
+    const next=await platform.prefetchRelease?.(manifest.nextId)||await gateway.manifest(manifest.nextId);
+    if(prefetchController.signal.aborted||next.releaseId!==manifest.nextId)return;
+    await prefetchChapter(next,tier,images(),prefetchController.signal);
+   })().catch(()=>{/* Background preloading must never interrupt reading. */});
+  },1500);
   const saved=preview||readingGateway?null:platform.loadPosition(manifest.releaseId);
   if(!preview&&readingGateway&&progressStorage)session=new ReadingSession(readingGateway,progressStorage,timer,()=>progressVersion++);
   void initializeReaderPosition(linkedIndex>=0?{pageId:manifest.pages[linkedIndex].id,fraction:0}:null,async()=>{
@@ -64,7 +75,7 @@
    const position=await session.start(manifest,!!offlineTier);
    return position?.releaseId===manifest.releaseId?position:null;
   },{go:async position=>{const index=manifest.pages.findIndex(page=>page.id===position.pageId);if(index>=0)await goPage(index,position.fraction,false);},userNavigated:()=>userNavigated,ready:()=>{if(mounted)positionReady=true;},quality:()=>changeQuality(preferences.quality)}).catch(failure=>{message=failureCode(failure);});
-  return ()=>{mounted=false;void saver?.flush().finally(()=>session?.close());downloadController?.abort();closePanel?.();stopObserve();stopVisibility();stopKeyboard();queue?.close();};
+  return ()=>{mounted=false;stopPrefetch();prefetchController.abort();void saver?.flush().finally(()=>session?.close());downloadController?.abort();closePanel?.();stopObserve();stopVisibility();stopKeyboard();queue?.close();};
  });
  async function changeQuality(quality:ReaderPreferences['quality']) {
   if(!mounted)return;

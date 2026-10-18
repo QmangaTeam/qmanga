@@ -32,7 +32,7 @@ func (storage mediaStorage) OpenDerivative(ctx context.Context, key string, offs
 func TestMediaRangeAndRevocationBefore304(testingTarget *testing.T) {
 	repository := &mediaRepository{}
 	router := NewRouter(nil)
-	NewPublishingHandler(application.New(repository, mediaStorage{}, func() string { return "id" })).Register(router, NewIdentityHandler(nil, "http://localhost:8080", false))
+	NewPublishingHandler(application.New(repository, mediaStorage{}, nil, func() string { return "id" })).Register(router, NewIdentityHandler(nil, "http://localhost:8080", false))
 	send := func(method, rangeValue, etag string) *httptest.ResponseRecorder {
 		request := httptest.NewRequest(method, "/api/v1/media/asset", nil)
 		request.Header.Set("Range", rangeValue)

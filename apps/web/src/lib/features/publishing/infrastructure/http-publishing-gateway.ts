@@ -13,7 +13,7 @@ export class HttpPublishingGateway implements PublishingGateway {
  constructor(private api: ApiClient) {}
  private async items<Item>(path: string, map: (value: unknown) => Item) { return array(object(await this.api.call(path)).items, map); }
  async projectPage(filter:{query?:string;teamId?:string},cursor=''){const query=new URLSearchParams({q:filter.query||'',team:filter.teamId||'',cursor});const result=object(await this.api.call('/api/v1/studio/projects?'+query));return {items:array(result.items,value=>{const item=object(value);return {id:text(item.id),titleName:text(item.title_name),teamName:text(item.team_name),teamId:text(item.team_id)};}),nextCursor:text(result.next_cursor),total:number(result.total)};}
- async project(id:string){const item=object(await this.api.call('/api/v1/studio/projects/'+encodeURIComponent(id)));return {id:text(item.id),titleId:text(item.title_id),titleName:text(item.title_name),teamId:text(item.team_id),teamName:text(item.team_name),role:text(item.role),approved:item.approved===true,status:text(item.status)};}
+ async project(id:string){const item=object(await this.api.call('/api/v1/studio/projects/'+encodeURIComponent(id)));return {id:text(item.id),titleId:text(item.title_id),titleName:text(item.title_name),teamId:text(item.team_id),teamName:text(item.team_name),role:text(item.role),approved:item.approved===true,status:text(item.status),coverId:text(item.cover_id)};}
  async createChapter(id:string,input:{label:string;volume:string;name:string;order:number}){return text(object(await this.api.call('/api/v1/studio/projects/'+encodeURIComponent(id)+'/chapters','POST',input)).id);}
  async projects(offset=0) { return this.items('/api/v1/studio/projects?offset='+offset, value => { const item = object(value); return { id: text(item.id), titleName: text(item.title_name), teamName: text(item.team_name),teamId:text(item.team_id) }; }); }
  async chapters(id: string,offset=0) { return this.items('/api/v1/studio/projects/' + encodeURIComponent(id) + '/chapters?offset='+offset, value => { const item = object(value); return { id: text(item.id), label: text(item.label), name: text(item.name), order: number(item.order) }; }); }
@@ -59,6 +59,18 @@ export class HttpPublishingGateway implements PublishingGateway {
  async pending(offset=0) { return this.items('/api/v1/moderation/revisions?offset='+offset, revision); }
  async review(id: string, decision: 'publish' | 'reject', reason: string) { await this.api.call('/api/v1/moderation/revisions/' + encodeURIComponent(id) + '/review', 'POST', { decision, reason }); }
  async selectCover(projectId:string,pageId:string){await this.api.call('/api/v1/studio/projects/'+encodeURIComponent(projectId)+'/cover','PUT',{page_id:pageId});}
+ async uploadCover(projectId:string,file:unknown):Promise<string>{
+  if(!(file instanceof File)||file.size===0||!['image/jpeg','image/png','image/webp'].includes(file.type))throw new AppFailure('upload_file');
+  if(file.size>25*1024*1024)throw new AppFailure('upload_size');
+  const token=await this.api.csrfToken();
+  let response:Response;
+  try{response=await fetch('/api/v1/studio/projects/'+encodeURIComponent(projectId)+'/cover-file',{method:'PUT',credentials:'same-origin',headers:{'X-CSRF-Token':token,'Content-Type':file.type},body:file,signal:AbortSignal.timeout(600000)});}
+  catch{throw new AppFailure('network');}
+  let result:Record<string,unknown>;
+  try{result=object(await response.json());}catch{throw new AppFailure('unavailable');}
+  if(!response.ok)throw new AppFailure(text(object(result.error).code));
+  return text(result.cover_id);
+ }
  async retryPage(revisionId:string,pageId:string){await this.api.call('/api/v1/studio/revisions/'+encodeURIComponent(revisionId)+'/pages/'+encodeURIComponent(pageId)+'/retry','POST',{});}
  async restore(id:string,reason:string){await this.api.call('/api/v1/moderation/releases/'+encodeURIComponent(id)+'/restore','POST',{reason});}
  async withdraw(id: string, reason: string) { await this.api.call('/api/v1/moderation/releases/' + encodeURIComponent(id) + '/withdraw', 'POST', { reason }); }

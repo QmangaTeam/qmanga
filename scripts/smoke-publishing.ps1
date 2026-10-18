@@ -70,6 +70,24 @@ try {
     $title = Send-Api $admin POST 'admin/titles' @{slug=$slug;name='Жергілікті оқу сынағы';original_name='';aliases=@();kind='manga';original_status='ongoing';translation_status='ongoing';description='Пайдаланушы берген файлдармен жергілікті сынақ. Бұл файлдар GitHub-қа жіберілмейді.';direction='rtl';genre_ids=@();demo=$true} $adminCsrf 201
     $chapter = Send-Api $admin POST "admin/titles/$($title.id)/chapters" @{label='1';order=1;volume='1';name='Сынақ тарауы'} $adminCsrf 201
     $project = Send-Api $admin POST "admin/titles/$($title.id)/projects" @{team_id=$team.id} $adminCsrf 201
+    $coverRequest = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Put, "$AppUrl/api/v1/studio/projects/$($project.id)/cover-file")
+    $coverRequest.Headers.Add('Origin', ([uri]$AppUrl).GetLeftPart([System.UriPartial]::Authority))
+    $coverRequest.Headers.Add('X-CSRF-Token', $ownerCsrf)
+    $coverStream = [IO.File]::OpenRead($files[0].FullName)
+    $coverRequest.Content = [System.Net.Http.StreamContent]::new($coverStream)
+    $coverRequest.Content.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::new('application/octet-stream')
+    try {
+        $coverResponse = $owner.SendAsync($coverRequest).GetAwaiter().GetResult()
+        try {
+            $coverResult = $coverResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult() | ConvertFrom-Json
+            if ([int]$coverResponse.StatusCode -ne 201 -or -not $coverResult.cover_id) { throw "Independent cover upload failed: $([int]$coverResponse.StatusCode)" }
+        } finally { $coverResponse.Dispose() }
+    } finally { $coverRequest.Dispose(); $coverStream.Dispose() }
+    $studioProject = Send-Api $owner GET "studio/projects/$($project.id)"
+    if ($studioProject.cover_id -ne $coverResult.cover_id) { throw 'Independent cover did not appear in studio project.' }
+    $coverMedia = $anonymous.GetAsync("$AppUrl$($coverResult.url)").GetAwaiter().GetResult()
+    try { if ([int]$coverMedia.StatusCode -ne 200 -or $coverMedia.Content.Headers.ContentType.MediaType -ne 'image/webp') { throw 'Independent cover is not public WebP media.' } }
+    finally { $coverMedia.Dispose() }
     $draft = Send-Api $owner POST "studio/projects/$($project.id)/revisions" @{chapter_id=$chapter.id} $ownerCsrf 201
     $null = Send-Api $anonymous GET "titles/$slug" -Expected 404
     $position = 0
@@ -102,7 +120,7 @@ try {
     $null = Send-Api $owner POST "studio/revisions/$($draft.id)/submit" @{version=$draft.version} $ownerCsrf 204
     $null = Send-Api $admin POST "moderation/revisions/$($draft.id)/review" @{decision='publish';reason='Local test'} $adminCsrf 204
     $manifest = Send-Api $anonymous GET "releases/$($draft.release_id)/manifest"
-    if (@($manifest.pages).Count -ne $files.Count) { throw 'Incomplete manifest.' }
+    if (@($manifest.pages).Count -ne $files.Count -or $manifest.cover_url -ne $coverResult.url) { throw 'Independent cover changed chapter pages or disappeared from manifest.' }
     foreach ($page in $manifest.pages) {
         foreach ($tier in @('eco','standard','high')) {
             $variants = @($page.variants.$tier)

@@ -27,7 +27,7 @@ export function createDownloads(){return new Downloads(new BrowserDownloadStorag
 import { HttpCatalogGateway } from '$lib/features/catalog/infrastructure/http-catalog-gateway';
 import { BrowserReaderPlatform } from '$lib/features/reading/infrastructure/browser-reader-platform';
 import { BrowserImageLoader, BrowserTimer } from '$lib/features/reading/infrastructure/browser-image-loader';
-export function createReader() {const api=new ApiClient(globalThis.fetch.bind(globalThis));return {gateway:new HttpReaderGateway(api),catalogue:new HttpCatalogGateway(api),platform:new BrowserReaderPlatform(),images:(first?:HTMLImageElement)=>new BrowserImageLoader(first),timer:new BrowserTimer()};}
+export function createReader() {const api=new ApiClient(globalThis.fetch.bind(globalThis));return {gateway:new HttpReaderGateway(api),catalogue:new HttpCatalogGateway(api),platform:new BrowserReaderPlatform(),images:(first?:HTMLImageElement,cacheable=true)=>new BrowserImageLoader(first,cacheable),timer:new BrowserTimer()};}
 import type { AuthGateway } from '$lib/features/identity/application/auth';
 import type { TeamsGateway } from '$lib/features/teams/application/teams';
 import { HttpTeamsGateway } from '$lib/features/teams/infrastructure/http-teams-gateway';

@@ -10,13 +10,14 @@ import (
 )
 
 type Service struct {
-	repository Repository
-	storage    Storage
-	newID      func() string
+	repository     Repository
+	storage        Storage
+	coverProcessor CoverProcessor
+	newID          func() string
 }
 
-func New(repository Repository, storage Storage, newID func() string) *Service {
-	return &Service{repository: repository, storage: storage, newID: newID}
+func New(repository Repository, storage Storage, coverProcessor CoverProcessor, newID func() string) *Service {
+	return &Service{repository: repository, storage: storage, coverProcessor: coverProcessor, newID: newID}
 }
 func (service *Service) CreateDraft(ctx context.Context, actor, project, chapter string) (StudioRevision, error) {
 	return service.repository.CreateDraft(ctx, actor, project, chapter, service.newID())
@@ -85,6 +86,25 @@ func (service *Service) Restore(ctx context.Context, actor, id, reason string) e
 }
 func (service *Service) SelectCover(ctx context.Context, actor, project, page string) error {
 	return service.repository.SelectCover(ctx, actor, project, page)
+}
+func (service *Service) UploadCover(ctx context.Context, actor, project string, source io.Reader) (string, error) {
+	if failure := service.repository.CanUploadCover(ctx, actor, project); failure != nil {
+		return "", failure
+	}
+	cover, failure := service.coverProcessor.ProcessCover(ctx, source)
+	if failure != nil {
+		return "", failure
+	}
+	defer cover.Close()
+	cover.ID = service.newID()
+	cover.ObjectKey = cover.ID
+	if failure = service.storage.PutDerivative(ctx, cover.ObjectKey, cover.Content, cover.Bytes, cover.Mime); failure != nil {
+		return "", failure
+	}
+	if failure = service.repository.SaveCover(ctx, actor, project, cover.CoverAsset); failure != nil {
+		return "", failure
+	}
+	return cover.ID, nil
 }
 func (service *Service) RetryPage(ctx context.Context, actor, revision, page string) error {
 	return service.repository.RetryPage(ctx, actor, revision, page)

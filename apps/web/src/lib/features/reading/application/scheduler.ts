@@ -14,7 +14,10 @@ export class ImageQueue {
   const ids = new Set(chosen.map(item => item.id));
   for (const [id,entry] of this.entries) if (!ids.has(id)) { this.discard(entry); this.entries.delete(id); this.reject(id,new Error('Жүктеу тоқтатылды')); }
   this.order = chosen.map(fragment => fragment.id);
-  for (const fragment of chosen) if (!this.entries.has(fragment.id)) this.entries.set(fragment.id,{fragment,status:'queued',attempts:0,message:''});
+	for (const fragment of chosen) if (!this.entries.has(fragment.id)) {
+	 const image=this.loader.cached?.(fragment);
+	 this.entries.set(fragment.id,{fragment,status:image?'ready':'queued',image,attempts:0,message:''});
+	}
   this.pump(); this.changed();
  }
  ready(id: string): Promise<ImageReference> { const entry = this.entries.get(id); if (entry?.image) return Promise.resolve(entry.image); if (entry?.status === 'error') return Promise.reject(new MediaFailure(entry.message,false,0,entry.message)); return new Promise((resolve,reject) => { const list=this.waiters.get(id)||[];list.push({resolve,reject});this.waiters.set(id,list); }); }
