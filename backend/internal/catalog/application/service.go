@@ -22,12 +22,12 @@ type Cursor struct {
 	Name, ID  string
 }
 type Filter struct {
-	AgeRating                                                   *int
-	HasChapters                                                 bool
-	Featured                                                    bool
-	Query, Kind, Genre, OriginalStatus, TranslationStatus, Sort string
-	Limit                                                       int
-	After                                                       *Cursor
+	AgeRating                                                                         *int
+	HasChapters                                                                       bool
+	Featured                                                                          bool
+	Query, Kind, Genre, Category, Collection, OriginalStatus, TranslationStatus, Sort string
+	Limit                                                                             int
+	After                                                                             *Cursor
 }
 type Page struct {
 	Items []Summary
@@ -42,6 +42,8 @@ type Detail struct {
 	Score              float64
 	RatingCount        int
 	Genres             []Genre
+	Categories         []Genre
+	Collections        []domain.Collection
 	Projects           []Project
 }
 type Project struct{ ID, TitleID, TeamID, TitleName, TitleSlug, TeamName, TeamSlug, Status string }
@@ -149,7 +151,7 @@ func (service *Service) List(ctx context.Context, filter Filter) (Page, error) {
 	if filter.TranslationStatus != "" && filter.TranslationStatus != "ongoing" && filter.TranslationStatus != "completed" && filter.TranslationStatus != "paused" && filter.TranslationStatus != "stopped" {
 		return Page{}, domain.ErrInvalid
 	}
-	if len(filter.Genre) > 64 || (filter.After != nil && (filter.After.ID == "" || len(filter.After.ID) > 36 || utf8.RuneCountInString(filter.After.Name) > 200 || filter.After.UpdatedAt.IsZero())) {
+	if len(filter.Category) > 64 || len(filter.Collection) > 64 || len(filter.Genre) > 64 || (filter.After != nil && (filter.After.ID == "" || len(filter.After.ID) > 36 || utf8.RuneCountInString(filter.After.Name) > 200 || filter.After.UpdatedAt.IsZero())) {
 		return Page{}, domain.ErrInvalid
 	}
 	return service.repository.List(ctx, filter)

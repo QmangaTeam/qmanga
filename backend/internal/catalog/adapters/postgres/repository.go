@@ -80,6 +80,12 @@ func (repository *Repository) List(ctx context.Context, filter application.Filte
 	if filter.Genre != "" {
 		conditions = append(conditions, `EXISTS(SELECT 1 FROM title_genres mapping JOIN genres genre ON genre.id=mapping.genre_id WHERE mapping.title_id=title.id AND genre.slug=`+bind(filter.Genre)+`)`)
 	}
+	if filter.Category != "" {
+		conditions = append(conditions, `EXISTS(SELECT 1 FROM title_categories mapping JOIN categories category ON category.id=mapping.category_id WHERE mapping.title_id=title.id AND category.slug=`+bind(filter.Category)+`)`)
+	}
+	if filter.Collection != "" {
+		conditions = append(conditions, `EXISTS(SELECT 1 FROM collection_titles mapping JOIN editorial_collections collection ON collection.id=mapping.collection_id WHERE mapping.title_id=title.id AND collection.is_visible AND collection.slug=`+bind(filter.Collection)+`)`)
+	}
 	timestamp := "title.updated_at"
 	if filter.Sort == "new" {
 		timestamp = "title.created_at"
@@ -181,6 +187,43 @@ func (repository *Repository) detail(ctx context.Context, condition, id string, 
 	rows.Close()
 	if failure != nil {
 		return detail, failure
+	}
+	detail.Categories = []application.Genre{}
+	detail.Collections = []domain.Collection{}
+	categoryRows, categoryError := repository.pool.Query(ctx, "SELECT category.id,category.name_kk,category.slug FROM categories category JOIN title_categories mapping ON mapping.category_id=category.id WHERE mapping.title_id=$1 ORDER BY category.name_kk,category.id", title.ID)
+	if categoryError != nil {
+		return detail, categoryError
+	}
+	for categoryRows.Next() {
+		var item application.Genre
+		if categoryError = categoryRows.Scan(&item.ID, &item.Name, &item.Slug); categoryError != nil {
+			categoryRows.Close()
+			return detail, categoryError
+		}
+		detail.Categories = append(detail.Categories, item)
+	}
+	categoryError = categoryRows.Err()
+	categoryRows.Close()
+	if categoryError != nil {
+		return detail, categoryError
+	}
+	collectionRows, collectionError := repository.pool.Query(ctx, `SELECT collection.id,collection.name_kk,collection.slug,collection.description,collection.position,collection.is_visible FROM editorial_collections collection JOIN collection_titles mapping ON mapping.collection_id=collection.id WHERE mapping.title_id=$1 AND ($2 OR collection.is_visible) ORDER BY collection.position,collection.id`, title.ID, !public)
+	if collectionError != nil {
+		return detail, collectionError
+	}
+	for collectionRows.Next() {
+		var item domain.Collection
+		if collectionError = collectionRows.Scan(&item.ID, &item.Name, &item.Slug, &item.Description, &item.Position, &item.Visible); collectionError != nil {
+			collectionRows.Close()
+			return detail, collectionError
+		}
+		item.TitleIDs = []string{}
+		detail.Collections = append(detail.Collections, item)
+	}
+	collectionError = collectionRows.Err()
+	collectionRows.Close()
+	if collectionError != nil {
+		return detail, collectionError
 	}
 	projectCondition := `outer_project.title_id=$1`
 	failure = repository.pool.QueryRow(ctx, `SELECT

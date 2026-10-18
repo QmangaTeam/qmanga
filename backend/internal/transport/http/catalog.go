@@ -27,6 +27,7 @@ func (handler *CatalogHandler) Register(api *gin.RouterGroup, identity *Identity
 	api.GET("/titles/:slug", handler.detail)
 	api.GET("/titles/:slug/chapters", handler.chapters)
 	api.GET("/genres", handler.genres)
+	api.GET("/taxonomy", handler.taxonomy)
 	api.GET("/teams/:slug", handler.team)
 	api.GET("/studio/projects", identity.RequireUser(), handler.studioProjects)
 	api.GET("/studio/projects/:id", identity.RequireUser(), handler.studioProject)
@@ -42,6 +43,18 @@ func (handler *CatalogHandler) Register(api *gin.RouterGroup, identity *Identity
 	admin.GET("/catalog-teams", handler.approvedTeams)
 	admin.POST("/titles", handler.createTitle)
 	admin.POST("/genres", handler.createGenre)
+	admin.GET("/taxonomy", handler.taxonomy)
+	for _, kind := range []string{"genres", "categories"} {
+		if kind != "genres" {
+			admin.POST("/"+kind, handler.saveTaxon(kind))
+		}
+		admin.PUT("/"+kind+"/:id", handler.saveTaxon(kind))
+		admin.DELETE("/"+kind+"/:id", handler.deleteTaxon(kind))
+	}
+	admin.POST("/collections", handler.saveCollection)
+	admin.PUT("/collections/:id", handler.saveCollection)
+	admin.DELETE("/collections/:id", handler.deleteTaxon("collections"))
+	admin.PUT("/titles/:id/categories", handler.setCategories)
 	admin.POST("/titles/:id/chapters", handler.createChapter)
 	admin.POST("/titles/:id/projects", handler.createProject)
 	admin.GET("/project-requests", handler.projectRequests)
@@ -105,7 +118,7 @@ func (handler *CatalogHandler) list(request *gin.Context) {
 	if !valid {
 		return
 	}
-	filter := application.Filter{Query: request.Query("q"), Kind: request.Query("kind"), Genre: request.Query("genre"), OriginalStatus: request.Query("original_status"), TranslationStatus: request.Query("translation_status"), Sort: request.DefaultQuery("sort", "updated"), Featured: request.Query("featured") == "true", HasChapters: request.Query("has_chapters") == "true", Limit: limit}
+	filter := application.Filter{Query: request.Query("q"), Kind: request.Query("kind"), Genre: request.Query("genre"), Category: request.Query("category"), Collection: request.Query("collection"), OriginalStatus: request.Query("original_status"), TranslationStatus: request.Query("translation_status"), Sort: request.DefaultQuery("sort", "updated"), Featured: request.Query("featured") == "true", HasChapters: request.Query("has_chapters") == "true", Limit: limit}
 	if raw := request.Query("age_rating"); raw != "" {
 		age, err := strconv.Atoi(raw)
 		if err != nil {
@@ -197,7 +210,7 @@ func detailView(detail application.Detail) gin.H {
 	if title.AgeRating != nil {
 		ageRating = *title.AgeRating
 	}
-	return gin.H{"age_rating": ageRating, "id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "publication": title.Publication, "chapter_count": detail.ChapterCount, "reader_count": detail.ReaderCount, "rating_distribution": detail.RatingDistribution, "aliases": title.Aliases, "authors": title.Authors, "featured": title.Featured, "listed": title.Listed, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
+	return gin.H{"age_rating": ageRating, "id": title.ID, "slug": title.Slug, "name": title.Name, "original_name": title.OriginalName, "publication": title.Publication, "chapter_count": detail.ChapterCount, "reader_count": detail.ReaderCount, "rating_distribution": detail.RatingDistribution, "aliases": title.Aliases, "authors": title.Authors, "featured": title.Featured, "listed": title.Listed, "kind": title.Kind, "original_status": title.OriginalStatus, "translation_status": title.TranslationStatus, "description": title.Description, "direction": title.Direction, "demo": title.Demo, "cover_url": coverURL(detail.CoverID), "score": detail.Score, "rating_count": detail.RatingCount, "categories": genreViews(detail.Categories), "collections": collectionViews(detail.Collections), "genres": genreViews(detail.Genres), "projects": projectViews(detail.Projects)}
 }
 func (handler *CatalogHandler) adminDetail(request *gin.Context) {
 	account, _ := CurrentAccount(request)
