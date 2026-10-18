@@ -29,7 +29,17 @@
 
  let moreChapters=$state(false),moreRevisions=$state(false),project=$state<StudioProject|null>(null),newChapter=$state(false),chapterLabel=$state(''),chapterVolume=$state(''),chapterName=$state(''),chapterOrder=$state('');
  const editor=$derived(project?.approved&&project.status==='active'&&(project.role==='owner'||project.role==='editor'));
- async function openDraft(){if(!project)return;let selected=chapterId;if(newChapter)selected=await gateway.createChapter(projectId,{label:chapterLabel,volume:chapterVolume,name:chapterName,order:chapterOrder?Number(chapterOrder):0});chapterId=selected;newChapter=false;active=await gateway.create(projectId,selected);choosingChapter=false;activeStep='draft-pages';await reload();}
+ function clearChapterInputs(){chapterLabel='';chapterVolume='';chapterName='';chapterOrder='';}
+ async function openDraft(){
+  if(!project)return;
+  let selected=chapterId;
+  if(newChapter){
+   selected=await gateway.createChapter(projectId,{label:chapterLabel,volume:chapterVolume,name:chapterName,order:chapterOrder?Number(chapterOrder):0});
+   chapterId=selected;newChapter=false;clearChapterInputs();
+  }
+  active=await gateway.create(projectId,selected);
+  chapterId=selected;clearChapterInputs();choosingChapter=false;activeStep='draft-pages';await reload();
+ }
  async function discardDraft(){if(!active)return;const id=active.id,version=active.version;try{await gateway.discard(id,version);}catch(failure){if(failureCode(failure)==='conflict'){try{active=await gateway.revision(id);await reload();}catch{active=null;await reload();}discardDialog?.close();}throw failure;}discardDialog?.close();if(active?.id===id)active=null;order=null;pendingSources=[];await reload();notice='draft_discarded';}
  async function loadMoreChapters(){const next=await gateway.chapters(projectId,chapters.length);chapters=[...chapters,...next];moreChapters=next.length===100;}
  async function loadMoreRevisions(){const next=await gateway.revisions(projectId,revisions.length);revisions=[...revisions,...next];moreRevisions=next.length===100;}
@@ -46,7 +56,8 @@
  let refreshSequence=0;
  let replacementCapacity=$state(false);
  let pendingSources=$state<UploadSource[]>([]);
- const unsaved=$derived(order!==null||attributionDirty||uploading||pendingSources.length>0);
+ const chapterDirty=$derived(!!(chapterLabel||chapterVolume||chapterName||chapterOrder));
+ const unsaved=$derived(chapterDirty||order!==null||attributionDirty||uploading||pendingSources.length>0);
  beforeNavigate(navigation=>{if(unsaved&&navigation.willUnload){navigation.cancel();return;}if(unsaved&&!window.confirm(text($locale,'Сақталмаған өзгерістер бар. Шығу керек пе?','Есть несохранённые изменения. Уйти?')))navigation.cancel();});
  async function run(action: () => Promise<void>) { if (busy) return; busy = true; error = ''; notice = ''; try { await action(); } catch (failure) { error = failureCode(failure); } finally { busy = false; } }
  async function reload() { project=await gateway.project(projectId);[chapters,revisions] = await Promise.all([gateway.chapters(projectId),gateway.revisions(projectId)]);moreChapters=chapters.length===100;moreRevisions=revisions.length===100;if(!chapters.length)newChapter=true;if(!active&&revisions.length){const chosen=revisions.find(revision=>canEdit(revision.state))||revisions[0];active=await gateway.revision(chosen.id);chapterId=active.chapterId;} }
