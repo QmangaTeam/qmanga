@@ -7,4 +7,5 @@ test('solo portfolio exposes an explicit Telegram link and its existing project'
  expect(russian).toContain('href="https://t.me/dala_team"');expect(russian).toContain('Один переводчик');expect(russian).toContain('href="/titles/story"');
  const kazakh=render(TeamFixture,{props:{language:'kk',team}}).body;
  expect(kazakh).toContain('Жеке аудармашы');expect(kazakh).toContain('ДТ');
+ expect(kazakh).toContain('src="/media/avatars/team/team"');expect(kazakh).toContain('alt=""');expect(kazakh).toContain('aria-hidden="true"');
 });
