@@ -1,7 +1,7 @@
 import {before,after,test} from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
-import {readFile,mkdir} from 'node:fs/promises';
+import {readFile,mkdir,writeFile} from 'node:fs/promises';
 import {join} from 'node:path';
 const fixture=process.env.QMANGA_FIXTURE_FILE?JSON.parse(await readFile(process.env.QMANGA_FIXTURE_FILE,'utf8')):null;
 const baseURL=fixture?.app_url||process.env.QMANGA_TEST_URL||'http://localhost:8080';
@@ -11,9 +11,12 @@ before(async()=>{browser=await chromium.launch({headless:true,...(process.env.QM
 after(async()=>{await browser?.close();});
 for(const locale of ['kk','ru'])for(const theme of ['light','dark'])test(`catalogue sidebar and drawer preserve committed URL state: ${locale}/${theme}`,{timeout:30000},async()=>{
  const context=await browser.newContext({baseURL,viewport:{width:1280,height:800},reducedMotion:'reduce'});
+ let page;const browserErrors=[];
  try{
   await context.addCookies([{name:'qmanga_locale',value:locale,url:baseURL}]);await context.addInitScript(value=>localStorage.setItem('qmanga.theme',value),theme);
-  const page=await context.newPage();page.setDefaultTimeout(8000);
+  page=await context.newPage();page.setDefaultTimeout(8000);
+  page.on('pageerror',error=>browserErrors.push({kind:'pageerror',message:error.message,stack:error.stack}));
+  page.on('console',entry=>{if(entry.type()==='error')browserErrors.push({kind:'console',message:entry.text()});});
   const url='/catalog?q=DrawerFixture&age_rating=18&kind=manhwa&sort=name';
   await page.goto(url);
   const aside=page.locator('aside.catalogue-filters');
@@ -53,5 +56,14 @@ for(const locale of ['kk','ru'])for(const theme of ['light','dark'])test(`catalo
   assert.notEqual(await page.evaluate(()=>getComputedStyle(document.body).overflow),'hidden');
   if(process.env.QMANGA_SCREENSHOT_DIR)await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,`filters-${locale}-${theme}-desktop.png`)});
   await page.setViewportSize({width:668,height:800});await trigger.click();await page.mouse.click(8,200);await dialog.waitFor({state:'hidden'});
+ }catch(error){
+  const directory=process.env.QMANGA_SCREENSHOT_DIR||join(process.cwd(),'tmp','browser-failures');
+  await mkdir(directory,{recursive:true});
+  const file=join(directory,`filters-failure-${locale}-${theme}`);
+  let state;
+  try{state=await page?.evaluate(()=>({url:location.href,ready:document.readyState,asideCount:document.querySelectorAll('aside.catalogue-filters').length,main:document.querySelector('main')?.innerText}));}catch(cause){state={diagnosticError:String(cause)};}
+  await writeFile(file+'.json',JSON.stringify({error:String(error),browserErrors,state},null,2));
+  try{await page?.screenshot({path:file+'.png',timeout:3000});}catch{/* Keep the original failure if a crashed page cannot be captured. */}
+  throw error;
  }finally{await context.close();}
 });
