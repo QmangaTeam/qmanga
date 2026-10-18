@@ -3,6 +3,7 @@ package application
 import (
 	"bytes"
 	"context"
+	"errors"
 	"io"
 	"qmanga/internal/identity/domain"
 	"time"
@@ -96,13 +97,32 @@ func (s *AvatarService) cleanupAvatar(failedKey string) {
 	if failedKey != "" {
 		_ = s.repository.AbandonAvatarObject(ctx, failedKey)
 	}
+	_ = s.DrainAvatarGarbage(ctx)
+}
+
+// DrainAvatarGarbage retries durable cleanup independently of uploads, with bounded work and time.
+func (s *AvatarService) DrainAvatarGarbage(parent context.Context) error {
+	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
+	defer cancel()
 	keys, err := s.repository.AvatarGarbage(ctx)
 	if err != nil {
-		return
+		return err
 	}
-	for _, key := range keys {
-		if err = s.storage.DeleteDerivative(ctx, key); err == nil {
-			_ = s.repository.ForgetAvatarGarbage(ctx, key)
+	var failures []error
+	for index, key := range keys {
+		if index >= 20 {
+			break
+		}
+		if err = ctx.Err(); err != nil {
+			return errors.Join(append(failures, err)...)
+		}
+		if err = s.storage.DeleteDerivative(ctx, key); err != nil {
+			failures = append(failures, err)
+			continue
+		}
+		if err = s.repository.ForgetAvatarGarbage(ctx, key); err != nil {
+			failures = append(failures, err)
 		}
 	}
+	return errors.Join(failures...)
 }

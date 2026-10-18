@@ -19,6 +19,25 @@ func main() {
 		log.Fatal(failure)
 	}
 	defer app.Close()
+	// Retry durable avatar cleanup even when no new upload or image job arrives.
+	avatarTicker := time.NewTicker(time.Minute)
+	defer avatarTicker.Stop()
+	go func() {
+		drain := func() {
+			if err := app.Avatars.DrainAvatarGarbage(ctx); err != nil && ctx.Err() == nil {
+				log.Printf("avatar cleanup failure: %T", err)
+			}
+		}
+		drain()
+		for {
+			select {
+			case <-ctx.Done():
+				return
+			case <-avatarTicker.C:
+				drain()
+			}
+		}
+	}()
 	for ctx.Err() == nil {
 		notified, notificationError := app.Notifications.Deliver(ctx)
 		if notificationError != nil {

@@ -45,6 +45,7 @@ type Application struct {
 	Worker         *publicationApp.Worker
 	Catalogue      *catalogApp.Service
 	Teams          *teamApp.Service
+	Avatars        *identityApp.AvatarService
 	Notifications  *notificationApp.Service
 }
 
@@ -117,7 +118,8 @@ func Initialize(parentContext context.Context) (*Application, error) {
 	transport.NewGoogleHandler(googleService, identityHandler).Register(httpRouter.Group("/api/v1"))
 	teamService := teamApp.New(teamPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)
 	transport.NewTeamHandler(teamService).Register(httpRouter.Group("/api/v1"), identityHandler)
-	transport.NewAvatarHandler(identityApp.NewAvatars(identityPostgres.New(postgresClient.Pool()), storageClient, avatarimage.New(), teamService, uuid.NewString), identityHandler).Register(httpRouter)
+	avatarService := identityApp.NewAvatars(identityPostgres.New(postgresClient.Pool()), storageClient, avatarimage.New(), teamService, uuid.NewString)
+	transport.NewAvatarHandler(avatarService, identityHandler).Register(httpRouter)
 	transport.NewMetricsHandler(metricsApplication.New(metricsPostgres.New(postgresClient.Pool()))).Register(httpRouter.Group("/api/v1"), identityHandler)
 	catalogService := catalogApp.New(catalogPostgres.New(postgresClient.Pool()), uuid.NewString)
 	transport.NewCatalogHandler(catalogService).Register(httpRouter.Group("/api/v1"), identityHandler)
@@ -144,6 +146,7 @@ func Initialize(parentContext context.Context) (*Application, error) {
 		Worker:         publicationApp.NewWorker(publicationRepository, storageClient, imagemagick.New(), uuid.NewString),
 		Catalogue:      catalogService,
 		Teams:          teamService,
+		Avatars:        avatarService,
 		Notifications:  notifications,
 	}
 

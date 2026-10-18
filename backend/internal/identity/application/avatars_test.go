@@ -96,11 +96,15 @@ func (r *cleanupRepo) ForgetAvatarGarbage(_ context.Context, key string) error {
 
 type cleanupStorage struct {
 	avatarStorage
-	deleted []string
+	deleted       []string
+	deleteFailure bool
 }
 
 func (s *cleanupStorage) DeleteDerivative(_ context.Context, key string) error {
 	s.deleted = append(s.deleted, key)
+	if s.deleteFailure {
+		return errors.New("storage temporarily unavailable")
+	}
 	return nil
 }
 func TestAvatarCleansFailedAndReplacedObjects(t *testing.T) {
@@ -122,5 +126,46 @@ func TestAvatarCleansFailedAndReplacedObjects(t *testing.T) {
 		if len(storage.deleted) != 1 || storage.deleted[0] != expected || len(repo.forgot) != 1 {
 			t.Fatalf("cleanup failed: %+v %+v", storage.deleted, repo.forgot)
 		}
+	}
+}
+
+func TestAvatarIndependentDrainRetriesFailedDeletion(t *testing.T) {
+	repo := &cleanupRepo{queue: []string{"avatars/obsolete"}}
+	storage := &cleanupStorage{deleteFailure: true}
+	service := NewAvatars(repo, storage, &avatarProcessor{}, avatarTeams{}, func() string { return "unused" })
+	if err := service.DrainAvatarGarbage(context.Background()); err == nil {
+		t.Fatal("deletion failure ignored")
+	}
+	if len(repo.forgot) != 0 {
+		t.Fatal("failed object discarded from retry queue")
+	}
+	storage.deleteFailure = false
+	if err := service.DrainAvatarGarbage(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(repo.forgot) != 1 || repo.forgot[0] != "avatars/obsolete" || len(storage.deleted) != 2 {
+		t.Fatalf("independent retry failed: %+v %+v", repo.forgot, storage.deleted)
+	}
+}
+func TestAvatarDrainIsBoundedAndRespectsCancellation(t *testing.T) {
+	repo := &cleanupRepo{queue: make([]string, 30)}
+	for index := range repo.queue {
+		repo.queue[index] = "avatars/obsolete"
+	}
+	storage := &cleanupStorage{}
+	service := NewAvatars(repo, storage, &avatarProcessor{}, avatarTeams{}, func() string { return "unused" })
+	if err := service.DrainAvatarGarbage(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if len(storage.deleted) != 20 {
+		t.Fatalf("drain exceeded bound: %d", len(storage.deleted))
+	}
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := service.DrainAvatarGarbage(ctx); !errors.Is(err, context.Canceled) {
+		t.Fatalf("cancellation ignored: %v", err)
+	}
+	if len(storage.deleted) != 20 {
+		t.Fatal("cancelled drain deleted object")
 	}
 }
