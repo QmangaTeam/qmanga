@@ -18,6 +18,16 @@
  import {safeReturnPath} from '$lib/features/identity/domain/return-path';
  let {children,data}=$props();
  const notifications=createNotifications(),auth=createAuth(),teams=createTeams();
+ let accountRefreshing=$state(false),accountRefreshFailed=$state(false),accountGeneration=0;
+ const authRoute=$derived(/^\/(login|register|forgot-password|reset-password|verify-email)(\/|$)/.test($page.url.pathname)||$page.url.pathname==='/auth/complete');
+ async function refreshAccount(){
+  if($page.url.pathname==='/auth/complete')return;
+  const generation=++accountGeneration;
+  accountRefreshing=true;accountRefreshFailed=false;unreadCount=0;refreshGeneration++;
+  try{await invalidateAll();if(generation===accountGeneration)accountRefreshing=false;}
+  catch{if(generation===accountGeneration)accountRefreshFailed=true;}
+ }
+ onMount(()=>{const changed=()=>{void refreshAccount();};const stored=(event:StorageEvent)=>{if(event.key==='qmanga:auth-epoch')changed();};window.addEventListener('qmanga:account-change',changed);window.addEventListener('storage',stored);return()=>{accountGeneration++;window.removeEventListener('qmanga:account-change',changed);window.removeEventListener('storage',stored);};});
  let avatarVersion=$state(0);
  let unreadCount=$state(0),mounted=$state(false),refreshGeneration=0;
  async function refreshUnread(){const generation=++refreshGeneration,id=data.user?.id; if(!id){unreadCount=0;return;}try{const count=await notifications.unread(id);if(generation===refreshGeneration&&data.user?.id===id)unreadCount=count;}catch{if(generation===refreshGeneration)unreadCount=0;}}
@@ -39,13 +49,21 @@
  ]);
  const loginReturn=$derived($page.url.pathname==='/saved'?'/saved':safeReturnPath(/^\/(login|register|forgot-password|reset-password|verify-email)(\/|$)/.test($page.url.pathname)?$page.url.searchParams.get('returnTo'):$page.url.pathname+$page.url.search));
 </script>
+{#snippet content()}
+ {#if authRoute}{@render children()}{:else}{#key data.user?.id||'guest'}{@render children()}{/key}{/if}
+{/snippet}
 <a class="skip-link" href="#content">{text($locale,'Мазмұнға өту','К содержимому')}</a>
-{#if $page.url.pathname.startsWith('/read/') || $page.url.pathname==='/offline-reader'}
- <main id="content">{@render children()}</main>
+{#if accountRefreshing&&!authRoute}
+ <main id="content" class="page-container" aria-busy={!accountRefreshFailed}>
+  <p role="status">{accountRefreshFailed?text($locale,'Аккаунтты жаңарту мүмкін болмады.','Не удалось обновить аккаунт.'):text($locale,'Аккаунт жаңартылуда…','Обновляем аккаунт…')}</p>
+  {#if accountRefreshFailed}<button onclick={()=>void refreshAccount()}>{text($locale,'Қайталау','Повторить')}</button>{/if}
+ </main>
+{:else if $page.url.pathname.startsWith('/read/') || $page.url.pathname==='/offline-reader'}
+ <main id="content">{@render content()}</main>
 {:else}
- {#if adminArea}<main id="content" class="admin-container">{@render children()}</main>{:else}
+ {#if adminArea}<main id="content" class="admin-container">{@render content()}</main>{:else}
  <AppHeader {unreadBadge} {unreadCount} items={navigation.slice(0,4)} currentPath={$page.url.pathname} accountHref={data.user?'/menu':'/login?returnTo='+encodeURIComponent(loginReturn)} accountLabel={data.user?'Аккаунт':text($locale,'Кіру','Войти')} homeLabel={text($locale,'Qmanga басты бет','Qmanga — главная')} navigationLabel={text($locale,'Негізгі','Основная навигация')}>{#snippet account()}{#if data.user}<AccountMenu version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}{/snippet}</AppHeader>
- <main id="content" class="page-container">{@render children()}</main>
+ <main id="content" class="page-container">{@render content()}</main>
  <SiteFooter version={data.buildVersion}/>
  <MobileNavigation {unreadBadge} {unreadCount} items={navigation} currentPath={$page.url.pathname} label={text($locale,'Мобильді навигация','Мобильная навигация')}/>
  {/if}
