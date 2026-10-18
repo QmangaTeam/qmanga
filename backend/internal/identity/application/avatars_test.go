@@ -11,12 +11,18 @@ import (
 
 type avatarRepo struct{ saved bool }
 
-func (r *avatarRepo) SaveAvatar(context.Context, Avatar) error { r.saved = true; return nil }
+func (r *avatarRepo) ReserveAvatarObject(context.Context, string) error { return nil }
+func (r *avatarRepo) AbandonAvatarObject(context.Context, string) error { return nil }
+func (r *avatarRepo) AvatarGarbage(context.Context) ([]string, error)   { return nil, nil }
+func (r *avatarRepo) ForgetAvatarGarbage(context.Context, string) error { return nil }
+func (r *avatarRepo) SaveAvatar(context.Context, Avatar) error          { r.saved = true; return nil }
 func (r *avatarRepo) Avatar(context.Context, string, string) (Avatar, error) {
 	return Avatar{}, domain.ErrNotFound
 }
 
 type avatarStorage struct{}
+
+func (avatarStorage) DeleteDerivative(context.Context, string) error { return nil }
 
 func (avatarStorage) PutDerivative(context.Context, string, io.Reader, int64, string) error {
 	return nil
@@ -55,6 +61,66 @@ func TestAvatarAuthorizationPrecedesProcessing(t *testing.T) {
 			}
 		} else if !errors.Is(err, domain.ErrForbidden) || repo.saved || processor.called {
 			t.Fatalf("unauthorized upload processed: %+v %v", scenario, err)
+		}
+	}
+}
+
+type cleanupRepo struct {
+	avatarRepo
+	failed   bool
+	reserved bool
+	queue    []string
+	forgot   []string
+}
+
+func (r *cleanupRepo) ReserveAvatarObject(context.Context, string) error {
+	r.reserved = true
+	return nil
+}
+func (r *cleanupRepo) SaveAvatar(_ context.Context, a Avatar) error {
+	if r.failed {
+		return errors.New("database unavailable")
+	}
+	r.queue = []string{"avatars/obsolete"}
+	return nil
+}
+func (r *cleanupRepo) AbandonAvatarObject(_ context.Context, key string) error {
+	r.queue = append(r.queue, key)
+	return nil
+}
+func (r *cleanupRepo) AvatarGarbage(context.Context) ([]string, error) { return r.queue, nil }
+func (r *cleanupRepo) ForgetAvatarGarbage(_ context.Context, key string) error {
+	r.forgot = append(r.forgot, key)
+	return nil
+}
+
+type cleanupStorage struct {
+	avatarStorage
+	deleted []string
+}
+
+func (s *cleanupStorage) DeleteDerivative(_ context.Context, key string) error {
+	s.deleted = append(s.deleted, key)
+	return nil
+}
+func TestAvatarCleansFailedAndReplacedObjects(t *testing.T) {
+	for _, failed := range []bool{false, true} {
+		repo := &cleanupRepo{failed: failed}
+		storage := &cleanupStorage{}
+		service := NewAvatars(repo, storage, &avatarProcessor{}, avatarTeams{}, func() string { return "new" })
+		_, err := service.Upload(context.Background(), "me", "user", "me", strings.NewReader("image"))
+		if !repo.reserved {
+			t.Fatal("object not durably reserved")
+		}
+		expected := "avatars/obsolete"
+		if failed {
+			expected = "avatars/new"
+			if err == nil {
+				t.Fatal("save failure ignored")
+			}
+		}
+		if len(storage.deleted) != 1 || storage.deleted[0] != expected || len(repo.forgot) != 1 {
+			t.Fatalf("cleanup failed: %+v %+v", storage.deleted, repo.forgot)
 		}
 	}
 }

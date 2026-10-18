@@ -2,11 +2,13 @@ package http
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"io"
 	"net/http"
 	"qmanga/internal/identity/application"
+	"qmanga/internal/identity/domain"
 	"strconv"
 	"strings"
 	"time"
@@ -22,8 +24,8 @@ func NewAvatarHandler(service *application.AvatarService, identity *IdentityHand
 	return &AvatarHandler{service, identity, make(chan struct{}, 4)}
 }
 func (h *AvatarHandler) Register(router *gin.Engine) {
-	router.POST("/api/v1/avatars/user", h.identity.RequireUser(), h.upload("user"))
-	router.POST("/api/v1/avatars/team/:id", h.identity.RequireUser(), h.upload("team"))
+	router.POST("/api/v1/avatars/user", h.identity.RequireUser(), expectedAccount(), h.upload("user"))
+	router.POST("/api/v1/avatars/team/:id", h.identity.RequireUser(), expectedAccount(), h.upload("team"))
 	router.GET("/media/avatars/:kind/:id", h.media)
 	router.HEAD("/media/avatars/:kind/:id", h.media)
 }
@@ -73,6 +75,18 @@ func (h *AvatarHandler) media(c *gin.Context) {
 	defer cancel()
 	avatar, stream, err := h.service.Open(ctx, c.Param("kind"), c.Param("id"))
 	if err != nil {
+		if errors.Is(err, domain.ErrNotFound) {
+			if c.Request.Method == "HEAD" {
+				c.Status(404)
+			} else {
+				Error(c, 404, "not_found", "Аватар табылмады")
+			}
+			return
+		}
+		if c.Request.Method == "HEAD" {
+			c.Status(503)
+			return
+		}
 		h.identity.respondError(c, err)
 		return
 	}

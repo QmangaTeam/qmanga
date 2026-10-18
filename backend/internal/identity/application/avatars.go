@@ -16,10 +16,15 @@ type Avatar struct {
 	UpdatedAt          time.Time
 }
 type AvatarRepository interface {
+	ReserveAvatarObject(context.Context, string) error
+	AbandonAvatarObject(context.Context, string) error
+	AvatarGarbage(context.Context) ([]string, error)
+	ForgetAvatarGarbage(context.Context, string) error
 	SaveAvatar(context.Context, Avatar) error
 	Avatar(context.Context, string, string) (Avatar, error)
 }
 type AvatarStorage interface {
+	DeleteDerivative(context.Context, string) error
 	PutDerivative(context.Context, string, io.Reader, int64, string) error
 	OpenDerivative(context.Context, string, int64, int64) (io.ReadCloser, error)
 }
@@ -57,10 +62,20 @@ func (s *AvatarService) Upload(ctx context.Context, actor, kind, owner string, s
 		return Avatar{}, domain.ErrInvalid
 	}
 	avatar := Avatar{Kind: kind, OwnerID: owner, Key: "avatars/" + s.newID(), Bytes: int64(len(raw)), UpdatedAt: time.Now().UTC()}
-	if err = s.storage.PutDerivative(ctx, avatar.Key, bytes.NewReader(raw), avatar.Bytes, "image/jpeg"); err != nil {
+	if err = s.repository.ReserveAvatarObject(ctx, avatar.Key); err != nil {
 		return Avatar{}, err
 	}
-	return avatar, s.repository.SaveAvatar(ctx, avatar)
+	if err = s.storage.PutDerivative(ctx, avatar.Key, bytes.NewReader(raw), avatar.Bytes, "image/jpeg"); err != nil {
+		s.cleanupAvatar(avatar.Key)
+		return Avatar{}, err
+	}
+	err = s.repository.SaveAvatar(ctx, avatar)
+	if err != nil {
+		s.cleanupAvatar(avatar.Key)
+	} else {
+		s.cleanupAvatar("")
+	}
+	return avatar, err
 }
 func (s *AvatarService) Open(ctx context.Context, kind, owner string) (Avatar, io.ReadCloser, error) {
 	if kind != "user" && kind != "team" {
@@ -72,4 +87,22 @@ func (s *AvatarService) Open(ctx context.Context, kind, owner string) (Avatar, i
 	}
 	stream, err := s.storage.OpenDerivative(ctx, avatar.Key, 0, -1)
 	return avatar, stream, err
+}
+
+// Pending objects and obsolete versions have durable deletion records. Never delete a current key.
+func (s *AvatarService) cleanupAvatar(failedKey string) {
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if failedKey != "" {
+		_ = s.repository.AbandonAvatarObject(ctx, failedKey)
+	}
+	keys, err := s.repository.AvatarGarbage(ctx)
+	if err != nil {
+		return
+	}
+	for _, key := range keys {
+		if err = s.storage.DeleteDerivative(ctx, key); err == nil {
+			_ = s.repository.ForgetAvatarGarbage(ctx, key)
+		}
+	}
 }

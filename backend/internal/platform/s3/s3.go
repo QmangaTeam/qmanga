@@ -120,3 +120,7 @@ func (clientInstance *Client) EnsureBuckets(contextInstance context.Context) err
 
 	return nil
 }
+
+func (clientInstance *Client) DeleteDerivative(ctx context.Context, key string) error {
+	return clientInstance.minioClient.RemoveObject(ctx, clientInstance.mediaBucket, key, minio.RemoveObjectOptions{})
+}
