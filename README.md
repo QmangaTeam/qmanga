@@ -4,11 +4,13 @@
 
 ## Current development state
 
-Latest checkpoint and exact resume point: [current state, 18 October 2026](docs/CURRENT-STATE-2026-10-18.md). The T07–T10 frontend checkpoint is WIP, with one failing browser regression and two known filter-state defects; it is not completed beta acceptance.
+Current product queue and release notes: [UPDATE.md](UPDATE.md). Working rules and document ownership: [AGENTS.md](AGENTS.md). Check dated reports against the current code before resuming a task.
+
+Recorded reliability checkpoint: [current state, 18 October 2026](docs/CURRENT-STATE-2026-10-18.md). The latest recorded reliability pass passed local checks and the full GitHub CI; physical-device and human pilot acceptance remain open.
 
 The local functional alpha runs on seven Alpine services. Accounts, approved teams, catalogue/admin editing, mobile publishing, private media processing, moderation and the reader are connected to real persistence. The reader has page/strip modes, eco/standard/high, controlled requests and decoded memory, local/cloud progress with explicit conflicts, library choices, selected offline copies, ratings, comments, reports and notifications. Domain/application ports remain separate from Gin, PostgreSQL, Svelte and browser adapters. This is not public-release acceptance. The current baseline, limitations and next acceptance gates are the [18 October audit](docs/AUDIT-2026-10-18.md) and [development plan](docs/DEVELOPMENT-PLAN-2026-10-18.md).
 
-Fresh installations have an empty catalogue until a team uploads and a moderator publishes content. Automated fixtures use isolated schemas. The owner's sample images are used only in local development storage and never committed. Keep the approved compact layout and green palette; the next work repairs connected user journeys rather than starting another redesign. See docs/ui/DESIGN-REVIEW.md.
+Fresh installations have an empty catalogue until a team uploads and a moderator publishes content. Automated fixtures use isolated schemas. The owner's sample images are used only in local development storage and never committed. Keep the approved compact layout and orange/dark palette; the next work repairs connected user journeys rather than starting another redesign. See docs/ui/DESIGN-REVIEW.md.
 
 ## Local start
 
@@ -56,11 +58,11 @@ The first command skips PostgreSQL integration without TEST_DATABASE_URL. The to
 
 ## Interface and local preview
 
-The interface defaults to Kazakh. An explicit Russian choice is available in settings and reader settings; it does not translate manga content or reset the reading position. The original green/dark/light palette is retained. Help and reporting guidance are at /help.
+The interface defaults to Kazakh. An explicit Russian choice is available in settings and reader settings; it does not translate manga content or reset the reading position. Dark and light themes use the approved orange/brown palette. Help and reporting guidance are at /help.
 
 For the isolated component gallery run `docker compose --profile tools up -d web-ui` and open http://localhost:3001. It is development tooling, not a production route. The web image build runs application tests, Svelte SSR component tests, architecture/contrast checks, both Svelte checks and the production build.
 
-See docs/ui/REDESIGN-VALIDATION.md for fresh evidence and the remaining public-launch/device acceptance limits.
+See [the reliability report](docs/RELIABILITY-PASS-2026-10-18.md) for recorded evidence and the remaining public-launch/device acceptance limits.
 
 ## Architecture
 See docs/ARCHITECTURE.md and docs/MEDIA-GATEWAY.md. Feature contexts contain domain, application ports/use cases, and adapters; Go and browser composition roots provide concrete dependencies. PostgreSQL migrations are embedded and serialized by an advisory lock.
@@ -69,4 +71,4 @@ The original MinIO upload sources remain private. Reader original quality is an 
 
 ## Product specification
 
-The [development plan](docs/DEVELOPMENT-PLAN-2026-10-18.md) is the active post-audit backlog; [first-package evidence and remaining gates](docs/STAGE1-VALIDATION-2026-10-18.md) distinguish local checks from unverified acceptance. QMANGA-PLAN.md, QMANGA-READER.md, QMANGA-ROADMAP.md and docs/PROGRESS.md preserve the original specifications and historical milestones, not a claim that the current beta/public-launch gates passed.
+The [development plan](docs/DEVELOPMENT-PLAN-2026-10-18.md) is the active post-audit backlog; [latest evidence and remaining gates](docs/RELIABILITY-PASS-2026-10-18.md) distinguish local checks from unverified acceptance. QMANGA-PLAN.md, QMANGA-READER.md, QMANGA-ROADMAP.md preserve the original specifications and historical milestones, not a claim that the current beta/public-launch gates passed.
