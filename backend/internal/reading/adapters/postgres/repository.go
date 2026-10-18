@@ -85,16 +85,16 @@ func (repository *Repository) Save(ctx context.Context, actor string, input appl
 	if failure = transaction.QueryRow(ctx, "SELECT id FROM users WHERE id=$1 AND NOT is_blocked FOR UPDATE", actor).Scan(&locked); failure != nil {
 		return domain.ErrForbidden
 	}
-	// Infer only for a first save with competing projects, using actual accepted reading.
-	if input.Version == 0 && input.PreferredTeamID == "" && !input.Removed {
-		if failure = transaction.QueryRow(ctx, `SELECT coalesce((SELECT release.team_id FROM reading_progress progress JOIN releases release ON release.id=progress.release_id JOIN projects project ON project.id=release.project_id AND project.title_id=progress.title_id WHERE progress.user_id=$1 AND progress.title_id=$2 AND (SELECT count(*) FROM projects WHERE title_id=$2)>1),'')`, actor, input.TitleID).Scan(&input.PreferredTeamID); failure != nil {
-			return failure
-		}
-	}
 	current := application.Selection{}
 	failure = transaction.QueryRow(ctx, "SELECT status,is_favorite,coalesce(preferred_team_id,''),notify_new_releases,selection_version,is_removed FROM library_entries WHERE user_id=$1 AND title_id=$2 FOR UPDATE", actor, input.TitleID).Scan(&current.Status, &current.Favorite, &current.PreferredTeamID, &current.Notify, &current.Version, &current.Removed)
 	if failure != nil && !errors.Is(failure, pgx.ErrNoRows) {
 		return failure
+	}
+	// Infer only for a new or restored entry with competing projects, using actual accepted reading.
+	if (current.Version == 0 || current.Removed) && input.PreferredTeamID == "" && !input.Removed {
+		if failure = transaction.QueryRow(ctx, `SELECT coalesce((SELECT release.team_id FROM reading_progress progress JOIN releases release ON release.id=progress.release_id JOIN projects project ON project.id=release.project_id AND project.title_id=progress.title_id WHERE progress.user_id=$1 AND progress.title_id=$2 AND (SELECT count(*) FROM projects WHERE title_id=$2)>1),'')`, actor, input.TitleID).Scan(&input.PreferredTeamID); failure != nil {
+			return failure
+		}
 	}
 	if current.Version > 0 && current.Status == input.Status && current.Favorite == input.Favorite && current.PreferredTeamID == input.PreferredTeamID && current.Notify == input.Notify && current.Removed == input.Removed {
 		return nil

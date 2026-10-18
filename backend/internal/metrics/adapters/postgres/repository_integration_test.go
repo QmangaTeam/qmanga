@@ -123,6 +123,20 @@ func TestMetricsScopeEventsAndReadingSuggestion(t *testing.T) {
 			t.Fatal("inferred preference without actual competing-project reading", entry, err)
 		}
 	}
+	if err = repo.Remove(ctx, "reader", "title"); err != nil {
+		t.Fatal(err)
+	}
+	entry, err = repo.Selection(ctx, "reader", "title")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err = repo.Save(ctx, "reader", readingApp.Selection{TitleID: "title", Status: "reading", Version: entry.Version}); err != nil {
+		t.Fatal(err)
+	}
+	entry, err = repo.Selection(ctx, "reader", "title")
+	if err != nil || entry.PreferredTeamID != "own" {
+		t.Fatal("restored library entry lost reading-derived preference", entry, err)
+	}
 	var old int
 	if err = db.Pool().QueryRow(ctx, `SELECT count(*) FROM reading_activity WHERE day<(now() AT TIME ZONE 'UTC')::date-89`).Scan(&old); err != nil || old != 0 {
 		t.Fatal("retention", old, err)
