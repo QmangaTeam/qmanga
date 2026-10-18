@@ -92,18 +92,18 @@ func TestMetricsScopeEventsAndReadingSuggestion(t *testing.T) {
 	if err != nil || entry.PreferredTeamID != "" {
 		t.Fatal("explicit clear ignored", entry, err)
 	}
-	exec(`INSERT INTO ratings(id,user_id,title_id,score) VALUES('rating','reader','title',8);UPDATE ratings SET score=9 WHERE id='rating';UPDATE releases SET status='draft' WHERE id='r1';UPDATE releases SET status='published' WHERE id='r1';INSERT INTO reading_activity VALUES((now() AT TIME ZONE 'UTC')::date-91,'other','r1',true);UPDATE metrics_collection SET pruned_on=(now() AT TIME ZONE 'UTC')::date-1;INSERT INTO reading_activity VALUES((now() AT TIME ZONE 'UTC')::date,'other','r1',false);`)
+	exec(`INSERT INTO releases(id,chapter_id,project_id,team_id,status,current_revision_id) VALUES('foreign-release','c1','foreign-project','foreign','published','foreign-revision');INSERT INTO revisions(id,release_id,status) VALUES('foreign-revision','foreign-release','published');INSERT INTO ratings(id,user_id,title_id,score) VALUES('rating','reader','title',8);UPDATE ratings SET score=9 WHERE id='rating';UPDATE releases SET status='draft' WHERE id='r1';UPDATE releases SET status='published' WHERE id='r1';INSERT INTO reading_activity VALUES((now() AT TIME ZONE 'UTC')::date-91,'other','r1',true);UPDATE metrics_collection SET pruned_on=(now() AT TIME ZONE 'UTC')::date-1;INSERT INTO reading_activity VALUES((now() AT TIME ZONE 'UTC')::date,'other','foreign-release',false);`)
 	metrics := New(db.Pool())
 	report, err := metrics.Report(ctx, "admin", true, 7)
 	if err != nil || len(report.Days) != 7 {
 		t.Fatal(report, err)
 	}
 	today := report.Days[6]
-	if today.Verified != 4 || today.Publications != 3 || today.Completions != 3 || today.Readers != 2 || today.Libraries != 1 || today.Subscriptions != 1 || today.Ratings != 1 || report.PeriodReaders != 2 {
+	if today.Verified != 4 || today.Publications != 4 || today.Completions != 3 || today.Readers != 2 || today.Libraries != 1 || today.Subscriptions != 1 || today.Ratings != 1 || report.PeriodReaders != 2 {
 		t.Fatalf("unexpected aggregates: %+v %+v", today, report)
 	}
 	own, err := metrics.Report(ctx, "translator", false, 30)
-	if err != nil || own.Days[29].Completions != 3 || own.Days[29].Verified != 0 || own.Days[29].Libraries != 1 {
+	if err != nil || own.Days[29].Completions != 3 || own.Days[29].Verified != 0 || own.Days[29].Libraries != 1 || own.Days[29].Readers != 1 || own.Days[29].Publications != 3 || own.PeriodReaders != 1 {
 		t.Fatal(own, err)
 	}
 	if _, err = metrics.Report(ctx, "reader", true, 7); !errors.Is(err, application.ErrForbidden) {
