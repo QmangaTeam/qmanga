@@ -90,6 +90,7 @@ func TestIdentityFlowWithPostgres(testingTarget *testing.T) {
 	expect(send("POST", "register", credentials, nil, "", "http://foreign.example"), 403)
 	expect(send("POST", "register", credentials, nil, "", origin), 202)
 	expect(send("POST", "register", credentials, nil, "", origin), 202)
+	delete(credentials, "display_name") // Login deliberately rejects registration-only fields.
 	verification := mailer.token()
 	expect(send("POST", "verify-email", map[string]string{"token": verification}, nil, "", origin), 200)
 	expect(send("POST", "verify-email", map[string]string{"token": verification}, nil, "", origin), 410)
