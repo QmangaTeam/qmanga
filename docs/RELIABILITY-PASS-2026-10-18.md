@@ -67,3 +67,7 @@ Scope limits: cover selection uses a ready project image and an independent safe
 
 Physical-device endurance, representative mobile performance, human usability and Kazakh translation review remain unperformed pilot gates. No production deployment or external invitations were performed. See `PILOT-AND-PERFORMANCE-2026-10-18.md` and `PREPARED-PUBLICATION-IMPORT.md`.
 Final production build: `tmp/reliability-final-build.log` — 84 frontend tests (380 assertions), 26 SSR UI tests (650 assertions), zero failures; app and preview each zero errors/warnings; architecture and both-theme contrast checks pass. API, worker and web rebuilt; all seven local services healthy. Final browser recheck confirmed cover audit before/after and actor links, decoded offline page 23 from blob storage, preserved online `auto` quality, and offline chapter panel linking to saved chapters without online directory errors.
+
+## Remote CI confirmation
+
+Code commit `eef58597922ea5a4d4043bb2cb52de4eee988d82` passed the complete GitHub Actions run [39082237199](https://github.com/maqsatto/qmanga/actions/runs/39082237199): clean build, setup checks, full Go/PostgreSQL/codec suite, auth/publishing/reading smoke, and all `tests/browser/*.test.mjs` including the new cold-offline/eviction/retry regression. The earlier JSON-log parsing failure no longer blocks downstream tests. This remote result was observed as `completed / success`, not inferred from local checks.
