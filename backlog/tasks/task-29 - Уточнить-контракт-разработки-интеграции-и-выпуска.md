@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-18 21:26'
-updated_date: '2026-10-18 22:31'
+updated_date: '2026-10-18 23:04'
 labels:
   - process
   - ci
@@ -42,4 +42,6 @@ ordinal: 3026
 Ревью владельца завершено для23 карточек на базе3302515: проверены реализация, права доступа, границы API/хранилищ и интеграция. Итоговые локальные проверки:106 Go-тестов/подтестов,114 прикладных и29 SSR-тестов,40/40 браузерных сценариев;0 ошибок и0 пропусков, Svelte0 ошибок/предупреждений. Логи tmp/review-complete-go.jsonl, tmp/review-complete-web-build.log, tmp/review-final-browser-acceptance.log. Точные auth/publishing/reading CI smoke пройдены на настоящих PostgreSQL/MinIO/Mailpit. Это локальная приёмка; Review сохранён до удалённого CI, staging и наблюдаемого выпуска того же SHA. Для TASK17 дополнительно нужны утверждение правовых текстов владельцем и действующий ящик поддержки; для TASK26 остаётся предрелизная проверка consent/contact.
 
 Review corrected exact CI auth registration payload d044eea and isolated smoke/browser auth phases9aa2d19; real PowerShell auth→publishing→reading smoke passed. f75f1f3 serializes browser files with real production auth limits; full40/40 acceptance passed in79s. Same-image API recreation preserves session, manifests and streamed media checksums. Backup deletion guard and fail-closed shell acceptance419641b are included in CI. No remote pipeline/release claimed.
+
+Authorized push10d39b867a44dc42d7e2999eb3df456a8655c0f7 completed. Remote Verify Qmanga run39173918089 succeeded:106 Go tests/subtests without actual skips,114 application+29SSR,40/40 browsers; real auth/publishing/reading and backup guard passed; all3 ARM64 images published. Existing outbound poller deployed that exact SHA to staging; public footer, PostgreSQL/S3 health, taxonomy, registration validation and guest access guards verified. Production not promoted yet: original SSHkey is on unavailable previous PC. Next step: approved temporary one-instance/time-limited Oracle RunCommand access if usable, then inspect host migrations/backup/restore gates and run existing guarded production release. No host permissions changed and no production success claimed.
 <!-- SECTION:NOTES:END -->

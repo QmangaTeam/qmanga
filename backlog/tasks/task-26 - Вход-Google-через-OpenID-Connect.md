@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-identity'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 22:31'
+updated_date: '2026-10-18 23:04'
 labels:
   - stage-7
 dependencies:
@@ -46,4 +46,6 @@ Actual Google end-to-end verification now succeeded in owner browser after expli
 Review fix7548685 routes successful Google sessions through a one-use 60-second session-bound HttpOnly proof before awaited browser cache cleanup and cross-tab account notification. Cancel/error/unmarked/replayed/wrong-session completion does not clear caches. Actual Google repeat sign-in was rechecked on rebuilt local API and returned /settings as maqsatto without a completion loop. Backend token/transport, server proof and browser isolation regressions cover the boundary. AC2 retains the external pre-release consent/contact acceptance gate.
 
 Ревью владельца завершено для23 карточек на базе3302515: проверены реализация, права доступа, границы API/хранилищ и интеграция. Итоговые локальные проверки:106 Go-тестов/подтестов,114 прикладных и29 SSR-тестов,40/40 браузерных сценариев;0 ошибок и0 пропусков, Svelte0 ошибок/предупреждений. Логи tmp/review-complete-go.jsonl, tmp/review-complete-web-build.log, tmp/review-final-browser-acceptance.log. Точные auth/publishing/reading CI smoke пройдены на настоящих PostgreSQL/MinIO/Mailpit. Это локальная приёмка; Review сохранён до удалённого CI, staging и наблюдаемого выпуска того же SHA. Для TASK17 дополнительно нужны утверждение правовых текстов владельцем и действующий ящик поддержки; для TASK26 остаётся предрелизная проверка consent/contact.
+
+Remote10d39b8 CI passed and exactSHA serves staging. Deployed /api/v1/auth/google/status currently reports enabled:false because serverOAuth pair is not yet installed. Localowner Google acceptance remains valid; remoteconfiguration/consent/contact and release acceptance still pending. Keep Review.
 <!-- SECTION:NOTES:END -->
