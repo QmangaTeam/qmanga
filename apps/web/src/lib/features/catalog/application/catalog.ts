@@ -1,7 +1,9 @@
 import type { AgeRating, Kind, OriginalStatus, TranslationStatus } from '../domain/catalog';
 import type {Publication} from '../domain/publication';
 
-export interface CatalogFilter {ageRating?:string;hasChapters?:boolean; featured?:boolean; query?: string; kind?: string; genre?: string; originalStatus?: string; translationStatus?: string; sort?: string }
+export interface Collection extends Genre {description:string;position:number;visible:boolean;titleIds:string[]}
+export interface Taxonomy {genres:Genre[];categories:Genre[];collections:Collection[]}
+export interface CatalogFilter {category?:string;collection?:string;ageRating?:string;hasChapters?:boolean; featured?:boolean; query?: string; kind?: string; genre?: string; originalStatus?: string; translationStatus?: string; sort?: string }
 export interface ChapterFilter { query?:string; sort?:'asc'|'desc'; limit?:number }
 export interface Genre { id: string; name: string; slug: string }
 export interface Summary {
@@ -10,7 +12,7 @@ export interface Summary {
  coverURL: string; demo: boolean; chapterCount: number; ratingCount: number; score: number; updatedAt: string;
 }
 export interface Project { id: string; titleId: string; teamId: string; titleName: string; titleSlug: string; teamName: string; teamSlug: string; status: string }
-export interface TitleDetail {ageRating?:AgeRating;listed?:boolean; authors?:string[]; featured?:boolean;
+export interface TitleDetail {categories?:Genre[];collections?:Collection[];ageRating?:AgeRating;listed?:boolean; authors?:string[]; featured?:boolean;
  publication?:Publication; chapterCount?:number; readerCount?:number; ratingDistribution?:number[];
  id: string; slug: string; name: string; originalName: string; aliases: string[]; kind: Kind; originalStatus: OriginalStatus; translationStatus: TranslationStatus;
  description: string; direction: 'ltr' | 'rtl'; demo: boolean; coverURL: string; score: number; ratingCount: number; genres: Genre[]; projects: Project[];
@@ -24,6 +26,7 @@ export interface CatalogGateway {
  rankings(kind?:string):Promise<ResultPage<Summary>>;
  updates(after?:string,team?:string):Promise<ResultPage<ReleaseUpdate>>;
  list(filter: CatalogFilter, cursor?: string): Promise<ResultPage<Summary>>;
+ taxonomy?():Promise<Taxonomy>;
  genres(): Promise<Genre[]>;
  detail(slug: string): Promise<TitleDetail | null>;
  chapters(slug: string, cursor?: string, filter?:ChapterFilter): Promise<ResultPage<Chapter>>;
@@ -31,9 +34,9 @@ export interface CatalogGateway {
 }
 export async function loadCatalogue(gateway: CatalogGateway, filter: CatalogFilter, cursor?: string) {
  try {
-  const [page, genres] = await Promise.all([gateway.list(filter, cursor), gateway.genres()]);
-  return { available: true, page, genres, message: '' };
+  const [page, genres, taxonomy] = await Promise.all([gateway.list(filter, cursor), gateway.genres(),gateway.taxonomy?.()]);
+  return { available: true, page, genres, categories:taxonomy?.categories||[],collections:taxonomy?.collections||[], message: '' };
  } catch {
-  return { available: false, page: { items: [], nextCursor: null } as ResultPage<Summary>, genres: [] as Genre[], message: 'Каталогты жүктеу мүмкін болмады. Қайта көріңіз.' };
+  return { available: false, page: { items: [], nextCursor: null } as ResultPage<Summary>, genres: [] as Genre[],categories:[] as Genre[],collections:[] as Collection[], message: 'Каталогты жүктеу мүмкін болмады. Қайта көріңіз.' };
  }
 }

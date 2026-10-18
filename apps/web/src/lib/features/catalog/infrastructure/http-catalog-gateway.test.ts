@@ -38,3 +38,17 @@ test('catalogue carries validated age ratings and preserves the age filter inclu
   }
  }
 });
+
+test('taxonomy maps distinct categories and ordered collections and preserves combined URL filters',async()=>{
+ let requested='';
+ const client=new ApiClient((async(input:RequestInfo|URL)=>{
+  requested=String(input);
+  if(requested.includes('/taxonomy'))return Response.json({genres:[{id:'genre',name:'Adventure',slug:'adventure'}],categories:[{id:'category',name:'Қиял әлемдері',slug:'fantasy-worlds'}],collections:[{id:'selection',name:'Selection',slug:'selection',description:'Editorial',position:2,visible:true,title_ids:['second','first']}]});
+  return Response.json({items:[],next_cursor:null});
+ }) as typeof fetch);
+ const gateway=new HttpCatalogGateway(client),result=await gateway.taxonomy();
+ expect(result.categories[0].id).toBe('category');expect(result.collections[0].titleIds).toEqual(['second','first']);expect('title_ids' in result.collections[0]).toBe(false);
+ await gateway.list({category:'fantasy-worlds',collection:'selection',genre:'adventure',ageRating:'18'},'cursor');
+ const params=new URL(requested,'http://localhost').searchParams;
+ expect(Object.fromEntries(params)).toEqual({category:'fantasy-worlds',collection:'selection',age_rating:'18',genre:'adventure',cursor:'cursor'});
+});

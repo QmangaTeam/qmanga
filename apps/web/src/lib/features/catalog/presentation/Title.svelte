@@ -46,7 +46,7 @@
  </aside>
  <header class="title-heading">
   <div class="name-line"><div><h1>{title.name}</h1><p class="subtitle"><AgeRating value={title.ageRating}/>{#if title.publication?.year}<span>{title.publication.year}</span>{/if}<a href={'/catalog?kind='+title.kind}>{names.kind[title.kind]}</a>{#if title.demo}<span class="demo">{text($locale,'Үлгі','Пример')}</span>{/if}</p></div>{#if rating}{@render rating()}{/if}</div>
-  {#if title.genres.length}<div class="title-genres">{#each title.genres as genre}<a href={'/catalog?genre='+encodeURIComponent(genre.slug)}>{genre.name}</a>{/each}</div>{/if}
+  {#if title.genres.length||title.categories?.length||title.collections?.length}<div class="title-genres">{#each title.categories||[] as category}<a href={"/catalog?category="+encodeURIComponent(category.slug)}>{category.name}</a>{/each}{#each title.collections||[] as collection}<a href={"/catalog?collection="+encodeURIComponent(collection.slug)}>{collection.name}</a>{/each}{#each title.genres as genre}<a href={'/catalog?genre='+encodeURIComponent(genre.slug)}>{genre.name}</a>{/each}</div>{/if}
   {#if title.description}<p class="synopsis">{title.description}</p>{/if}
  </header>
  <div class="title-main">

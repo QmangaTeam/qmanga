@@ -13,6 +13,7 @@
  import {emptyPublication} from '../domain/publication';
  const kindNames=$derived(catalogNames($locale).kind),originalStatusNames=$derived(catalogNames($locale).original),translationStatusNames=$derived(catalogNames($locale).translation);
  let { user, gateway, initialTitleId = '' }: { user: Account | null; gateway: CatalogManagementGateway; initialTitleId?: string } = $props();
+ let categories=$state<Genre[]>([]), categoryIds=$state<string[]>([]);
  let titles = $state<Summary[]>([]), genres = $state<Genre[]>([]), teams = $state<{id: string; name: string}[]>([]);
  let moreTitles=$state(false),moreTeams=$state(false);
  async function loadMoreTitles(){const next=await gateway.titles(titles.length);titles=[...titles,...next];moreTitles=next.length===100;}
@@ -20,11 +21,11 @@
  let selected = $state(''), input = $state(emptyMetadata()), aliases = $state(''), authors = $state(''), detail = $state<TitleDetail | null>(null);
  let busy = $state(false), notice = $state(''), failure = $state('');
  let chapterLabel = $state(''), chapterOrder = $state(1), volume = $state(''), chapterName = $state(''), teamId = $state(''), genreName = $state(''), genreSlug = $state('');
- async function reload() { [titles, genres, teams] = await Promise.all([gateway.titles(), gateway.genres(), gateway.teams()]);moreTitles=titles.length===100;moreTeams=teams.length===100; }
+ async function reload() { categories=(await gateway.taxonomy()).categories; [titles, genres, teams] = await Promise.all([gateway.titles(), gateway.genres(), gateway.teams()]);moreTitles=titles.length===100;moreTeams=teams.length===100; }
  async function operation(action: () => Promise<void>, success = '') { if (busy) return; busy = true; failure = ''; notice = ''; try { await action(); notice = success; } catch (error) { failure = failureCode(error); } finally { busy = false; } }
- async function choose(id: string) { const next = id ? await gateway.detail(id) : null; selected = id; detail = next; input = detail ? editableMetadata(detail) : emptyMetadata(); input.publication??=emptyPublication(); aliases = input.aliases.join('\n'); authors=(input.authors||[]).join('\n'); }
+ async function choose(id: string) { const next = id ? await gateway.detail(id) : null; selected = id; detail = next;categoryIds=(next?.categories||[]).map(item=>item.id); input = detail ? editableMetadata(detail) : emptyMetadata(); input.publication??=emptyPublication(); aliases = input.aliases.join('\n'); authors=(input.authors||[]).join('\n'); }
  onMount(() => { if (user?.role === 'admin') operation(async () => { await reload(); if (initialTitleId) await choose(initialTitleId); }); });
- async function save(event: SubmitEvent) { event.preventDefault(); notice = ''; input.authors=authors.split('\n').map(value=>value.trim()).filter(Boolean); input.aliases = aliases.split('\n').map(value => value.trim()).filter(Boolean); if (metadataError(input)) { failure = "metadata_invalid"; return; } await operation(async () => { const id = await gateway.save(input, selected || undefined); await reload(); await choose(id); }, 'saved'); }
+ async function save(event: SubmitEvent) { event.preventDefault(); notice = ''; input.authors=authors.split('\n').map(value=>value.trim()).filter(Boolean); input.aliases = aliases.split('\n').map(value => value.trim()).filter(Boolean); if (metadataError(input)) { failure = "metadata_invalid"; return; } await operation(async () => { const id = await gateway.save(input, selected || undefined); await gateway.setCategories(id,categoryIds); await reload(); await choose(id); }, 'saved'); }
 </script>
 <svelte:head><title>{copy($locale,"Каталогты басқару — Qmanga")}</title><meta name="robots" content="noindex"/></svelte:head>
 <h1>{copy($locale,"Каталогты басқару")}</h1><a class="auth-link" href="/admin">{copy($locale,"Командалар")}</a><a class="auth-link" href="/moderation">{copy($locale,"Жарияланымдарды тексеру")}</a>
@@ -49,6 +50,7 @@
  <label>{copy($locale,"Сипаттама")}<textarea bind:value={input.description} rows="5" maxlength="10000"></textarea></label>
  <PublicationFields bind:value={input.publication}/>
  <fieldset><legend>{copy($locale,"Жанрлар")}</legend>{#each genres as genre}<label class="check"><input type="checkbox" bind:group={input.genreIds} value={genre.id}/>{genre.name}</label>{/each}</fieldset>
+ <fieldset><legend>{text($locale,"Мазмұн санаттары","Категории содержания")}</legend>{#each categories as category}<label class="check"><input type="checkbox" bind:group={categoryIds} value={category.id}/>{category.name}</label>{/each}</fieldset>
  <label class="check"><input type="checkbox" bind:checked={input.demo}/>{copy($locale,"Үлгі туынды")}</label>
  <button class="button primary" disabled={busy} type="submit">{copy($locale,"Тайтлды сақтау")}</button>
 </form></section>
@@ -57,6 +59,6 @@
 <h3>{copy($locale,"Командаға жоба беру")}</h3><form onsubmit={event => { event.preventDefault(); operation(async () => { await gateway.createProject(selected,teamId); await choose(selected); }, 'saved'); }}><label>{copy($locale,"Мақұлданған команда")}<select bind:value={teamId} required><option value="">{copy($locale,"Команданы таңдаңыз")}</option>{#each teams as team}<option value={team.id}>{team.name}</option>{/each}</select></label>{#if moreTeams}<button type="button" class="button subtle" disabled={busy} onclick={()=>operation(loadMoreTeams)}>{text($locale,'Тағы командалар','Ещё команды')}</button>{/if}<button class="button primary" disabled={busy || !teamId}>{copy($locale,"Жоба құру")}</button></form>
 {#each detail?.projects || [] as project}<p><a class="auth-link" href={'/admin/projects/' + encodeURIComponent(project.id)}>{project.teamName}: {project.titleName}</a></p>{/each}
 {:else}<p class="muted">{copy($locale,"Алдымен тайтлды сақтаңыз немесе таңдаңыз.")}</p>{/if}
-<h3>{copy($locale,"Жаңа жанр")}</h3><form onsubmit={event => { event.preventDefault(); operation(async () => { await gateway.createGenre(genreName,genreSlug); genres = await gateway.genres(); genreName = ''; genreSlug = ''; }, 'saved'); }}><label>{copy($locale,"Жанр атауы")}<input bind:value={genreName} required maxlength="80"/></label><label>{copy($locale,"Сілтемесі")}<input bind:value={genreSlug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="64"/></label><button class="button subtle" disabled={busy}>{copy($locale,"Жанр қосу")}</button></form>
+<p><a class="auth-link" href="/admin/taxonomy">{text($locale,"Жанрлар, санаттар және жинақтар","Жанры, категории и подборки")}</a></p><h3>{copy($locale,"Жаңа жанр")}</h3><form onsubmit={event => { event.preventDefault(); operation(async () => { await gateway.createGenre(genreName,genreSlug); genres = await gateway.genres(); genreName = ''; genreSlug = ''; }, 'saved'); }}><label>{copy($locale,"Жанр атауы")}<input bind:value={genreName} required maxlength="80"/></label><label>{copy($locale,"Сілтемесі")}<input bind:value={genreSlug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="64"/></label><button class="button subtle" disabled={busy}>{copy($locale,"Жанр қосу")}</button></form>
 </section></div>{/if}
 <style>.auth-link { margin-right:18px; } .panel form { margin-top:18px; } .check { display:flex; align-items:center; min-height:44px; gap:10px; } .check input { width:20px; height:20px; min-height:20px; flex-shrink:0; } fieldset { border:1px solid var(--line); padding:12px; }</style>

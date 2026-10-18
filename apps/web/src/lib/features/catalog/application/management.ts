@@ -1,6 +1,11 @@
 import type { Metadata } from '../domain/metadata';
-import type { Genre, Summary, TitleDetail, Project } from './catalog';
+import type { Genre, Summary, TitleDetail, Project, Taxonomy,Collection } from './catalog';
 export interface CatalogManagementGateway {
+ taxonomy():Promise<Taxonomy>;
+ saveTaxon(kind:'genres'|'categories',input:Genre):Promise<void>;
+ deleteTaxon(kind:'genres'|'categories'|'collections',id:string):Promise<void>;
+ saveCollection(input:Collection):Promise<void>;
+ setCategories(title:string,ids:string[]):Promise<void>;
  titles(offset?:number): Promise<Summary[]>;
  detail(id: string): Promise<TitleDetail>;
  project(id: string): Promise<Project>;
