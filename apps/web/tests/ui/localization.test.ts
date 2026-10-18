@@ -19,7 +19,9 @@ test('SSR locale contexts do not leak between renders',()=>{
  expect(russian).not.toContain('Тайтл табылмады');
  expect(kazakh).toContain('Тайтл табылмады');
  expect(kazakh).not.toContain('Тайтлы не найдены');
- expect(render(LocaleFixture,{props:{language:'ru'}}).body).toContain('Фильтры и сортировка');
+ expect(render(LocaleFixture,{props:{language:'ru'}}).body).toContain('Фильтры каталога');
+ expect(kazakh).toContain('Каталог сүзгілері');
+ expect(kazakh).not.toContain('Фильтры каталога');
 });
 test('notices translate at render time and never expose unknown backend text',()=>{
  expect(noticeText('ru','progress_pending')).toContain('синхронизации');
