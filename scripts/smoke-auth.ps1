@@ -38,12 +38,13 @@ function Read-Token([string]$Recipient, [string]$Page) {
     throw 'Test email was not received.'
 }
 try {
-    Assert-Status (Send-Auth POST register @{ email = $email; password = $password }) 202
+    Assert-Status (Send-Auth POST register @{ email = $email; password = $password; display_name = 'Smoke Reader' }) 202
     $verification = Read-Token $email 'verify-email'
     Assert-Status (Send-Auth POST verify-email @{ token = $verification }) 200
     Assert-Status (Send-Auth POST login @{ email = $email; password = $password }) 200
     $accountResult = Send-Auth GET me $null
     Assert-Status $accountResult 200
+    if ($accountResult.Data.user.display_name -ne 'Smoke Reader') { throw 'Registration nickname was not persisted.' }
     if (-not $accountResult.Data.user.email_verified) { throw 'Email was not verified.' }
     Assert-Status (Send-Auth POST logout @{}) 403
     $csrf = (Send-Auth GET csrf $null).Data.csrf_token
