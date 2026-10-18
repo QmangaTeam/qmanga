@@ -55,8 +55,12 @@ local_health() {
 }
 
 public_health() {
-  curl --fail --silent --show-error --max-time 15 "$APP_ORIGIN/api/v1/health" >/dev/null
-  curl --fail --silent --show-error --max-time 15 "$APP_ORIGIN/" >/dev/null
+  # OCI does not hairpin a VM's own public IP back to the VM. Connect to the
+  # local Caddy listener while keeping the real hostname for TLS and routing.
+  curl --fail --silent --show-error --max-time 15 \
+    --resolve "$DOMAIN:443:127.0.0.1" "$APP_ORIGIN/api/v1/health" >/dev/null
+  curl --fail --silent --show-error --max-time 15 \
+    --resolve "$DOMAIN:443:127.0.0.1" "$APP_ORIGIN/" >/dev/null
 }
 
 load_public_origin() {
