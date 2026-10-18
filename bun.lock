@@ -1,0 +1,27 @@
+{
+  "lockfileVersion": 2,
+  "configVersion": 1,
+  "workspaces": {
+    "": {
+      "name": "qmanga",
+      "devDependencies": {
+        "backlog.md": "1.54.0",
+      },
+    },
+  },
+  "packages": {
+    "backlog.md": ["backlog.md@1.54.0", "", { "optionalDependencies": { "backlog.md-darwin-arm64": "1.54.0", "backlog.md-darwin-x64": "1.54.0", "backlog.md-linux-arm64": "1.54.0", "backlog.md-linux-x64": "1.54.0", "backlog.md-windows-arm64": "1.54.0", "backlog.md-windows-x64": "1.54.0" }, "bin": { "backlog": "cli.js" } }, "sha512-yf2QlB5fmVjnJglPPfx1gBZeAvnOPhYR26ENPt6Wp1vzEMiKzv14Ew8xPkH/c4h3tXGEn5ezT9dWE/qLyhj+2Q=="],
+
+    "backlog.md-darwin-arm64": ["backlog.md-darwin-arm64@1.54.0", "", { "os": "darwin", "cpu": "arm64" }, "sha512-boN6Zi3vo97yb+LduWCWSrlZUUCV2yPzdM5j+mt+QOU1XalsrVxE5Pem+RySAKqtIw96ZDcvOJCUGNvrjFG/PQ=="],
+
+    "backlog.md-darwin-x64": ["backlog.md-darwin-x64@1.54.0", "", { "os": "darwin", "cpu": "x64" }, "sha512-CIqsNXckfJKMFPgpInRF3JbG7Yi9CuGc/j/Brt712qfw9ASW6UNOwft4QMLrPaT4IZZSB153X/NprbRsrkpuQg=="],
+
+    "backlog.md-linux-arm64": ["backlog.md-linux-arm64@1.54.0", "", { "os": "linux", "cpu": "arm64" }, "sha512-iuqhOsQdu1u9pnNa/+1dIh2AjQQi1eo+ZOJb43Ch8oG1eHB2aq6yD2yBr0hNu3xbcfNBVDFIRtOtL+dKtlSIOw=="],
+
+    "backlog.md-linux-x64": ["backlog.md-linux-x64@1.54.0", "", { "os": "linux", "cpu": "x64" }, "sha512-ZP4g3jZZ3AahdOi2v/zO+Qpz9XRLy70aHAa4UGY8uNzTGkGkVbUcK7kTZNztS0DHpllY9231nPaTTpdfWL2fYQ=="],
+
+    "backlog.md-windows-arm64": ["backlog.md-windows-arm64@1.54.0", "", { "os": "win32", "cpu": "arm64" }, "sha512-lEmJsUrG2Db4dW4xTey7VdcFWBVNqgY+WaL+TFz3xs3XyAU2MO35hBdelGY3oojFX31486z41nD0NFyeEbt8eg=="],
+
+    "backlog.md-windows-x64": ["backlog.md-windows-x64@1.54.0", "", { "os": "win32", "cpu": "x64" }, "sha512-4UncsLGjtrQwU9Avu6v6qNOaArcIjZP9upFEnj9yM/xYs5tRynPV7vbWPQuTp1NGak5NwX6bOYBgy5RpEnbHrg=="],
+  }
+}
