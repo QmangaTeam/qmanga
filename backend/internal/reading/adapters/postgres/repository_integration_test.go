@@ -159,15 +159,21 @@ func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 	if failure != nil {
 		testingTarget.Fatal(failure)
 	}
-	if _, failure = community.Comment(ctx, "first", communityDomain.Comment{TitleID: "title", ReleaseID: "release", ParentID: replyID, Body: "Терең жауап"}); !errors.Is(failure, communityDomain.ErrInvalid) {
-		testingTarget.Fatal("nested reply accepted", failure)
+	nestedID, failure := community.Comment(ctx, "first", communityDomain.Comment{TitleID: "title", ReleaseID: "release", ParentID: replyID, Body: "Терең жауап"})
+	if failure != nil {
+		testingTarget.Fatal("nested reply rejected", failure)
 	}
 	if failure = community.Edit(ctx, "second", commentID, "Өзгенің пікірін ауыстыру", false); !errors.Is(failure, communityDomain.ErrForbidden) {
 		testingTarget.Fatal("foreign edit", failure)
 	}
 	discussion, failure := community.Discussion(ctx, "title", "release", "")
-	if failure != nil || len(discussion.Comments) != 2 || discussion.Score != 8 || discussion.Ratings != 2 {
+	if failure != nil || len(discussion.Comments) != 3 || discussion.Score != 8 || discussion.Ratings != 2 {
 		testingTarget.Fatal(discussion, failure)
+	}
+	for _, comment := range discussion.Comments {
+		if comment.ID == nestedID && (comment.ParentID != replyID || comment.RootID != commentID) {
+			testingTarget.Fatal("nested reply lost immediate parent or root", comment)
+		}
 	}
 	for index := 0; index < 15; index++ {
 		if _, failure = database.Pool().Exec(ctx, `INSERT INTO comments(id,user_id,title_id,release_id,parent_id,body)VALUES($1,'second','title','release',$2,'Қосымша жауап')`, uuid.NewString(), commentID); failure != nil {
@@ -179,7 +185,7 @@ func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 		testingTarget.Fatal("unbounded replies", len(discussion.Comments), failure)
 	}
 	moreReplies, failure := community.Replies(ctx, commentID, discussion.Comments[len(discussion.Comments)-1].ID)
-	if failure != nil || len(moreReplies.Comments) != 6 {
+	if failure != nil || len(moreReplies.Comments) != 7 {
 		testingTarget.Fatal("reply pagination lost data", moreReplies, failure)
 	}
 	reportID, failure := community.Report(ctx, "second", communityApp.Report{TitleID: "title", ReleaseID: "release", TargetType: "page", TargetID: "page", PageID: "page", Category: "image", Reason: "Бет анық жүктелмейді"})
@@ -236,8 +242,14 @@ func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 		}
 	}
 	ungrouped, failure := notifications.List(ctx, "second", "")
-	if failure != nil || len(ungrouped) != 1 {
-		testingTarget.Fatal("logical chapter duplicated across teams", len(ungrouped), failure)
+	newReleases := 0
+	for _, item := range ungrouped {
+		if item.Kind == "new_release" {
+			newReleases++
+		}
+	}
+	if failure != nil || newReleases != 1 {
+		testingTarget.Fatal("logical chapter duplicated across teams", newReleases, failure)
 	}
 	execute("INSERT INTO titles(id,slug,name_kk,is_listed)VALUES('announcement','announcement','Анонс',true),('private-title','private-title','Private',false)")
 	if _, failure = community.Discussion(ctx, "announcement", "", ""); failure != nil {
