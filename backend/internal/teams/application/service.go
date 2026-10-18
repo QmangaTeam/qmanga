@@ -150,3 +150,15 @@ func (service *Service) Invitations(ctx context.Context, actor, team string, off
 func (service *Service) RevokeInvitation(ctx context.Context, actor, team, id string) error {
 	return service.repository.RevokeInvitation(ctx, actor, team, id)
 }
+
+// CheckAvatar permits verified team owners and editors to change team imagery.
+func (service *Service) CheckAvatar(ctx context.Context, actorID, teamID string) error {
+	access, err := service.repository.Access(ctx, actorID, teamID)
+	if err != nil {
+		return err
+	}
+	if !access.Verified || (access.Role != domain.Owner && access.Role != domain.Editor) {
+		return domain.ErrForbidden
+	}
+	return nil
+}

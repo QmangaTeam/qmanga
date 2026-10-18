@@ -4,7 +4,7 @@ function object(value: unknown): value is Record<string, unknown> { return typeo
 function accountView(value: unknown): Account | undefined {
  if (!object(value) || typeof value.id !== 'string' || typeof value.email !== 'string' || typeof value.email_verified !== 'boolean') return;
  if (value.role !== 'reader' && value.role !== 'moderator' && value.role !== 'admin') return;
- return { displayName:typeof value.display_name==='string'?value.display_name:'',id: value.id, email: value.email, role: value.role, verified: value.email_verified };
+ return { avatarURL:typeof value.avatar_url==='string'&&/^\/media\/avatars\/user\/[a-zA-Z0-9-]+$/.test(value.avatar_url)?value.avatar_url:undefined, displayName:typeof value.display_name==='string'?value.display_name:'',id: value.id, email: value.email, role: value.role, verified: value.email_verified };
 }
 export class HttpAuthGateway implements AuthGateway {
  constructor(private base: string, private request: typeof fetch, private cookie = '',private accountChanged:()=>Promise<void>=async()=>{}) {}

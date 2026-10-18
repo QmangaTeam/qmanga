@@ -22,6 +22,7 @@ type IdentityHandler struct {
 }
 type userDTO struct {
 	ID            string `json:"id"`
+	AvatarURL     string `json:"avatar_url"`
 	DisplayName   string `json:"display_name"`
 	Email         string `json:"email"`
 	Role          string `json:"role"`
@@ -33,7 +34,7 @@ type principal struct {
 }
 
 func userView(account domain.Account) userDTO {
-	return userDTO{ID: account.ID, Email: account.Email, Role: account.Role, EmailVerified: account.Verified, DisplayName: account.DisplayName}
+	return userDTO{AvatarURL: "/media/avatars/user/" + account.ID, ID: account.ID, Email: account.Email, Role: account.Role, EmailVerified: account.Verified, DisplayName: account.DisplayName}
 }
 func NewIdentityHandler(service *application.Service, origin string, secure bool) *IdentityHandler {
 	return &IdentityHandler{service: service, origin: origin, secure: secure, limiter: &rateLimiter{entries: make(map[string]rateEntry)}}

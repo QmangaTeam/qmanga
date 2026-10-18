@@ -60,9 +60,9 @@ try {
     if ($LASTEXITCODE -ne 0) { throw 'Bootstrap administrator failed.' }
     $null = Send-Api $admin POST 'auth/login' @{email=$adminEmail; password=$adminPassword}
     $adminCsrf = (Send-Api $admin GET 'auth/csrf').csrf_token
-    $null = Send-Api $owner POST 'auth/register' @{email=$ownerEmail; password=$ownerPassword} -Expected 202
+    $null = Send-Api $owner POST 'auth/register' @{email=$ownerEmail; password=$ownerPassword; display_name='Reader Owner'} -Expected 202
     $null = Send-Api $owner POST 'auth/verify-email' @{token=(Verification-Token $ownerEmail)}
-    $null = Send-Api $owner POST 'auth/login' @{email=$ownerEmail; password=$ownerPassword}
+    $null = Send-Api $owner POST 'auth/login' @{email=$ownerEmail; password=$ownerPassword; display_name='Reader Owner'}
     $ownerCsrf = (Send-Api $owner GET 'auth/csrf').csrf_token
     $team = Send-Api $owner POST 'studio/teams' @{slug="test-$($suffix.Substring(0,12))";name='Жергілікті сынақ тобы';description='Local development test'} $ownerCsrf 201
     $null = Send-Api $admin POST "admin/teams/$($team.id)/approve" @{} $adminCsrf 204

@@ -1,0 +1,75 @@
+package application
+
+import (
+	"bytes"
+	"context"
+	"io"
+	"qmanga/internal/identity/domain"
+	"time"
+)
+
+const MaxAvatarBytes int64 = 5 << 20
+
+type Avatar struct {
+	Kind, OwnerID, Key string
+	Bytes              int64
+	UpdatedAt          time.Time
+}
+type AvatarRepository interface {
+	SaveAvatar(context.Context, Avatar) error
+	Avatar(context.Context, string, string) (Avatar, error)
+}
+type AvatarStorage interface {
+	PutDerivative(context.Context, string, io.Reader, int64, string) error
+	OpenDerivative(context.Context, string, int64, int64) (io.ReadCloser, error)
+}
+type AvatarProcessor interface {
+	ProcessAvatar(io.Reader) ([]byte, error)
+}
+type AvatarTeams interface {
+	CheckAvatar(context.Context, string, string) error
+}
+type AvatarService struct {
+	repository AvatarRepository
+	storage    AvatarStorage
+	processor  AvatarProcessor
+	teams      AvatarTeams
+	newID      func() string
+}
+
+func NewAvatars(repository AvatarRepository, storage AvatarStorage, processor AvatarProcessor, teams AvatarTeams, newID func() string) *AvatarService {
+	return &AvatarService{repository, storage, processor, teams, newID}
+}
+func (s *AvatarService) Upload(ctx context.Context, actor, kind, owner string, source io.Reader) (Avatar, error) {
+	if actor == "" || (kind != "user" && kind != "team") || owner == "" {
+		return Avatar{}, domain.ErrForbidden
+	}
+	if kind == "user" && actor != owner {
+		return Avatar{}, domain.ErrForbidden
+	}
+	if kind == "team" {
+		if err := s.teams.CheckAvatar(ctx, actor, owner); err != nil {
+			return Avatar{}, domain.ErrForbidden
+		}
+	}
+	raw, err := s.processor.ProcessAvatar(io.LimitReader(source, MaxAvatarBytes+1))
+	if err != nil {
+		return Avatar{}, domain.ErrInvalid
+	}
+	avatar := Avatar{Kind: kind, OwnerID: owner, Key: "avatars/" + s.newID(), Bytes: int64(len(raw)), UpdatedAt: time.Now().UTC()}
+	if err = s.storage.PutDerivative(ctx, avatar.Key, bytes.NewReader(raw), avatar.Bytes, "image/jpeg"); err != nil {
+		return Avatar{}, err
+	}
+	return avatar, s.repository.SaveAvatar(ctx, avatar)
+}
+func (s *AvatarService) Open(ctx context.Context, kind, owner string) (Avatar, io.ReadCloser, error) {
+	if kind != "user" && kind != "team" {
+		return Avatar{}, nil, domain.ErrNotFound
+	}
+	avatar, err := s.repository.Avatar(ctx, kind, owner)
+	if err != nil {
+		return avatar, nil, err
+	}
+	stream, err := s.storage.OpenDerivative(ctx, avatar.Key, 0, -1)
+	return avatar, stream, err
+}

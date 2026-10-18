@@ -1,4 +1,6 @@
 <script lang="ts">
+ import AvatarEditor from '$lib/features/identity/presentation/AvatarEditor.svelte';
+ import type {AvatarGateway} from '$lib/features/identity/application/avatars';
  import {onMount} from 'svelte';
  import {page} from '$app/stores';
  import type {TeamsGateway} from '../application/teams';
@@ -9,7 +11,7 @@
  import RequestStatus from '$lib/features/publishing/presentation/RequestStatus.svelte';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {failureCode,noticeText} from '$lib/shared/presentation/copy';
- let {user,gateway}:{user:Account|null;gateway:TeamsGateway}=$props();const {locale}=useLocale();
+ let {user,gateway,avatars}:{user:Account|null;gateway:TeamsGateway;avatars?:AvatarGateway}=$props();const {locale}=useLocale();
  let teams=$state<Team[]>([]),selected=$state(''),members=$state<Member[]>([]),moreTeams=$state(false),moreMembers=$state(false),teamOffset=0,memberOffset=0,loading=$state(true),busy=$state(false),error=$state(''),notice=$state('');
  let invitations=$state<Invitation[]>([]),moreInvitations=$state(false),invitationOffset=0;
  let form=$state<'new'|'edit'|null>(null),name=$state(''),slug=$state(''),description=$state(''),telegramURL=$state(''),email=$state(''),role=$state<'member'|'editor'>('member'),removeID=$state('');
@@ -45,6 +47,7 @@
  {#if active}<section class="team"><div class="team-heading"><div><h2>{active.name}</h2><p class="muted">{active.role?roles[active.role]:''}</p></div><RequestStatus status={active.approved?'approved':active.reviewStatus||'pending'}/></div><p class="description">{active.description}</p>
   {#if !active.approved}<div class="review-note"><h3>{active.reviewStatus==='rejected'?text($locale,'Өтінімді түзету керек','Заявку нужно исправить'):text($locale,'Өтінім қаралуда','Заявка на рассмотрении')}</h3><p>{active.reviewNote||text($locale,'Әкімші команданы тексереді. Мақұлданған соң жобаларға өтінім беруге болады.','Администратор проверит команду. После одобрения можно подавать заявки на проекты.')}</p><div class="actions"><button class="button subtle" disabled={busy} onclick={()=>run(()=>load())}>{text($locale,'Күйін жаңарту','Обновить статус')}</button>{#if canManage(active)}<button class="button subtle" onclick={()=>open('edit')}>{active.reviewStatus==='rejected'?text($locale,'Өтінімді түзету','Исправить заявку'):text($locale,'Деректерді өңдеу','Изменить данные')}</button>{/if}</div></div>
   {:else}<div class="actions"><a class="button subtle" href={'/teams/'+encodeURIComponent(active.slug)}>{text($locale,'Ашық парақша','Публичная страница')}</a><a class="button primary" href={'/studio/projects?team='+active.id}>{text($locale,'Команда жобалары','Проекты команды')}</a>{#if active.role==='owner'||active.role==='editor'}<a class="button subtle" href="/studio/requests?new=1">{text($locale,'Жоба сұрау','Запросить проект')}</a>{/if}{#if canManage(active)}<button class="button subtle" onclick={()=>open('edit')}>{text($locale,'Команданы өңдеу','Изменить команду')}</button>{/if}</div>{/if}
+  {#if avatars&&(active.role==='owner'||active.role==='editor')}<AvatarEditor gateway={avatars} kind="team" ownerId={active.id} name={active.name}/>{/if}
   {#if canManage(active)}<details class="management"><summary>{text($locale,'Қатысушылар және шақырулар','Участники и приглашения')}</summary>
    {#each members as member}<div class="member-row"><div><strong>{member.email}</strong><small>{roles[member.role]}</small></div>{#if member.role!=='owner'}<button class="button subtle" disabled={busy} onclick={()=>removeID=member.userId}>{text($locale,'Шығару','Удалить из команды')}</button>{/if}</div>{#if removeID===member.userId}<div class="review-note"><p>{text($locale,'Қатысушы команда жобаларына кіре алмайды. Қайтару үшін жаңа шақыру керек.','Участник потеряет доступ к проектам команды. Для возвращения понадобится новое приглашение.')}</p><div class="actions"><button class="button primary" disabled={busy} onclick={()=>run(async()=>{await gateway.remove(active!.id,member.userId);await loadMembers();})}>{text($locale,'Шығаруды растау','Подтвердить удаление')}</button><button class="button subtle" onclick={()=>removeID=''}>{text($locale,'Бас тарту','Отмена')}</button></div></div>{/if}{/each}
    {#if moreMembers}<button class="button subtle" disabled={busy} onclick={()=>run(()=>loadMembers(true))}>{text($locale,'Тағы қатысушылар','Ещё участники')}</button>{/if}
