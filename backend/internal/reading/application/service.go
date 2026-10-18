@@ -82,3 +82,14 @@ func (service *Service) Advance(ctx context.Context, actor string, event domain.
 	}
 	return service.repository.Advance(ctx, actor, event)
 }
+
+// Suggestion counts different completed chapters, independently of translations/revisions.
+func (service *Service) Suggestion(ctx context.Context, actor, title string) (bool, error) {
+	repository, ok := service.repository.(interface {
+		Suggestion(context.Context, string, string) (bool, error)
+	})
+	if !ok {
+		return false, nil
+	}
+	return repository.Suggestion(ctx, actor, title)
+}

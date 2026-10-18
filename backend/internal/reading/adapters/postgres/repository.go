@@ -85,6 +85,12 @@ func (repository *Repository) Save(ctx context.Context, actor string, input appl
 	if failure = transaction.QueryRow(ctx, "SELECT id FROM users WHERE id=$1 AND NOT is_blocked FOR UPDATE", actor).Scan(&locked); failure != nil {
 		return domain.ErrForbidden
 	}
+	// Infer only for a first save with competing projects, using actual accepted reading.
+	if input.Version == 0 && input.PreferredTeamID == "" && !input.Removed {
+		if failure = transaction.QueryRow(ctx, `SELECT coalesce((SELECT release.team_id FROM reading_progress progress JOIN releases release ON release.id=progress.release_id JOIN projects project ON project.id=release.project_id AND project.title_id=progress.title_id WHERE progress.user_id=$1 AND progress.title_id=$2 AND (SELECT count(*) FROM projects WHERE title_id=$2)>1),'')`, actor, input.TitleID).Scan(&input.PreferredTeamID); failure != nil {
+			return failure
+		}
+	}
 	current := application.Selection{}
 	failure = transaction.QueryRow(ctx, "SELECT status,is_favorite,coalesce(preferred_team_id,''),notify_new_releases,selection_version,is_removed FROM library_entries WHERE user_id=$1 AND title_id=$2 FOR UPDATE", actor, input.TitleID).Scan(&current.Status, &current.Favorite, &current.PreferredTeamID, &current.Notify, &current.Version, &current.Removed)
 	if failure != nil && !errors.Is(failure, pgx.ErrNoRows) {
@@ -174,6 +180,14 @@ func (repository *Repository) Advance(ctx context.Context, actor string, event d
 	}
 	if _, failure = transaction.Exec(ctx, `INSERT INTO reading_events(user_id,event_id,title_id,request_hash,accepted_version)VALUES($1,$2,$3,$4,$5)`, actor, event.ID, event.TitleID, requestHash, next.Version); failure != nil {
 		return application.Result{}, failure
+	}
+	if _, failure = transaction.Exec(ctx, `INSERT INTO reading_activity(day,user_id,release_id,completed) VALUES((now() AT TIME ZONE 'UTC')::date,$1,$2,$3) ON CONFLICT(day,user_id,release_id) DO UPDATE SET completed=reading_activity.completed OR EXCLUDED.completed`, actor, event.ReleaseID, event.Completed && pagePosition == lastPosition && event.Fraction >= .95); failure != nil {
+		return application.Result{}, failure
+	}
+	if event.Completed && pagePosition == lastPosition && event.Fraction >= .95 {
+		if _, failure = transaction.Exec(ctx, `INSERT INTO reading_completions(user_id,title_id,chapter_id) SELECT $1,chapter.title_id,chapter.id FROM chapters chapter JOIN releases release ON release.chapter_id=chapter.id WHERE release.id=$2 ON CONFLICT DO NOTHING`, actor, event.ReleaseID); failure != nil {
+			return application.Result{}, failure
+		}
 	}
 	next, failure = scan(transaction.QueryRow(ctx, `SELECT `+progressColumns+` FROM reading_progress WHERE user_id=$1 AND title_id=$2`, actor, event.TitleID))
 	if failure != nil {

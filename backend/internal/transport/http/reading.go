@@ -17,6 +17,7 @@ func (handler *ReadingHandler) Register(api *gin.RouterGroup, identity *Identity
 	api.GET("/reading/references", handler.references)
 	group := api.Group("", identity.RequireUser(), expectedAccount())
 	group.GET("/reading/recent", handler.recent)
+	group.GET("/reading/suggestion/:id", handler.suggestion)
 	group.GET("/library", handler.list)
 	group.GET("/library/:id", handler.selection)
 	group.PUT("/library/:id", handler.save)
@@ -200,4 +201,14 @@ func readingError(request *gin.Context, failure error) {
 		log.Printf("reading failure: %T", failure)
 		Error(request, 503, "unavailable", "Оқу деректері уақытша қолжетімсіз")
 	}
+}
+
+func (handler *ReadingHandler) suggestion(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	eligible, failure := handler.service.Suggestion(request.Request.Context(), account.ID, request.Param("id"))
+	if failure != nil {
+		readingError(request, failure)
+		return
+	}
+	request.JSON(200, gin.H{"eligible": eligible})
 }

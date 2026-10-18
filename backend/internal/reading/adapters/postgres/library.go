@@ -43,3 +43,9 @@ func (repository *Repository) Library(ctx context.Context, actor string, filter 
 	}
 	return page, transaction.Commit(ctx)
 }
+
+func (repository *Repository) Suggestion(ctx context.Context, actor, title string) (bool, error) {
+	var eligible bool
+	failure := repository.pool.QueryRow(ctx, `SELECT (SELECT count(*) FROM (SELECT chapter_id FROM reading_completions WHERE user_id=$1 AND title_id=$2 LIMIT 3) completed)=3 AND NOT EXISTS(SELECT 1 FROM library_entries WHERE user_id=$1 AND title_id=$2 AND NOT is_removed)`, actor, title).Scan(&eligible)
+	return eligible, failure
+}
