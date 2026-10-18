@@ -48,7 +48,7 @@ test('title rating saves independently and updates its distribution', {timeout:3
  let original=0,headers={};
  try{
   await context.addCookies([{name:'qmanga_locale',value:'ru',url:fixture.app_url}]);
-  const login=await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.owner_email,password:fixture.owner_password}});
+  const login=await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.admin_email,password:fixture.admin_password}});
   assert.equal(login.status(),200);
   const account=(await login.json()).user;
   const csrf=(await context.cookies(fixture.app_url)).find(cookie=>cookie.name==='qmanga_csrf')?.value;
@@ -83,12 +83,13 @@ test('title rating saves independently and updates its distribution', {timeout:3
  }
 });
 
+// Reading regressions own the owner account's library; use the separate verified admin here.
 test('title actions open dialogs and library status saves with one choice', {timeout:30000},async()=>{
  const context=await browser.newContext({baseURL:fixture.app_url,viewport:{width:360,height:780}});
  let headers={},original=null,changed=null;
  try{
   await context.addCookies([{name:'qmanga_locale',value:'ru',url:fixture.app_url}]);
-  const login=await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.owner_email,password:fixture.owner_password}});
+  const login=await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.admin_email,password:fixture.admin_password}});
   assert.equal(login.status(),200);
   const account=(await login.json()).user;
   const csrf=(await context.cookies(fixture.app_url)).find(cookie=>cookie.name==='qmanga_csrf')?.value;
@@ -112,8 +113,12 @@ test('title actions open dialogs and library status saves with one choice', {tim
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
  }finally{
   if(changed){
-   if(original)await context.request.put('/api/v1/library/'+fixture.title_id,{headers,data:{version:changed.version,removed:false,status:original.status,favorite:original.favorite,preferred_team_id:original.preferred_team_id,notify:original.notify}}).catch(()=>{});
-   else await context.request.delete('/api/v1/library/'+fixture.title_id,{headers}).catch(()=>{});
+   const cleanup=original
+    ? await context.request.put('/api/v1/library/'+fixture.title_id,{headers,data:{version:changed.version,removed:original.removed===true,status:original.status,favorite:original.favorite,preferred_team_id:original.preferred_team_id,notify:original.notify}})
+    : await context.request.delete('/api/v1/library/'+fixture.title_id,{headers});
+   assert.equal(cleanup.status(),204,'restore the fixture library state');
+   const restored=await (await context.request.get('/api/v1/library/'+fixture.title_id,{headers})).json();
+   assert.equal(restored.entry?.removed??true,original?.removed??true,'cleanup must not resurrect a removed entry');
   }
   await context.close();
  }
