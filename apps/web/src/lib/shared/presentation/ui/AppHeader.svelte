@@ -46,7 +46,8 @@
  h2{font-size:18px;font-weight:650}
  .close-search{padding:0;border-radius:6px}
  .search-field{display:flex;align-items:center;gap:8px;border:1px solid var(--muted);border-radius:8px;padding-left:12px}
- .search-field input{flex:1;width:0;padding-inline:0;border:0;background:none;outline-offset:0}
+ .search-field:focus-within{outline:2px solid var(--accent);outline-offset:2px}
+ .search-field input{flex:1;width:0;padding-inline:0;border:0;border-radius:0;background:none;outline:none}
  .search-field button{color:var(--accent);flex-shrink:0}
  .catalogue-link{margin-top:12px;font-weight:400}
  @media(min-width:768px){
