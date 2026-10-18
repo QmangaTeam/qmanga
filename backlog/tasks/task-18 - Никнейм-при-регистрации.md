@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-identity'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 22:01'
+updated_date: '2026-10-18 22:05'
 labels:
   - stage-5
 dependencies: []
@@ -37,4 +37,6 @@ ordinal: 18
 Implemented required nickname across registration UI/application/Go handler; Unicode letters/numbers and single internal spaces plus _.-; legacy empty profiles remain usable. Existing settings can fill nickname; CreateAccount now persists display_name. Verified bun domain test 1 pass/11 assertions; svelte-check 0 errors/warnings; go identity domain/application/postgres passes (DB integration skipped without TEST_DATABASE_URL). Full transport test pending concurrent catalog changes and parent real stack/browser acceptance. Release not verified.
 
 Implementation SHAs:42e1d18 (nickname) and76654ff (strict login fixture correction). Parent real PostgreSQL focused flow subsequently passed; current release/browser acceptance remains tracked by parent.
+
+Actual disposable-stack browser suite now verifies missingnickname and email-shaped nickname both422/error.code validation, valid Kazakh nickname persisted through login, and nickname input minlength2. Targetedbrowser1test passed; finaldeployedSHA remains pending.
 <!-- SECTION:NOTES:END -->

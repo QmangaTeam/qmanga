@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-identity'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 22:01'
+updated_date: '2026-10-18 22:05'
 labels:
   - stage-5
 dependencies: []
@@ -43,4 +43,6 @@ Security follow-up: uploads require original rendered actor via X-Qmanga-Account
 Implementation SHAs:22c8b47 (avatar pipeline/UI) andef70106 (accountbinding, durable garbage cleanup, missing-avatar404). Remaining review: parent current-build real browser suite and deployed release; public team-avatar presentation delegated to catalog owner if included in this acceptance.
 
 Final cleanup review: added public DrainAvatarGarbage(ctx), at most20keys and5second derived deadline, retry errors preserve durable queue entries. Worker drains at startup and every minute independently of uploads/image jobs, including crash-reserved objects after their safety horizon. Added regressions for failed storage deletion followed by independent successful drain, cancellation and20key bound; existing PostgreSQL test excludes current keys. Verified go identity/bootstrap/worker tests; parent current-stack rebuild and full browser acceptance remain pending.
+
+Actual disposable-stack browser verification passed (identity-avatars.test.mjs,1test0fail): valid nickname registration/login; PNGupload through Go to sanitized256pxJPEG; same-originimage requests; GET/HEAD; byte206/multirange416; missing404; settings at320/360/1280 inboth themes withnooverflow. Captured ignoredtmp/all16-identity-screenshots and visually inspected dark320. Existing gateway+API duplicate nosniff header values arebothsafe; test validates everytoken. This browser stack preceded f87f2a7 workerdrain rebuild, so parent still validates finalSHA.
 <!-- SECTION:NOTES:END -->
