@@ -113,6 +113,16 @@ func TestMetricsScopeEventsAndReadingSuggestion(t *testing.T) {
 	if _, err = metrics.Report(ctx, "translator", false, 7); !errors.Is(err, application.ErrForbidden) {
 		t.Fatal("former member retained access", err)
 	}
+	exec(`INSERT INTO titles(id,name_kk,slug) VALUES('single','Single','single');INSERT INTO projects(id,title_id,team_id) VALUES('single-project','single','own');`)
+	for _, title := range []string{"single", "title"} {
+		if err = repo.Save(ctx, "other", readingApp.Selection{TitleID: title, Status: "reading"}); err != nil {
+			t.Fatal(err)
+		}
+		entry, err = repo.Selection(ctx, "other", title)
+		if err != nil || entry.PreferredTeamID != "" {
+			t.Fatal("inferred preference without actual competing-project reading", entry, err)
+		}
+	}
 	var old int
 	if err = db.Pool().QueryRow(ctx, `SELECT count(*) FROM reading_activity WHERE day<(now() AT TIME ZONE 'UTC')::date-89`).Scan(&old); err != nil || old != 0 {
 		t.Fatal("retention", old, err)
