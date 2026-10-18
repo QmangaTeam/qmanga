@@ -35,9 +35,10 @@ try{
  $comment=Send $first.Client POST community/comments @{title_id=$title;release_id=$ReleaseId;parent_id='';body='Жергілікті тексеру пікірі';spoiler=$true} $first.Csrf 201
  $reply=Send $second.Client POST community/comments @{title_id=$title;release_id=$ReleaseId;parent_id=$comment.id;body='Жергілікті тексеру жауабы';spoiler=$false} $second.Csrf 201
  $null=Send $second.Client PUT "community/comments/$($comment.id)" @{body='Өзгенің мәтінін өзгерту';spoiler=$false} $second.Csrf 403
- $null=Send $first.Client POST community/comments @{title_id=$title;release_id=$ReleaseId;parent_id=$reply.id;body='Терең жауап қабылданбайды';spoiler=$false} $first.Csrf 422
+ $nested=Send $first.Client POST community/comments @{title_id=$title;release_id=$ReleaseId;parent_id=$reply.id;body='Терең жауап қабылданады';spoiler=$false} $first.Csrf 201
  $null=Send $first.Client PUT "community/titles/$title/rating" @{score=9} $first.Csrf 204;$null=Send $first.Client PUT "community/titles/$title/rating" @{score=8} $first.Csrf 204
  $discussion=Send $anonymous GET "community/titles/$title`?release=$ReleaseId";$expectedScore=($baseline.score*$baseline.ratings+8)/($baseline.ratings+1);if($discussion.ratings -ne ($baseline.ratings+1) -or [Math]::Abs($discussion.score-$expectedScore) -gt 0.00001){throw 'Rating was duplicated.'}
+ $nestedView=@($discussion.comments | Where-Object { $_.id -eq $nested.id });if($nestedView.Count -ne 1 -or $nestedView[0].parent_id -ne $reply.id -or $nestedView[0].root_id -ne $comment.id){throw 'Nested reply lost its parent or root.'}
  $report=Send $second.Client POST community/reports @{title_id=$title;release_id=$ReleaseId;page_id=$page;target_type='page';target_id=$page;category='image';reason='Жергілікті сурет тексеруі'} $second.Csrf 201
  $null=Send $second.Client GET moderation/reports -Expected 403
  $null=Send $moderator.Client PUT "moderation/reports/$($report.id)" @{status='resolved';reason='Жергілікті тексеру аяқталды'} $moderator.Csrf 204

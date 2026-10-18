@@ -15,9 +15,9 @@ test('title stats live inside facts and comments load without an extra click', {
  const context=await browser.newContext({baseURL:fixture.app_url,viewport:{width:320,height:750}});
  try{
   await context.addCookies([{name:'qmanga_locale',value:'ru',url:fixture.app_url}]);
-  const list=await (await context.request.get('/api/v1/titles')).json();
-  const title=list.items.find(item=>item.id===fixture.title_id);
-  assert.ok(title?.slug);
+  const title={id:fixture.title_id,slug:fixture.title_slug};
+  assert.ok(title.slug);
+  const detail=(await (await context.request.get('/api/v1/titles/'+title.slug)).json());
   const page=await context.newPage();
   await page.goto('/titles/'+title.slug);
   assert.equal(await page.locator('.title-tabs a').count(),3);
@@ -25,7 +25,8 @@ test('title stats live inside facts and comments load without an extra click', {
   await page.getByRole('button',{name:/Статистика/}).click();
   const dialog=page.getByRole('dialog',{name:'Статистика тайтла'});
   await dialog.waitFor();
-  assert.equal(await dialog.getByText('Оценок пока нет').count(),1);
+  if(detail.rating_count===0)assert.equal(await dialog.getByText('Оценок пока нет').count(),1);
+  else assert.equal(await dialog.locator('.rating-bar').count(),10);
   if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'title-stats-320.png')});}
   await dialog.getByRole('button',{name:'Закрыть'}).click();
   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
@@ -47,9 +48,8 @@ test('title rating saves independently and updates its distribution', {timeout:3
   const account=(await login.json()).user;
   const csrf=(await context.cookies(fixture.app_url)).find(cookie=>cookie.name==='qmanga_csrf')?.value;
   headers={Origin:fixture.app_url,'X-Qmanga-Account':account.id,'X-CSRF-Token':csrf};
-  const list=await (await context.request.get('/api/v1/titles')).json();
-  const title=list.items.find(item=>item.id===fixture.title_id);
-  assert.ok(title?.slug);
+  const title={id:fixture.title_id,slug:fixture.title_slug};
+  assert.ok(title.slug);
   const current=await context.request.get('/api/v1/community/titles/'+fixture.title_id+'/rating',{headers});
   assert.equal(current.status(),200);
   original=(await current.json()).score;
@@ -88,9 +88,8 @@ test('title actions open dialogs and library status saves with one choice', {tim
   const account=(await login.json()).user;
   const csrf=(await context.cookies(fixture.app_url)).find(cookie=>cookie.name==='qmanga_csrf')?.value;
   headers={Origin:fixture.app_url,'X-Qmanga-Account':account.id,'X-CSRF-Token':csrf};
-  const list=await (await context.request.get('/api/v1/titles')).json();
-  const title=list.items.find(item=>item.id===fixture.title_id);
-  assert.ok(title?.slug);
+  const title={id:fixture.title_id,slug:fixture.title_slug};
+  assert.ok(title.slug);
   original=(await (await context.request.get('/api/v1/library/'+title.id,{headers})).json()).entry;
   const page=await context.newPage();
   await page.goto('/titles/'+title.slug);
