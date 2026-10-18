@@ -28,10 +28,12 @@ services:
       S3_USE_SSL: "false"
       SESSION_SECRET: ${SESSION_SECRET:?set SESSION_SECRET}
       CSRF_SECRET: ${CSRF_SECRET:?set CSRF_SECRET}
-      SMTP_ADDRESS: ${SMTP_ADDRESS:?set SMTP_ADDRESS}
+      MAIL_TRANSPORT: ${MAIL_TRANSPORT:-smtp}
+      SMTP_ADDRESS: ${SMTP_ADDRESS:-}
       SMTP_FROM: ${SMTP_FROM:?set SMTP_FROM}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      OCI_EMAIL_COMPARTMENT_ID: ${OCI_EMAIL_COMPARTMENT_ID:-}
       TRUSTED_PROXY_HOST: gateway
     depends_on:
       gateway: {condition: service_started}

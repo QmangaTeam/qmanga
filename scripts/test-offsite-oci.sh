@@ -17,11 +17,12 @@ set -euo pipefail
 test "$1 $2" = 'os object'
 operation=$3
 shift 3
-name= file=
+name= file= force=false
 while test "$#" -gt 0; do
   case "$1" in
     --name) name=$2; shift 2 ;;
     --file) file=$2; shift 2 ;;
+    --force) force=true; shift ;;
     *) shift ;;
   esac
 done
@@ -29,7 +30,7 @@ test -n "$name" && test -n "$file"
 object="$FAKE_BUCKET_DIR/$name"
 case "$operation" in
   put) mkdir -p "$(dirname "$object")"; cp "$file" "$object" ;;
-  get) cp "$object" "$file" ;;
+  get) test "$force" = false || { echo 'Object get does not support --force' >&2; exit 2; }; cp "$object" "$file" ;;
   *) exit 2 ;;
 esac
 EOF

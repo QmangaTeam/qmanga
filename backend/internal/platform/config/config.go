@@ -11,23 +11,25 @@ import (
 )
 
 type Config struct {
-	Environment      string
-	HTTPPort         string
-	DatabaseURL      string
-	S3Endpoint       string
-	S3AccessKey      string
-	S3SecretKey      string
-	S3BucketMedia    string
-	S3BucketSource   string
-	S3UseSSL         bool
-	SessionSecret    string
-	CSRFSecret       string
-	AppOrigin        string
-	SMTPAddress      string
-	SMTPFrom         string
-	SMTPUsername     string
-	SMTPPassword     string
-	TrustedProxyHost string
+	Environment           string
+	HTTPPort              string
+	DatabaseURL           string
+	S3Endpoint            string
+	S3AccessKey           string
+	S3SecretKey           string
+	S3BucketMedia         string
+	S3BucketSource        string
+	S3UseSSL              bool
+	SessionSecret         string
+	CSRFSecret            string
+	AppOrigin             string
+	MailTransport         string
+	SMTPAddress           string
+	SMTPFrom              string
+	SMTPUsername          string
+	SMTPPassword          string
+	OCIEmailCompartmentID string
+	TrustedProxyHost      string
 }
 
 func Load() (Config, error) {
@@ -43,10 +45,15 @@ func Load() (Config, error) {
 	sessionSecret := strings.TrimSpace(os.Getenv("SESSION_SECRET"))
 	csrfSecret := strings.TrimSpace(os.Getenv("CSRF_SECRET"))
 	appOrigin := strings.TrimSpace(os.Getenv("APP_ORIGIN"))
+	mailTransport := strings.TrimSpace(os.Getenv("MAIL_TRANSPORT"))
+	if mailTransport == "" {
+		mailTransport = "smtp"
+	}
 	smtpAddress := strings.TrimSpace(os.Getenv("SMTP_ADDRESS"))
 	smtpFrom := strings.TrimSpace(os.Getenv("SMTP_FROM"))
+	ociEmailCompartmentID := strings.TrimSpace(os.Getenv("OCI_EMAIL_COMPARTMENT_ID"))
 	trustedProxyHost := strings.TrimSpace(os.Getenv("TRUSTED_PROXY_HOST"))
-	if smtpAddress == "" && environment != "production" {
+	if smtpAddress == "" && environment != "production" && mailTransport == "smtp" {
 		smtpAddress = "mailpit:1025"
 	}
 	if smtpFrom == "" && environment != "production" {
@@ -54,8 +61,17 @@ func Load() (Config, error) {
 	}
 
 	var validationErrors []string
-	if _, _, parseError := net.SplitHostPort(smtpAddress); parseError != nil {
-		validationErrors = append(validationErrors, "SMTP_ADDRESS must be host:port")
+	switch mailTransport {
+	case "smtp":
+		if _, _, parseError := net.SplitHostPort(smtpAddress); parseError != nil {
+			validationErrors = append(validationErrors, "SMTP_ADDRESS must be host:port")
+		}
+	case "oci":
+		if !strings.HasPrefix(ociEmailCompartmentID, "ocid1.") {
+			validationErrors = append(validationErrors, "OCI_EMAIL_COMPARTMENT_ID must be an OCI compartment OCID")
+		}
+	default:
+		validationErrors = append(validationErrors, "MAIL_TRANSPORT must be 'smtp' or 'oci'")
 	}
 	if parsed, parseError := mail.ParseAddress(smtpFrom); parseError != nil || parsed.Address != smtpFrom {
 		validationErrors = append(validationErrors, "SMTP_FROM must be an email address")
@@ -162,23 +178,25 @@ func Load() (Config, error) {
 	}
 
 	configInstance := Config{
-		Environment:      environment,
-		HTTPPort:         portString,
-		DatabaseURL:      databaseURL,
-		S3Endpoint:       s3Endpoint,
-		S3AccessKey:      s3AccessKey,
-		S3SecretKey:      s3SecretKey,
-		S3BucketMedia:    s3BucketMedia,
-		S3BucketSource:   s3BucketSource,
-		S3UseSSL:         useSSL,
-		SessionSecret:    sessionSecret,
-		CSRFSecret:       csrfSecret,
-		AppOrigin:        appOrigin,
-		SMTPAddress:      smtpAddress,
-		SMTPFrom:         smtpFrom,
-		SMTPUsername:     os.Getenv("SMTP_USERNAME"),
-		SMTPPassword:     os.Getenv("SMTP_PASSWORD"),
-		TrustedProxyHost: trustedProxyHost,
+		Environment:           environment,
+		HTTPPort:              portString,
+		DatabaseURL:           databaseURL,
+		S3Endpoint:            s3Endpoint,
+		S3AccessKey:           s3AccessKey,
+		S3SecretKey:           s3SecretKey,
+		S3BucketMedia:         s3BucketMedia,
+		S3BucketSource:        s3BucketSource,
+		S3UseSSL:              useSSL,
+		SessionSecret:         sessionSecret,
+		CSRFSecret:            csrfSecret,
+		AppOrigin:             appOrigin,
+		MailTransport:         mailTransport,
+		SMTPAddress:           smtpAddress,
+		SMTPFrom:              smtpFrom,
+		SMTPUsername:          os.Getenv("SMTP_USERNAME"),
+		SMTPPassword:          os.Getenv("SMTP_PASSWORD"),
+		OCIEmailCompartmentID: ociEmailCompartmentID,
+		TrustedProxyHost:      trustedProxyHost,
 	}
 
 	if len(validationErrors) > 0 {

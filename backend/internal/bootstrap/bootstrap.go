@@ -13,6 +13,7 @@ import (
 	communityPostgres "qmanga/internal/community/adapters/postgres"
 	communityApp "qmanga/internal/community/application"
 	identityCrypto "qmanga/internal/identity/adapters/crypto"
+	identityOCIEmail "qmanga/internal/identity/adapters/ociemail"
 	identityPostgres "qmanga/internal/identity/adapters/postgres"
 	identitySMTP "qmanga/internal/identity/adapters/smtp"
 	identityApp "qmanga/internal/identity/application"
@@ -90,8 +91,18 @@ func Initialize(parentContext context.Context) (*Application, error) {
 			return nil, fmt.Errorf("configuring trusted gateway: %w", proxyError)
 		}
 	}
-	smtpHost, _, _ := net.SplitHostPort(appConfig.SMTPAddress)
-	mailer := identitySMTP.New(identitySMTP.Config{Address: appConfig.SMTPAddress, Host: smtpHost, From: appConfig.SMTPFrom, Username: appConfig.SMTPUsername, Password: appConfig.SMTPPassword, RequireTLS: appConfig.Environment == "production"})
+	var mailer identityApp.Mailer
+	if appConfig.MailTransport == "oci" {
+		ociMailer, emailError := identityOCIEmail.New(appConfig.OCIEmailCompartmentID, appConfig.SMTPFrom)
+		if emailError != nil {
+			postgresClient.Close()
+			return nil, fmt.Errorf("initializing email delivery: %w", emailError)
+		}
+		mailer = ociMailer
+	} else {
+		smtpHost, _, _ := net.SplitHostPort(appConfig.SMTPAddress)
+		mailer = identitySMTP.New(identitySMTP.Config{Address: appConfig.SMTPAddress, Host: smtpHost, From: appConfig.SMTPFrom, Username: appConfig.SMTPUsername, Password: appConfig.SMTPPassword, RequireTLS: appConfig.Environment == "production"})
+	}
 	identityService := identityApp.New(identityPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)
 	identityHandler := transport.NewIdentityHandler(identityService, appConfig.AppOrigin, appConfig.Environment == "production")
 	identityHandler.Register(httpRouter.Group("/api/v1"))

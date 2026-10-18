@@ -152,3 +152,28 @@ func TestLoad_ValidConfigurationLoadsCorrectly(testingTarget *testing.T) {
 		testingTarget.Errorf("expected custom-media, got %s", configInstance.S3BucketMedia)
 	}
 }
+
+func TestLoad_OCIEmailNeedsNoSMTPAddress(testingTarget *testing.T) {
+	testingTarget.Setenv("APP_ENV", "production")
+	testingTarget.Setenv("PORT", "8080")
+	testingTarget.Setenv("DATABASE_URL", "postgres://qmanga:supersecretpass@postgres:5432/qmanga?sslmode=disable")
+	testingTarget.Setenv("S3_ENDPOINT", "minio:9000")
+	testingTarget.Setenv("S3_ACCESS_KEY", "valid-access-key")
+	testingTarget.Setenv("S3_SECRET_KEY", "valid-secret-key-123")
+	testingTarget.Setenv("SESSION_SECRET", "12345678901234567890123456789012")
+	testingTarget.Setenv("CSRF_SECRET", "09876543210987654321098765432109")
+	testingTarget.Setenv("APP_ORIGIN", "https://qmanga.maqsatto.dev")
+	testingTarget.Setenv("TRUSTED_PROXY_HOST", "gateway")
+	testingTarget.Setenv("MAIL_TRANSPORT", "oci")
+	testingTarget.Setenv("SMTP_ADDRESS", "")
+	testingTarget.Setenv("SMTP_FROM", "no-reply@maqsatto.dev")
+	testingTarget.Setenv("OCI_EMAIL_COMPARTMENT_ID", "ocid1.tenancy.oc1..example")
+
+	loaded, err := Load()
+	if err != nil {
+		testingTarget.Fatalf("OCI email configuration rejected: %v", err)
+	}
+	if loaded.MailTransport != "oci" || loaded.OCIEmailCompartmentID != "ocid1.tenancy.oc1..example" {
+		testingTarget.Fatalf("OCI email configuration lost: %+v", loaded)
+	}
+}

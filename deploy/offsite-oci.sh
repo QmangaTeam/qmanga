@@ -26,7 +26,7 @@ for file in postgres.dump objects.tar SHA256SUMS; do
     --name "$prefix/$file" --file "$backup/$file" --force --no-multipart >/dev/null
   "$oci" os object get --auth instance_principal --region "$region" \
     --namespace "$namespace" --bucket-name "$bucket" \
-    --name "$prefix/$file" --file "$verification/$file" --force >/dev/null
+    --name "$prefix/$file" --file "$verification/$file" >/dev/null
   cmp "$backup/$file" "$verification/$file"
 done
 (cd "$verification" && sha256sum -c SHA256SUMS)
