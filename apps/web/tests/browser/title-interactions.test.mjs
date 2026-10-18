@@ -11,6 +11,11 @@ let browser;
 before(async()=>{browser=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});});
 after(async()=>{await browser?.close();});
 
+async function assertNoHorizontalOverflow(page){
+ const measure=await page.evaluate(()=>({width:innerWidth,scrollWidth:document.documentElement.scrollWidth,offenders:[...document.querySelectorAll('body *')].map(element=>({tag:element.tagName,className:typeof element.className==='string'?element.className:'',text:element.textContent?.trim().slice(0,35),left:Math.round(element.getBoundingClientRect().left),right:Math.round(element.getBoundingClientRect().right)})).filter(item=>item.right>innerWidth+1||item.left< -1).slice(0,12)}));
+ assert.equal(measure.scrollWidth<=measure.width+1,true,JSON.stringify(measure));
+}
+
 test('title stats live inside facts and comments load without an extra click', {timeout:30000},async()=>{
  const context=await browser.newContext({baseURL:fixture.app_url,viewport:{width:320,height:750}});
  try{
@@ -29,7 +34,7 @@ test('title stats live inside facts and comments load without an extra click', {
   else assert.equal(await dialog.locator('.rating-bar').count(),10);
   if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'title-stats-320.png')});}
   await dialog.getByRole('button',{name:'Закрыть'}).click();
-  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+  await assertNoHorizontalOverflow(page);
   const request=page.waitForResponse(response=>response.url().includes('/api/v1/community/titles/')&&response.request().method()==='GET');
   await page.getByRole('link',{name:'Комментарии'}).click();
   assert.equal((await request).status(),200);
@@ -70,7 +75,7 @@ test('title rating saves independently and updates its distribution', {timeout:3
   assert.equal(await page.locator('.format-actions button').count(),4);
   if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'comments-editor-1280.png')});}
   await page.setViewportSize({width:320,height:750});
-  assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
+  await assertNoHorizontalOverflow(page);
   if(process.env.QMANGA_SCREENSHOT_DIR){await page.locator('.discussion').scrollIntoViewIfNeeded();await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'comments-editor-320.png')});}
  }finally{
   await context.request.put('/api/v1/community/titles/'+fixture.title_id+'/rating',{headers,data:{score:original}}).catch(()=>{});
