@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 21:55'
+updated_date: '2026-10-18 21:57'
 labels:
   - stage-3
 dependencies: []
@@ -35,4 +35,6 @@ ordinal: 11
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented separate categories and ordered, visible editorial collections in migration 000024; genres and age remain independent. Added domain and isolated PostgreSQL regression. Go catalog/HTTP unit tests pass; PostgreSQL run pending harness URL.
+
+Implementation commits: 433aa31, e85e4e5, b9058a8. Domain/application authorization and validation tests pass; isolated PostgreSQL test is ready for coordinated acceptance. Genres, categories, collections and age rating remain separate. Next: run real PostgreSQL migration/persistence regression, then leave Review pending observed release.
 <!-- SECTION:NOTES:END -->
