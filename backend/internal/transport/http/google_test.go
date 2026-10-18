@@ -2,6 +2,8 @@ package http
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"net/http/httptest"
@@ -100,6 +102,10 @@ func TestGoogleSuccessUsesBrowserAccountTransitionAndCancellationDoesNot(t *test
 		for _, cookie := range response.Result().Cookies() {
 			if cookie.Name == "qmanga_external_complete" {
 				proof = true
+				expected := sha256.Sum256([]byte(strings.Repeat("a", 43) + "\x00ordinary-session"))
+				if cookie.Value != hex.EncodeToString(expected[:]) {
+					t.Fatal("proof is not bound to nonce and new session")
+				}
 				if !cookie.HttpOnly || !cookie.Secure || len(cookie.Value) != 64 || cookie.MaxAge > 60 {
 					t.Fatal("unsafe completion proof")
 				}
