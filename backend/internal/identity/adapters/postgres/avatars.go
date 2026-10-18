@@ -3,6 +3,7 @@ package postgres
 import (
 	"context"
 	"qmanga/internal/identity/application"
+	"time"
 )
 
 func (r *Repository) ReserveAvatarObject(ctx context.Context, key string) error {
@@ -58,4 +59,39 @@ func (r *Repository) Avatar(ctx context.Context, kind, owner string) (applicatio
 	a := application.Avatar{Kind: kind, OwnerID: owner}
 	err := r.pool.QueryRow(ctx, `SELECT a.object_key,a.bytes,a.updated_at FROM avatars a WHERE a.owner_kind=$1 AND a.owner_id=$2 AND (($1='user' AND EXISTS(SELECT 1 FROM users u WHERE u.id=a.owner_id AND NOT u.is_blocked)) OR ($1='team' AND EXISTS(SELECT 1 FROM teams t WHERE t.id=a.owner_id AND t.is_approved)))`, kind, owner).Scan(&a.Key, &a.Bytes, &a.UpdatedAt)
 	return a, translate(err)
+}
+
+// The session lock conflicts with deploy/backup-guard.sh. Keep this exact
+// connection checked out until every physical deletion and receipt update ends.
+func (r *Repository) TryAvatarCleanupGuard(ctx context.Context) (func(), bool, error) {
+	conn, err := r.pool.Acquire(ctx)
+	if err != nil {
+		return nil, false, err
+	}
+	var acquired bool
+	if err = conn.QueryRow(ctx, `SELECT pg_try_advisory_lock(482161,1)`).Scan(&acquired); err != nil {
+		// A lost reply may follow successful acquisition; never pool that session.
+		cleanup, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		raw := conn.Hijack()
+		_ = raw.Close(cleanup)
+		return nil, false, err
+	}
+	if !acquired {
+		conn.Release()
+		return nil, false, nil
+	}
+	release := func() {
+		cleanup, cancel := context.WithTimeout(context.Background(), 2*time.Second)
+		defer cancel()
+		var unlocked bool
+		if err := conn.QueryRow(cleanup, `SELECT pg_advisory_unlock(482161,1)`).Scan(&unlocked); err != nil || !unlocked {
+			// A pooled session must never retain an unaccounted advisory lock.
+			raw := conn.Hijack()
+			_ = raw.Close(cleanup)
+			return
+		}
+		conn.Release()
+	}
+	return release, true, nil
 }

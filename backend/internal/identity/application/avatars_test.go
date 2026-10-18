@@ -11,6 +11,12 @@ import (
 
 type avatarRepo struct{ saved bool }
 
+func (r *avatarRepo) TryAvatarCleanupGuard(ctx context.Context) (func(), bool, error) {
+	if err := ctx.Err(); err != nil {
+		return nil, false, err
+	}
+	return func() {}, true, nil
+}
 func (r *avatarRepo) ReserveAvatarObject(context.Context, string) error { return nil }
 func (r *avatarRepo) AbandonAvatarObject(context.Context, string) error { return nil }
 func (r *avatarRepo) AvatarGarbage(context.Context) ([]string, error)   { return nil, nil }
@@ -167,5 +173,30 @@ func TestAvatarDrainIsBoundedAndRespectsCancellation(t *testing.T) {
 	}
 	if len(storage.deleted) != 20 {
 		t.Fatal("cancelled drain deleted object")
+	}
+}
+
+type backupGuardRepo struct {
+	cleanupRepo
+	held     bool
+	released bool
+}
+
+func (r *backupGuardRepo) TryAvatarCleanupGuard(context.Context) (func(), bool, error) {
+	if r.held {
+		return nil, false, nil
+	}
+	return func() { r.released = true }, true, nil
+}
+func TestAvatarDrainSkipsBackupAndReleasesGuardAfterDeletion(t *testing.T) {
+	repo := &backupGuardRepo{cleanupRepo: cleanupRepo{queue: []string{"avatars/obsolete"}}, held: true}
+	storage := &cleanupStorage{}
+	service := NewAvatars(repo, storage, &avatarProcessor{}, avatarTeams{}, func() string { return "unused" })
+	if err := service.DrainAvatarGarbage(context.Background()); err != nil || len(storage.deleted) != 0 {
+		t.Fatal("backup did not suppress deletion", err, storage.deleted)
+	}
+	repo.held = false
+	if err := service.DrainAvatarGarbage(context.Background()); err != nil || len(storage.deleted) != 1 || !repo.released {
+		t.Fatal("cleanup did not resume/release", err, storage.deleted, repo.released)
 	}
 }

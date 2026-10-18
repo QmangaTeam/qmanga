@@ -17,6 +17,7 @@ type Avatar struct {
 	UpdatedAt          time.Time
 }
 type AvatarRepository interface {
+	TryAvatarCleanupGuard(context.Context) (func(), bool, error)
 	ReserveAvatarObject(context.Context, string) error
 	AbandonAvatarObject(context.Context, string) error
 	AvatarGarbage(context.Context) ([]string, error)
@@ -104,6 +105,14 @@ func (s *AvatarService) cleanupAvatar(failedKey string) {
 func (s *AvatarService) DrainAvatarGarbage(parent context.Context) error {
 	ctx, cancel := context.WithTimeout(parent, 5*time.Second)
 	defer cancel()
+	release, acquired, err := s.repository.TryAvatarCleanupGuard(ctx)
+	if err != nil {
+		return err
+	}
+	if !acquired {
+		return nil
+	} // An online backup owns the deletion guard.
+	defer release()
 	keys, err := s.repository.AvatarGarbage(ctx)
 	if err != nil {
 		return err

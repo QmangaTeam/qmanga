@@ -50,6 +50,11 @@ jobs:
             caddy validate --config /etc/caddy/config/Caddyfile --adapter caddyfile
       - name: Cold start and web build checks
         run: docker compose --parallel 1 up -d --build --wait --wait-timeout 180
+      - name: Online backup and avatar deletion guard regression
+        env:
+          QMANGA_TEST_ENV_FILE: ${{ github.workspace }}/.env
+          QMANGA_TEST_PROJECT: qmanga-ci
+        run: bash scripts/test-backup-guard.sh
       - name: Go unit, PostgreSQL and real codec tests without hidden skips
         shell: pwsh
         run: |

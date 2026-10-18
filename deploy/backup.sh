@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 source "$(dirname "$0")/lib.sh"
+source "$(dirname "$0")/backup-guard.sh"
 target_config "${1:?target required}"
 load_public_origin
 stamp=$(date -u +%Y%m%dT%H%M%SZ)
@@ -19,8 +20,14 @@ required_kb=$((object_kb * 2 + (database_bytes / 1024) * 2 + 1048576))
 test "$available_kb" -ge "$required_kb" || {
   echo "Backup needs $required_kb KiB free, only $available_kb KiB available" >&2; exit 2;
 }
-# Database snapshot precedes object copy. This remains online-safe only while
-# S3 keys are immutable and objects are never physically deleted.
+# Immutable keys may be physically removed only by the guarded avatar collector.
+# Confirm the lock from the database itself before snapshotting, and keep the
+# same live session through both mirrors and successful backup publication.
+trap backup_guard_stop EXIT
+trap 'exit 130' INT
+trap 'exit 143' TERM
+trap 'exit 129' HUP
+backup_guard_start
 data_compose exec -T postgres pg_dump -U qmanga -d qmanga -Fc --no-owner > "$backup/postgres.dump"
 test -s "$backup/postgres.dump"
 set -a
@@ -30,6 +37,7 @@ export MC_HOST_qmanga="http://$MINIO_ROOT_USER:$MINIO_ROOT_PASSWORD@minio:9000"
 mc="$QMANGA_HOST_ROOT/bin/mc"
 test -x "$mc"
 for bucket in qmanga-media qmanga-source; do
+  backup_guard_check
   mkdir -p "$backup/$bucket"
   docker run --rm --user "$(id -u):$(id -g)" --network "qmanga-$DEPLOY_TARGET-data" \
     --mount "type=bind,source=$mc,target=/usr/local/bin/mc,readonly" \
@@ -38,6 +46,7 @@ for bucket in qmanga-media qmanga-source; do
     alpine@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507 \
     /usr/local/bin/mc --config-dir /tmp/mc mirror "qmanga/$bucket" "/backup/$bucket"
 done
+backup_guard_check
 docker run --rm --user "$(id -u):$(id -g)" --network none \
   --mount "type=bind,source=$backup,target=/backup" \
   alpine@sha256:ce64758a109eb420d874a118f87920e625e12d3634e03b4a5573fd9f6e5d3507 \
@@ -52,5 +61,6 @@ if test "$DEPLOY_TARGET" = production; then
   test -x "$hook" || { echo "Missing executable off-host backup hook: $hook" >&2; exit 2; }
   "$hook" "$backup"
 fi
+backup_guard_check
 printf '%s\n' "$DEPLOY_TARGET $stamp" > "$backup/COMPLETE"
 echo "Verified $DEPLOY_TARGET backup: $backup"
