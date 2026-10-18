@@ -25,7 +25,7 @@ export class HttpAuthGateway implements AuthGateway {
   } catch { return { ok: false, code:'network', message: 'Қосылым үзілді. Қайталап көріңіз.' }; }
  }
  async login(input: Credentials) {const result=await this.call('login', { email: input.email, password: input.password });if(result.ok)await this.accountChanged();return result;}
- register(input: Credentials) { return this.call('register', { email: input.email, password: input.password }); }
+ register(input: Credentials) { return this.call('register', { email: input.email, password: input.password, display_name: input.displayName || '' }); }
  async current() { const result = await this.call('me'); return result.ok ? result.account || null : null; }
  requestReset(email: string) { return this.call('forgot-password', { email }); }
  resend(email: string) { return this.call('resend-verification', { email }); }

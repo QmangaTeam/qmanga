@@ -55,7 +55,11 @@ type LoginResult struct {
 func New(repository Repository, credentials Credentials, mailer Mailer, origin string) *Service {
 	return &Service{repository: repository, credentials: credentials, mailer: mailer, origin: origin, now: time.Now}
 }
-func (service *Service) Register(ctx context.Context, email, password string) error {
+func (service *Service) Register(ctx context.Context, email, password, displayName string) error {
+	name, failure := domain.NormalizeDisplayName(displayName)
+	if failure != nil || name == "" {
+		return domain.ErrInvalid
+	}
 	if validationError := domain.ValidatePassword(password); validationError != nil {
 		return validationError
 	}
@@ -71,6 +75,7 @@ func (service *Service) Register(ctx context.Context, email, password string) er
 	if createError != nil {
 		return createError
 	}
+	account.DisplayName = name
 	if saveError := service.repository.CreateAccount(ctx, account); saveError != nil {
 		if errors.Is(saveError, domain.ErrConflict) {
 			return nil

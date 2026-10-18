@@ -26,7 +26,7 @@ func translate(failure error) error {
 	return failure
 }
 func (repository *Repository) CreateAccount(ctx context.Context, account domain.Account) error {
-	_, failure := repository.pool.Exec(ctx, "INSERT INTO users(id,email,password_hash,role,is_verified) VALUES($1,$2,$3,$4,$5)", account.ID, account.Email, account.PasswordHash, account.Role, account.Verified)
+	_, failure := repository.pool.Exec(ctx, "INSERT INTO users(id,email,password_hash,role,is_verified,display_name) VALUES($1,$2,$3,$4,$5,$6)", account.ID, account.Email, account.PasswordHash, account.Role, account.Verified, account.DisplayName)
 	return translate(failure)
 }
 func (repository *Repository) AccountByEmail(ctx context.Context, email string) (domain.Account, error) {

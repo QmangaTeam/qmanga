@@ -19,3 +19,16 @@ func TestAccountAndPasswordRules(testingTarget *testing.T) {
 		testingTarget.Fatal("Unicode password rejected")
 	}
 }
+
+func TestDisplayNameRules(t *testing.T) {
+	for _, name := range []string{"", "Қазақ оқырманы", "Reader_42", "А-Я.1"} {
+		if _, err := NormalizeDisplayName(name); err != nil {
+			t.Errorf("valid nickname %q: %v", name, err)
+		}
+	}
+	for _, name := range []string{"x", " leading", "trailing ", "two  spaces", "reader@example.com", "<script>", "line\nbreak", "emoji😀"} {
+		if _, err := NormalizeDisplayName(name); err == nil {
+			t.Errorf("invalid nickname accepted: %q", name)
+		}
+	}
+}

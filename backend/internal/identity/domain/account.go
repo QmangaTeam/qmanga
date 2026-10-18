@@ -4,6 +4,7 @@ import (
 	"errors"
 	"net/mail"
 	"strings"
+	"unicode"
 	"unicode/utf8"
 )
 
@@ -47,9 +48,16 @@ func ValidatePassword(password string) error {
 	return nil
 }
 func NormalizeDisplayName(value string) (string, error) {
-	value = strings.TrimSpace(value)
-	if utf8.RuneCountInString(value) > 40 || (value != "" && utf8.RuneCountInString(value) < 2) || strings.ContainsAny(value, "\r\n\t") {
+	if value == "" {
+		return "", nil
+	} // Legacy accounts may keep an empty profile.
+	if value != strings.TrimSpace(value) || strings.Contains(value, "  ") || utf8.RuneCountInString(value) < 2 || utf8.RuneCountInString(value) > 40 {
 		return "", ErrInvalid
+	}
+	for _, character := range value {
+		if !unicode.IsLetter(character) && !unicode.IsNumber(character) && !strings.ContainsRune(" _.-", character) {
+			return "", ErrInvalid
+		}
 	}
 	return value, nil
 }

@@ -86,7 +86,7 @@ func TestIdentityFlowWithPostgres(testingTarget *testing.T) {
 			testingTarget.Fatal("credential hash leaked")
 		}
 	}
-	credentials := map[string]string{"email": "Reader@Example.com", "password": "correct-password-123"}
+	credentials := map[string]string{"email": "Reader@Example.com", "password": "correct-password-123", "display_name": "Оқырман"}
 	expect(send("POST", "register", credentials, nil, "", "http://foreign.example"), 403)
 	expect(send("POST", "register", credentials, nil, "", origin), 202)
 	expect(send("POST", "register", credentials, nil, "", origin), 202)

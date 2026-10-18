@@ -129,13 +129,14 @@ func RequireRole(roles ...string) gin.HandlerFunc {
 }
 func (handler *IdentityHandler) register(request *gin.Context) {
 	var input struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
+		DisplayName string `json:"display_name"`
+		Email       string `json:"email"`
+		Password    string `json:"password"`
 	}
 	if !decode(request, &input) {
 		return
 	}
-	if failure := handler.service.Register(request.Request.Context(), input.Email, input.Password); failure != nil {
+	if failure := handler.service.Register(request.Request.Context(), input.Email, input.Password, input.DisplayName); failure != nil {
 		handler.respondError(request, failure)
 		return
 	}

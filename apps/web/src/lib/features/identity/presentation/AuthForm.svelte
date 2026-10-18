@@ -11,11 +11,11 @@
  import StateMessage from '$lib/shared/presentation/ui/StateMessage.svelte';
  let {mode,gateway}:{mode:'login'|'register'|'forgot-password'|'reset-password'|'verify-email';gateway:AuthGateway}=$props();
  const {locale}=useLocale();
- let email=$state(''),password=$state(''),busy=$state(false),result=$state<AuthResult|null>(null);
+ let displayName=$state(''),email=$state(''),password=$state(''),busy=$state(false),result=$state<AuthResult|null>(null);
  const labels=$derived({login:text($locale,'Кіру','Войти'),register:text($locale,'Тіркелу','Регистрация'),'forgot-password':text($locale,'Құпиясөзді қалпына келтіру','Восстановить пароль'),'reset-password':text($locale,'Жаңа құпиясөз','Новый пароль'),'verify-email':text($locale,'Поштаны растау','Подтвердить почту')});
  const success=$derived(mode==='register'||mode==='forgot-password'?text($locale,'Хат жіберілді. Поштаңды тексер.','Письмо отправлено. Проверь почту.'):text($locale,'Дайын. Аккаунтқа кіруге болады.','Готово. Можно войти в аккаунт.'));
  async function submit(event:SubmitEvent){event.preventDefault();if(busy)return;busy=true;result=null;const token=$page.url.searchParams.get('token')||'';try{
-  if(mode==='login'||mode==='register')result=await authenticate(gateway,mode,{email,password});
+  if(mode==='login'||mode==='register')result=await authenticate(gateway,mode,{email,password,displayName});
   else if(mode==='forgot-password')result=await gateway.requestReset(email);
   else if(mode==='verify-email')result=await gateway.verify(token);
   else result=await gateway.reset(token,password);
@@ -26,6 +26,7 @@
 <svelte:head><title>{labels[mode]} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>
 <AuthLayout title={labels[mode]} description={mode==='login'?text($locale,'Кітапханаң мен оқу орныңды сақта.','Твоя библиотека и место чтения.'):mode==='register'?text($locale,'Бір аккаунт — барлық құрылғыда.','Один аккаунт на всех устройствах.'):undefined}>
  <form onsubmit={submit}>
+ {#if mode==='register'}<Field id="auth-nickname" label={text($locale,'Никнейм','Никнейм')} required hint={text($locale,'2–40 таңба: әріптер, сандар, бос орын, _ . -','2–40 символов: буквы, цифры, пробел, _ . -')}>{#snippet children(control)}<input {...control} bind:value={displayName} autocomplete="nickname" minlength="2" maxlength="40"/>{/snippet}</Field>{/if}
  {#if mode==='login'||mode==='register'||mode==='forgot-password'}<Field id="auth-email" label={text($locale,'Пошта','Почта')} required>{#snippet children(control)}<input {...control} type="email" bind:value={email} autocomplete="email" inputmode="email" maxlength="254" placeholder="name@example.com"/>{/snippet}</Field>{/if}
  {#if mode==='login'||mode==='register'||mode==='reset-password'}<Field id="auth-password" label={text($locale,'Құпиясөз','Пароль')} required hint={mode==='login'?undefined:text($locale,'10–128 таңба','10–128 символов')}>{#snippet children(control)}<input {...control} type="password" bind:value={password} autocomplete={mode==='login'?'current-password':'new-password'} minlength={mode==='login'?1:10} maxlength="128"/>{/snippet}</Field>{/if}
  {#if mode==='verify-email'}<p>{text($locale,'Поштадағы сілтемені ашқан болсаң, растауды бас.','Если ты открыл ссылку из письма, нажми подтвердить.')}</p>{/if}
