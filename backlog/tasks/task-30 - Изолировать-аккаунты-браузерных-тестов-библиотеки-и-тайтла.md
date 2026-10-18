@@ -35,4 +35,6 @@ ordinal: 4026
 
 <!-- SECTION:NOTES:BEGIN -->
 Исправлен title-interactions.test.mjs: действия rating/library используют отдельный verified admin fixture, а массовая библиотека остаётся у owner. Cleanup восстанавливает исходный removed и проверяет HTTP 204 и прочитанный результат вместо проглатывания ошибок. Исходный дефект подтверждён полным повторным прогоном: source-entry owner была removed:false, ожидание 110 записей падало. Восстановлена только эта известная синтетическая запись в отдельной среде qmanga-stage4-integration. Затем весь browser/*.test.mjs выполнен дважды подряд на тех же данных: 21/21 pass, 0 fail, 0 skip, без пересоздания fixture между прогонами. Логи tmp/integration/browser-repeat-1.log и browser-repeat-2.log. Product/backend behavior не менялись. Review до remote CI нового коммита.
+
+Исправление тестовой изоляции: 4b1b9af. Два полных успешных browser run на одинаковой fixture подтверждают повторяемость; pipeline использует тот же glob.
 <!-- SECTION:NOTES:END -->

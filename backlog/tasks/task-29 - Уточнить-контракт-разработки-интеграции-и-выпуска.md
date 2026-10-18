@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-18 21:26'
-updated_date: '2026-10-18 21:28'
+updated_date: '2026-10-18 21:35'
 labels:
   - process
   - ci
@@ -36,4 +36,6 @@ ordinal: 3026
 
 <!-- SECTION:NOTES:BEGIN -->
 Уточнён единый порядок в существующем RUNBOOK.md, AGENTS.md ссылается на него. Добавлена таблица контрактов UI/application/API/PostgreSQL/media/offline и матрица проверок, переходы Review/Done, привязка выпуска к SHA, staging и rollback. В Verify добавлены setup-bun 1.4.3 и locked install + backlog doctor; полный прежний CI сохранён, новые browser/*.test.mjs включаются автоматически. Локально выполнены точные shell-команды нового шага на Bun 1.4.3; doctor без ошибок. YAML и ссылки валидны; bash syntax, offsite backup checksum regression и shell setup recovery прошли. Начальный вариант запуска backlog в Alpine выявил glibc ELF несовместимость; итоговый workflow запускает CLI на Ubuntu runner через официальный setup-bun, не внутри Alpine. Remote Actions в этой сессии не запускались. Review до наблюдаемого CI для нового коммита.
+
+Контракт и CI: cb0150c. Дополнительно реально выполнены полный Go/PostgreSQL/codec прогон и полный browser suite дважды; обнаруженная проблема тестовой изоляции оформлена TASK-30 и исправлена в 4b1b9af. Local evidence не заменяет ещё не наблюдавшийся Actions run для этих SHA.
 <!-- SECTION:NOTES:END -->
