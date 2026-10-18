@@ -50,6 +50,8 @@ services:
       CSRF_SECRET: ${CSRF_SECRET}
       SMTP_ADDRESS: ${SMTP_ADDRESS:-mailpit:1025}
       SMTP_FROM: ${SMTP_FROM:-no-reply@qmanga.local}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
     depends_on:
@@ -69,6 +71,7 @@ services:
     environment:
       ORIGIN: ${APP_ORIGIN:-http://localhost:8080}
       API_INTERNAL_URL: http://api:8080
+      BUILD_VERSION: ${BUILD_VERSION:-local}
     depends_on:
       api: {condition: service_healthy}
     healthcheck:

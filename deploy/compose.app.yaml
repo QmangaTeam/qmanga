@@ -31,6 +31,8 @@ services:
       MAIL_TRANSPORT: ${MAIL_TRANSPORT:-smtp}
       SMTP_ADDRESS: ${SMTP_ADDRESS:-}
       SMTP_FROM: ${SMTP_FROM:?set SMTP_FROM}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
       OCI_EMAIL_COMPARTMENT_ID: ${OCI_EMAIL_COMPARTMENT_ID:-}
@@ -51,6 +53,7 @@ services:
     environment:
       ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
       API_INTERNAL_URL: http://api:8080
+      BUILD_VERSION: ${RELEASE_SHA}
     depends_on:
       api: {condition: service_healthy}
     healthcheck:

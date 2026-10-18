@@ -43,3 +43,7 @@ export function createCatalogueManagement(): CatalogManagementGateway { return n
 export function createPreferences(): ThemeStore { return new BrowserThemeStore(); }
 export function createTeams(): TeamsGateway { return new HttpTeamsGateway(new ApiClient(globalThis.fetch.bind(globalThis))); }
 export function createAuth(): AuthGateway { return new HttpAuthGateway('', globalThis.fetch.bind(globalThis),'',async()=>{await new BrowserProgressStorage().clearAccounts();await new BrowserLibraryStorage().clear();}); }
+import {HttpMetricsGateway} from '$lib/features/metrics/infrastructure/http-metrics-gateway';
+export function createMetrics(){return new HttpMetricsGateway(new ApiClient(globalThis.fetch.bind(globalThis)));}
+import {HttpAvatarGateway} from '$lib/features/identity/infrastructure/http-avatar-gateway';
+export function createAvatars(){return new HttpAvatarGateway(globalThis.fetch.bind(globalThis));}

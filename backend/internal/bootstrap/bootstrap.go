@@ -12,11 +12,15 @@ import (
 	catalogApp "qmanga/internal/catalog/application"
 	communityPostgres "qmanga/internal/community/adapters/postgres"
 	communityApp "qmanga/internal/community/application"
+	avatarimage "qmanga/internal/identity/adapters/avatarimage"
 	identityCrypto "qmanga/internal/identity/adapters/crypto"
+	googleoidc "qmanga/internal/identity/adapters/googleoidc"
 	identityOCIEmail "qmanga/internal/identity/adapters/ociemail"
 	identityPostgres "qmanga/internal/identity/adapters/postgres"
 	identitySMTP "qmanga/internal/identity/adapters/smtp"
 	identityApp "qmanga/internal/identity/application"
+	metricsPostgres "qmanga/internal/metrics/adapters/postgres"
+	metricsApplication "qmanga/internal/metrics/application"
 	notificationPostgres "qmanga/internal/notifications/adapters/postgres"
 	notificationApp "qmanga/internal/notifications/application"
 	"qmanga/internal/platform/config"
@@ -106,8 +110,15 @@ func Initialize(parentContext context.Context) (*Application, error) {
 	identityService := identityApp.New(identityPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)
 	identityHandler := transport.NewIdentityHandler(identityService, appConfig.AppOrigin, appConfig.Environment == "production")
 	identityHandler.Register(httpRouter.Group("/api/v1"))
+	var googleService *identityApp.GoogleService
+	if appConfig.GoogleClientID != "" {
+		googleService = identityApp.NewGoogle(identityPostgres.New(postgresClient.Pool()), identityCrypto.New(), googleoidc.New(appConfig.GoogleClientID, appConfig.GoogleClientSecret, appConfig.AppOrigin+"/api/v1/auth/google/callback"), identityService)
+	}
+	transport.NewGoogleHandler(googleService, identityHandler).Register(httpRouter.Group("/api/v1"))
 	teamService := teamApp.New(teamPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)
 	transport.NewTeamHandler(teamService).Register(httpRouter.Group("/api/v1"), identityHandler)
+	transport.NewAvatarHandler(identityApp.NewAvatars(identityPostgres.New(postgresClient.Pool()), storageClient, avatarimage.New(), teamService, uuid.NewString), identityHandler).Register(httpRouter)
+	transport.NewMetricsHandler(metricsApplication.New(metricsPostgres.New(postgresClient.Pool()))).Register(httpRouter.Group("/api/v1"), identityHandler)
 	catalogService := catalogApp.New(catalogPostgres.New(postgresClient.Pool()), uuid.NewString)
 	transport.NewCatalogHandler(catalogService).Register(httpRouter.Group("/api/v1"), identityHandler)
 	publicationRepository := publicationPostgres.New(postgresClient.Pool())
