@@ -1,10 +1,10 @@
 ---
 id: TASK-64
 title: Теги Senkuro в поиске каталога
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-10-19 19:29'
-updated_date: '2026-10-19 20:38'
+updated_date: '2026-10-19 22:27'
 labels:
   - catalog
   - taxonomy
@@ -58,7 +58,7 @@ ordinal: 39026
 - [x] #2 В фильтре каталога работает отдельный поиск по тегам: подсказки сгруппированы по категориям, теги выбираются множественно, выбранное видно чипами, панель одинаково работает в desktop-колонке и в мобильном диалоге на 320 и 360 px в обеих темах и локалях.
 - [x] #3 Фильтрация каталога по нескольким тегам работает через API (логика AND), а текстовый поиск каталога находит тайтлы по названию тега.
 - [x] #4 Название тега в интерфейсе соответствует локали (казахский/русский), админская таксономия не ломается, старый одиночный параметр genre продолжает работать.
-- [ ] #5 Проверено: полный Go-набор с PostgreSQL, web-тесты и svelte-check, браузерная приёмка каталога; релиз того же SHA на staging и production с внешней проверкой.
+- [x] #5 Проверено: полный Go-набор с PostgreSQL, web-тесты и svelte-check, браузерная приёмка каталога; релиз того же SHA на staging и production с внешней проверкой.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -80,3 +80,17 @@ Frontend: TagSearch.svelte (подсказки по группам, чипы, м
 
 Проверки: sudo docker compose --profile tools run --rm go-tests go test ./... -count=1 — зелёный с PostgreSQL (включая senkuro_tags_integration_test); bun test src/lib/features src/lib/shared src/lib/server — 127 pass; bun run test:ui — 38 pass; bun run check — 0 ошибок; check:architecture, check:ui-contrast, build — зелёные. Браузерная приёмка в управляемом Chrome на локальном стеке: каталог 320/360/desktop, kk/ru, тёмная и светлая темы; подсказки сгруппированы, чипы добавляются/снимаются, форма отправляет genre=<slug>, каталог сужается до помеченного тайтла, поиск по казахскому и русскому названию тега находит тайтл, админка сохраняет теги в title_genres. Браузерные регрессии локально: taxonomy, catalogue-filters, search, admin, tag-search — зелёные (остальные файлы требуют полного CI-фикстура, без него падают на 401 ещё до кода).
 <!-- SECTION:NOTES:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-10-19 22:27
+
+---
+
+20.10.2026, AC #5 закрыт выпуском.
+
+Production и staging: bb8aec38d6c019e08d940b6209e794795ca956e3 (тот же SHA, что в TASK-65). CI Verify Qmanga 39333412292 успешен, все три ARM64 images опубликованы; staging poller поднял SHA, production переведён release.sh production. Внешне: /api/v1/genres = 713, /api/v1/taxonomy = 6 групп в порядке Senkuro, панель каталога проверена Playwright (kk/ru, обе темы, desktop/mobile).
+
+---
+<!-- COMMENTS:END -->

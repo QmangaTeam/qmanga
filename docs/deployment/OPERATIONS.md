@@ -8,6 +8,8 @@
 
 2026-10-19 (вечер): staging и production выпущены на `f4d73ef9a047810e766f10be930e1089b2e01085` (TASK-62, TASK-63, служебный плагин graphify). [Verify Qmanga 39202510720](https://github.com/maqsatto/qmanga/actions/runs/39202510720): acceptance и все три ARM64 images success; SSH-deploy job штатно skipped. Staging поднят poller-ом, production переведён `release.sh production` на green, предыдущая раскладка (blue) остаётся тёплой для отката. Внешние проверки: health 200, главная отдаёт SHA, `/brand/qmanga.png` и `/brand/qmanga-light.png` 200 на staging и production. Ждёт подтверждения владельца: авто-связка существующих email-аккаунтов при реальном входе Google (TASK-62, статус Review).
 
+2026-10-20: staging и production выпущены на `bb8aec38d6c019e08d940b6209e794795ca956e3` (TASK-64: 719 меток Senkuro; TASK-65: панель фильтров каталога). [Verify Qmanga 39333412292](https://github.com/maqsatto/qmanga/actions/runs/39333412292): обе acceptance-половины и все три ARM64 images success. Staging poller поднял тот же SHA (green), production переведён `release.sh production` на blue, прошлый green (`f4d73ef`) остаётся тёплым для отката; backup `20261019T222451Z` проверен off-host. Внешние проверки: health 200, главная отдаёт SHA, `/api/v1/genres` = 713, 6 групп в порядке main-cast→demographics, панель `/catalog` проверена Playwright (kk/ru, обе темы, desktop/mobile).
+
 ## Адреса и доступ
 
 | Назначение | Адрес / путь |
