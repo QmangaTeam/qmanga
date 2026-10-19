@@ -1,11 +1,11 @@
 ---
 id: TASK-54
 title: Статус чтения поверх обложек каталога и главной
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:02'
-updated_date: '2026-10-19 00:34'
+updated_date: '2026-10-19 02:00'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -48,4 +48,6 @@ ordinal: 28026
 
 <!-- SECTION:NOTES:BEGIN -->
 Добавлен private/no-store GET /reading/statuses: максимум 60 id, только текущий аккаунт, без удалённых закладок и без полного сканирования библиотеки. Главная/каталог получают статусы для видимых обложек в композиции; карточки локализуют подписи, возрастная маркировка сохранена. При смене аккаунта данные очищаются, запоздавший ответ игнорируется. Go application/PostgreSQL/HTTP green; 2 application regression green; Docker web/API build green (116 application +34 SSR), Svelte 0 errors/0 warnings. Browser cover-statuses green: реальные изменения, обе страницы, 320/360/1280 обе темы, kk/ru, no-store/409/422/401 и выход через меню; library-cards также green. Скриншот просмотрен. До выпуска нужен полный integration/browser прогон, production не обновлён.
+
+Выпущено на staging и production18eb4fdf02ee050b2cc2915195e03580a4a80594 штатнымrelease.sh. CI39186717189 acceptance+3ARM64images success; локально50/50browser, профильныеPG/HTTP/webпроверки; независимый review безсущественныхзамечаний. Внешниеhealth/homepage exactSHA проверены. Доказательства общего выпуска вTASK59; TASK36графики намеренноотложенвладельцем.
 <!-- SECTION:NOTES:END -->

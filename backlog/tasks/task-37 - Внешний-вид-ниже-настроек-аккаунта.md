@@ -1,11 +1,11 @@
 ---
 id: TASK-37
 title: Внешний вид ниже настроек аккаунта
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:02'
-updated_date: '2026-10-19 00:06'
+updated_date: '2026-10-19 02:00'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -47,4 +47,6 @@ ordinal: 11026
 
 <!-- SECTION:NOTES:BEGIN -->
 Внешний вид перенесён после аккаунта в DOM. Порядок видимых секций подтверждён браузерным тестом на интегрированной Docker-сборке localhost:8080. Svelte 0 ошибок/предупреждений, сборка и 31 SSR-тест прошли. Выпуск и приёмка владельцем ещё не выполнены.
+
+Выпущено на staging и production18eb4fdf02ee050b2cc2915195e03580a4a80594 штатнымrelease.sh. CI39186717189 acceptance+3ARM64images success; локально50/50browser, профильныеPG/HTTP/webпроверки; независимый review безсущественныхзамечаний. Внешниеhealth/homepage exactSHA проверены. Доказательства общего выпуска вTASK59; TASK36графики намеренноотложенвладельцем.
 <!-- SECTION:NOTES:END -->

@@ -1,11 +1,11 @@
 ---
 id: TASK-53
 title: Сохранённые главы перенести в меню аккаунта
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:02'
-updated_date: '2026-10-19 00:29'
+updated_date: '2026-10-19 02:00'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -47,4 +47,6 @@ ordinal: 27026
 
 <!-- SECTION:NOTES:BEGIN -->
 Ссылка /saved перенесена из заголовка библиотеки в меню под аватаром рядом с библиотекой. Проверено browser smoke: в main ссылки нет, в меню аккаунта есть; локальная сборка/34 SSR green. Без выпуска.
+
+Выпущено на staging и production18eb4fdf02ee050b2cc2915195e03580a4a80594 штатнымrelease.sh. CI39186717189 acceptance+3ARM64images success; локально50/50browser, профильныеPG/HTTP/webпроверки; независимый review безсущественныхзамечаний. Внешниеhealth/homepage exactSHA проверены. Доказательства общего выпуска вTASK59; TASK36графики намеренноотложенвладельцем.
 <!-- SECTION:NOTES:END -->

@@ -1,11 +1,11 @@
 ---
 id: TASK-50
 title: Автоматический перенос гостевого чтения после регистрации
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:02'
-updated_date: '2026-10-19 00:44'
+updated_date: '2026-10-19 02:00'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -52,4 +52,6 @@ ordinal: 24026
 Backend готов: migration 000029, атомарные разрешения для новой email/Google регистрации, непрозрачная HttpOnly cookie без почты/пароля, только хэш в БД; GET eligibility + CSRF/expected-account completion. Обычный вход/дубликат/другой аккаунт/просроченный receipt не дают импорт; повтор completion безопасен. Полный Go ./... green, отдельные новые PostgreSQL проверки и HTTP/application повторяются после уточнения идемпотентности. Frontend и browser-приёмка продолжаются; без выпуска.
 
 Frontend готов: перенос запускается после подтверждения серверного разрешения, использует только подтверждённые удалённые записи, сохраняет существующее облако и явное удаление закладки. Гостевая запись остаётся на устройстве; повтор/сбой/смена аккаунта защищены поколением запросов. Ручной блок убран; библиотека, продолжение и статусы обновляются сигналом после записи. Исправлен выход из исчезнувшего меню и обновление CSRF при смене аккаунта. 7 новых application/transport tests green, Svelte 0 errors/0 warnings; browser на отдельном стенде green: регистрация, сбой, повтор, появление в библиотеке без reload, выход/повторный вход без повторного переноса, чужой аккаунт не получает permission. Backend SHA ef8cd20; полный Go green и повторные identity/PostgreSQL/HTTP green. Последний полный browser-прогон ещё предстоит, production не обновлён.
+
+Выпущено на staging и production18eb4fdf02ee050b2cc2915195e03580a4a80594 штатнымrelease.sh. CI39186717189 acceptance+3ARM64images success; локально50/50browser, профильныеPG/HTTP/webпроверки; независимый review безсущественныхзамечаний. Внешниеhealth/homepage exactSHA проверены. Доказательства общего выпуска вTASK59; TASK36графики намеренноотложенвладельцем.
 <!-- SECTION:NOTES:END -->

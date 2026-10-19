@@ -1,11 +1,11 @@
 ---
 id: TASK-59
 title: Повторный review субагентом перед завершением
-status: In Progress
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:59'
-updated_date: '2026-10-19 01:44'
+updated_date: '2026-10-19 02:00'
 labels: []
 dependencies: []
 ordinal: 33026
@@ -45,4 +45,6 @@ ordinal: 33026
 Итоговая версия с TASK-26.1: browser50/50 зелёный без пропусков,0ошибок; повторный независимый review дополнения и SQL также чистый. Следующий шаг CI, staging и production того же SHA.
 
 RemoteCI39186264073: браузерный прогон быстрее локального исчерпал реальный IPauthbudget30/min (429), хотя первичныйresetужеесть. Исправлена изоляция тестов: группы по8файлов, между завершёнными группами recreateтого жеAPIimage+healthwait, лимитыпродукта и утверждения тестов не изменены. Независимый reviewer проверил охватвсехфайлов/failpropagation, замечанийнет. Групповойлокальный прогон и новыйCI ожидаются.
+
+Финал: групповой browser12+16+18+4=50/50 без пропусков. CI39186717189 acceptance и все3ARM64images success. Штатный release18eb4fdf02ee050b2cc2915195e03580a4a80594 на staging и production завершился0; внешние HTTPS health/homepage exactSHA и Google enabled=true проверены. Независимый review UIпакета, linking, password8 и CIgroups чистый.
 <!-- SECTION:NOTES:END -->

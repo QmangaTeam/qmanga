@@ -1,11 +1,11 @@
 ---
 id: TASK-51
 title: Фильтры библиотеки одной строкой вместо dropdown
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:02'
-updated_date: '2026-10-19 00:29'
+updated_date: '2026-10-19 02:00'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -48,4 +48,6 @@ ordinal: 25026
 
 <!-- SECTION:NOTES:BEGIN -->
 Фильтры заменены на одну горизонтальную строку кнопок с aria-pressed и внутренней прокруткой. Сохранена серверная фильтрация и пагинация, ошибки/повтор. Library browser smoke проверяет работу реального фильтра; старые browser regression переведены на новые кнопки (полный их прогон ещё предстоит). Локально проверено, выпуск не выполнен.
+
+Выпущено на staging и production18eb4fdf02ee050b2cc2915195e03580a4a80594 штатнымrelease.sh. CI39186717189 acceptance+3ARM64images success; локально50/50browser, профильныеPG/HTTP/webпроверки; независимый review безсущественныхзамечаний. Внешниеhealth/homepage exactSHA проверены. Доказательства общего выпуска вTASK59; TASK36графики намеренноотложенвладельцем.
 <!-- SECTION:NOTES:END -->

@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-google'
 created_date: '2026-10-19 01:31'
-updated_date: '2026-10-19 01:38'
+updated_date: '2026-10-19 02:00'
 labels: []
 dependencies: []
 parent_task_id: TASK-26
@@ -44,4 +44,6 @@ Implemented explicit linking only from authenticated verified settings account: 
 Implementation SHA: a9617ee. Parent owns shared browser/staging/release acceptance and remaining AC1/4 evidence; no deployment or push performed by identity implementer.
 
 Родитель: полный итоговый browser прогон 50/50, без ошибок/пропусков (tmp/google-link-final-browser.log); UI linking account/CSRF, обе локали, темы,320/360/1280 прошли. Full Go ./... и повтор locked-session PostgreSQL/HTTP успешны; итоговая api/web сборка здорова. Независимый final_owner_review проверил весь addition и финальную SQL-проверку срока сессии: замечаний нет. Настоящая привязка Google существующего владельца и production release остаются отдельной приёмкой после CI/staging.
+
+Production18eb4fd выпущен, Googleenabled=true; CI39186717189 полныйsuccess. Реальная привязка Google владельца не выполнялась: владелец сменилпочту, требуется еёподтверждение и явное действие внастройках. Backend/PG/HTTP/browser50 и независимыйreviewпройдены; сохранитьReviewдо этойприёмки.
 <!-- SECTION:NOTES:END -->

@@ -1,11 +1,11 @@
 ---
 id: TASK-56
 title: 'Редактор главы: все секции видны на ПК, шаги служат навигацией'
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:05'
-updated_date: '2026-10-19 00:30'
+updated_date: '2026-10-19 02:00'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -46,4 +46,6 @@ ordinal: 30026
 
 <!-- SECTION:NOTES:BEGIN -->
 На ПК >=1000px все три секции в потоке и видимы одновременно, шаги фокусируют заголовок и прокручивают к нему. На телефоне сохраняется один активный шаг. Не используется hidden для desktop-visible контента. Регрессия сначала воспроизвела старое поведение; затем все 3 publishing-steps browser tests green, включая сохранение, ошибку сохранения, resize/клавиатуру/kk+ru/темы и guard несохранённой формы. Svelte 0 errors/0 warnings. Скриншот ПК просмотрен. Локально, без выпуска.
+
+Выпущено на staging и production18eb4fdf02ee050b2cc2915195e03580a4a80594 штатнымrelease.sh. CI39186717189 acceptance+3ARM64images success; локально50/50browser, профильныеPG/HTTP/webпроверки; независимый review безсущественныхзамечаний. Внешниеhealth/homepage exactSHA проверены. Доказательства общего выпуска вTASK59; TASK36графики намеренноотложенвладельцем.
 <!-- SECTION:NOTES:END -->

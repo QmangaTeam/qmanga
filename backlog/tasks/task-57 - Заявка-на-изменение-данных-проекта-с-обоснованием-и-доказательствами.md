@@ -1,11 +1,11 @@
 ---
 id: TASK-57
 title: Заявка на изменение данных проекта с обоснованием и доказательствами
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:11'
-updated_date: '2026-10-19 01:17'
+updated_date: '2026-10-19 02:00'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -63,4 +63,6 @@ ordinal: 31026
 Подключены HTTP/bootstrap, типизированный frontend gateway с account-bound multipart/CSRF, форма проекта и история, очередь/сравнение/решение модератора. Старые manual cover/cover-file HTTP endpoints теперь 409 moderation_required. Media ACL проверен в реальном PostgreSQL: pending cover и evidence недоступны гостю/чужому, одобренные текущие cover/banner публичны, evidence остаётся приватным. Полный Go ./... green. Браузерный workflow (подача cover/banner/evidence → approval → public media → удаление banner через новую заявку → cover fallback) green; страницы 320/360/1280 без overflow. Перед финальной приёмкой ещё общий browser rerun и независимый review.
 
 Локально workflow реализован и проверен. Actual CI smoke auth/publishing/reading на свежем isolated fixture green; publishing использует новую заявку/approval, pending/public media проверены. Дополнительный realPG regression подтверждает сохранение отдельного баннера при замене обложки, закрытие superseded cover и запрет заблокированному модератору. Review до подтверждённого выпуска того же SHA.
+
+Выпущено на staging и production18eb4fdf02ee050b2cc2915195e03580a4a80594 штатнымrelease.sh. CI39186717189 acceptance+3ARM64images success; локально50/50browser, профильныеPG/HTTP/webпроверки; независимый review безсущественныхзамечаний. Внешниеhealth/homepage exactSHA проверены. Доказательства общего выпуска вTASK59; TASK36графики намеренноотложенвладельцем.
 <!-- SECTION:NOTES:END -->

@@ -1,11 +1,11 @@
 ---
 id: TASK-55
 title: 'Каталог: оставить фильтры и убрать локальный поиск'
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:02'
-updated_date: '2026-10-19 00:32'
+updated_date: '2026-10-19 02:00'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -48,4 +48,6 @@ ordinal: 29026
 
 <!-- SECTION:NOTES:BEGIN -->
 Убрана отдельная форма каталога; сохранены фильтры, q из общего поиска и сброс cursor при их применении. Локальная web сборка green, Svelte 0 errors/0 warnings, 34 SSR green; catalogue-filters 4/4 (kk/ru, обе темы, 320/360/1280), search 4/4 с реальным Enter → /catalog?q=... . На production не выпущено.
+
+Выпущено на staging и production18eb4fdf02ee050b2cc2915195e03580a4a80594 штатнымrelease.sh. CI39186717189 acceptance+3ARM64images success; локально50/50browser, профильныеPG/HTTP/webпроверки; независимый review безсущественныхзамечаний. Внешниеhealth/homepage exactSHA проверены. Доказательства общего выпуска вTASK59; TASK36графики намеренноотложенвладельцем.
 <!-- SECTION:NOTES:END -->

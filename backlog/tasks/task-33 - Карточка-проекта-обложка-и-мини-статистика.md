@@ -1,11 +1,11 @@
 ---
 id: TASK-33
 title: 'Карточка проекта: обложка и мини-статистика'
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:02'
-updated_date: '2026-10-19 00:10'
+updated_date: '2026-10-19 02:00'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -48,4 +48,6 @@ ordinal: 7026
 
 <!-- SECTION:NOTES:BEGIN -->
 Список проектов одним серверным запросом получает cover_url, chapter_count (главы именно проекта), rating_count/score тайтла; прежний публичный DTO проектов не расширен. Права и пагинация сохранены. Реальная PostgreSQL-регрессия и HTTP-пакет прошли. Docker web: 114 прикладных, 33 SSR, Svelte 0 ошибок/предупреждений, границы и контраст — успешно. Авторизованный браузерный тест на локальной фикстуре прошёл: показатели совпадают с API, обложка слева, 320/360/1280, обе темы, без горизонтального переполнения. Скриншоты tmp/owner-cards-screenshots осмотрены. До выпуска и приёмки остаётся Review.
+
+Выпущено на staging и production18eb4fdf02ee050b2cc2915195e03580a4a80594 штатнымrelease.sh. CI39186717189 acceptance+3ARM64images success; локально50/50browser, профильныеPG/HTTP/webпроверки; независимый review безсущественныхзамечаний. Внешниеhealth/homepage exactSHA проверены. Доказательства общего выпуска вTASK59; TASK36графики намеренноотложенвладельцем.
 <!-- SECTION:NOTES:END -->

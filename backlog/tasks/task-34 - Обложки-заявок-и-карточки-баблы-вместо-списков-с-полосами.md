@@ -1,11 +1,11 @@
 ---
 id: TASK-34
 title: Обложки заявок и карточки-баблы вместо списков с полосами
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:02'
-updated_date: '2026-10-19 00:45'
+updated_date: '2026-10-19 02:00'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -54,4 +54,6 @@ ordinal: 8026
 Отдельные карточные поверхности применены к обращениям MyReports/Reports, аккаунтам AccountManagement/AuditLog, скачанным главам Saved, Moderation/TeamApprovals, участникам Studio/PublicTeam, обновлениям Updates и файлам PublishingStudio. Непрофильные разделители форм/метрик/навигации сохранены. Docker/SSR/прикладные проверки прошли; авторизованные проекты/команды проверены в браузере. Library/LibraryRow ещё будут заменены сеткой TASK-49, визуальная приёмка списка заявок также остаётся; TASK-34 пока In Progress.
 
 Инвентаризация карточных списков выполнена (перечень в плане): остальные поверхности сделаны раньше, Library/LibraryRow теперь сетка, ручной гостевой список убран TASK-50. Популированные заявки дополнительно проверены синтетическим ответом UI: обложка слева, fallback, отдельные границы/скругления/зазоры, kk/ru, обе темы и 320/360/1280 без горизонтального overflow. Скриншот обнаружил растяжение обложки по высоте длинной карточки: regression сначала red, затем align-self:flex-start сохраняет 2:3, итоговый browser project-cards green на отдельном стенде. Локально проверено; общий browser-прогон/выпуск ещё впереди.
+
+Выпущено на staging и production18eb4fdf02ee050b2cc2915195e03580a4a80594 штатнымrelease.sh. CI39186717189 acceptance+3ARM64images success; локально50/50browser, профильныеPG/HTTP/webпроверки; независимый review безсущественныхзамечаний. Внешниеhealth/homepage exactSHA проверены. Доказательства общего выпуска вTASK59; TASK36графики намеренноотложенвладельцем.
 <!-- SECTION:NOTES:END -->
