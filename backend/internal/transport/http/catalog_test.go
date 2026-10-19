@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"net/http/httptest"
+	"net/url"
 	"strconv"
 	"strings"
 	"testing"
@@ -64,7 +65,7 @@ func TestCatalogueAgeQueryIncludesUnknownAndPublicDTO(t *testing.T) {
 	for _, raw := range []string{"0", "12", "16", "18"} {
 		response := httptest.NewRecorder()
 		router.ServeHTTP(response, httptest.NewRequest("GET", "/api/v1/titles?age_rating="+raw, nil))
-		if response.Code != 200 || repo.filter.AgeRating == nil || strconv.Itoa(*repo.filter.AgeRating) != raw {
+		if response.Code != 200 || len(repo.filter.AgeRatings) != 1 || strconv.Itoa(repo.filter.AgeRatings[0]) != raw {
 			t.Fatal("age filter lost", response.Code)
 		}
 		var body struct {
@@ -97,6 +98,45 @@ func TestCatalogueAcceptsSeveralTagsAndRejectsBrokenOnes(t *testing.T) {
 		router.ServeHTTP(broken, httptest.NewRequest("GET", "/api/v1/"+path, nil))
 		if broken.Code != 400 && broken.Code != 422 {
 			t.Fatalf("broken tag accepted: %s %d", path, broken.Code)
+		}
+	}
+}
+
+func TestCatalogueFacetQueryParameters(testingTarget *testing.T) {
+	repository := &catalogueRepository{}
+	router := NewRouter(nil)
+	NewCatalogHandler(application.New(repository, func() string { return "id" })).Register(router.Group("/api/v1"), NewIdentityHandler(nil, "http://localhost:8080", false))
+	values := url.Values{
+		"genre":              {"", "horror", "magic", "horror"},
+		"kind":               {"manga", "manhwa"},
+		"age_rating":         {"12", "18", "12"},
+		"original_status":    {"ongoing", "completed"},
+		"translation_status": {"paused"},
+		"format":             {"Сборник", "Вебтун"},
+		"source":             {"Манга"},
+		"country":            {"Япония", "Корея"},
+		"chapters_min":       {"20"},
+		"chapters_max":       {"200"},
+		"year_min":           {"2000"},
+		"year_max":           {"2026"},
+	}
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest("GET", "/api/v1/titles?"+values.Encode(), nil))
+	if response.Code != 200 {
+		testingTarget.Fatalf("facet query rejected: %d %s", response.Code, response.Body.String())
+	}
+	if len(repository.filter.Genres) != 2 || len(repository.filter.Kinds) != 2 || len(repository.filter.AgeRatings) != 2 || len(repository.filter.Formats) != 2 || len(repository.filter.Countries) != 2 {
+		testingTarget.Fatalf("repeated parameters lost: %+v", repository.filter)
+	}
+	if repository.filter.ChaptersMin != 20 || repository.filter.ChaptersMax != 200 || repository.filter.YearMin != 2000 || repository.filter.YearMax != 2026 || repository.filter.Sources[0] != "Манга" {
+		testingTarget.Fatalf("range parameters lost: %+v", repository.filter)
+	}
+	for _, path := range []string{"titles?chapters_min=wat", "titles?chapters_max=-2", "titles?year_min=2500", "titles?year_max=nope"} {
+		if response := httptest.NewRecorder(); func() bool {
+			router.ServeHTTP(response, httptest.NewRequest("GET", "/api/v1/"+path, nil))
+			return response.Code != 400
+		}() {
+			testingTarget.Fatalf("invalid range accepted: %s %d", path, response.Code)
 		}
 	}
 }

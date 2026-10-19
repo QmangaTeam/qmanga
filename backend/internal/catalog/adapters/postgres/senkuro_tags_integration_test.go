@@ -56,6 +56,11 @@ func TestSeededTagSearchAndCombinedFilters(t *testing.T) {
 	if len(taxonomy.Categories) != 6 {
 		t.Fatalf("seeded categories missing: %d", len(taxonomy.Categories))
 	}
+	for index, slug := range []string{"main-cast", "traits", "setting", "themes", "elements", "demographics"} {
+		if taxonomy.Categories[index].Slug != slug {
+			t.Fatalf("category order lost: %d %+v", index, taxonomy.Categories)
+		}
+	}
 	if len(taxonomy.Genres) != 713 {
 		t.Fatalf("seeded tags missing: %d", len(taxonomy.Genres))
 	}
@@ -93,6 +98,7 @@ func TestSeededTagSearchAndCombinedFilters(t *testing.T) {
 	}
 
 	input := domain.Metadata{Slug: "tagged", Name: "Tagged", Kind: "manga", OriginalStatus: "ongoing", TranslationStatus: "ongoing", Direction: "ltr", Listed: true}
+	input.Publication = domain.Publication{Year: 2024, Source: "Манга", Country: "Жапония", Formats: []string{"Вебтун", "Сборник"}}
 	horrorID := ""
 	for _, item := range taxonomy.Genres {
 		if item.Slug == "horror" {
@@ -130,6 +136,28 @@ func TestSeededTagSearchAndCombinedFilters(t *testing.T) {
 		t.Fatalf("search by title name failed: %+v %v", page, err)
 	}
 	_ = other
+	facets := []struct {
+		name   string
+		filter application.Filter
+		count  int
+	}{
+		{"kind union", application.Filter{Kinds: []string{"manhwa", "manga"}}, 2},
+		{"kind mismatch", application.Filter{Kinds: []string{"manhwa"}}, 0},
+		{"year exact", application.Filter{YearMin: 2024, YearMax: 2024}, 1},
+		{"year below", application.Filter{YearMax: 2023}, 0},
+		{"format union", application.Filter{Formats: []string{"Вебтун", "Сингл"}}, 1},
+		{"format mismatch", application.Filter{Formats: []string{"Ёнкома"}}, 0},
+		{"source", application.Filter{Sources: []string{"Манга"}}, 1},
+		{"country union", application.Filter{Countries: []string{"Корея", "Жапония"}}, 1},
+		{"country mismatch", application.Filter{Countries: []string{"Корея"}}, 0},
+		{"age union", application.Filter{AgeRatings: []int{0, 16}, Kinds: []string{"manga"}}, 2},
+	}
+	for _, facet := range facets {
+		page, err := service.List(ctx, facet.filter)
+		if err != nil || len(page.Items) != facet.count {
+			t.Fatalf("facet %s failed: %+v %v", facet.name, page, err)
+		}
+	}
 	if _, err = service.List(ctx, application.Filter{Genres: []string{"not a slug"}}); err == nil {
 		t.Fatal("invalid tag slug accepted")
 	}

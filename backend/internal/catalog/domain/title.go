@@ -41,6 +41,13 @@ func oneOf(value string, choices ...string) bool {
 	return false
 }
 func ValidAgeRating(value int) bool { return value == 0 || value == 12 || value == 16 || value == 18 }
+func ValidKind(value string) bool   { return oneOf(value, "manga", "manhwa", "manhua") }
+func ValidOriginalStatus(value string) bool {
+	return oneOf(value, "ongoing", "completed", "hiatus", "cancelled")
+}
+func ValidTranslationStatus(value string) bool {
+	return oneOf(value, "ongoing", "completed", "paused", "stopped")
+}
 
 func NewTitle(id string, input Metadata) (Title, error) {
 	if input.AgeRating != nil && !ValidAgeRating(*input.AgeRating) {

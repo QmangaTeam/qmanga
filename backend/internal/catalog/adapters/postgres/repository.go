@@ -24,9 +24,11 @@ const publicationJoins = ` FROM chapters chapter JOIN releases publication ON pu
  JOIN teams team ON team.id=publication.team_id `
 const publicationVisible = `publication.status='published' AND publication.language='kk' AND revision.status='published'`
 const hasChapters = `EXISTS(SELECT 1` + publicationJoins + `WHERE chapter.title_id=title.id AND ` + publicationVisible + `)`
+const titleChapterCount = `(SELECT count(DISTINCT chapter.id)` + publicationJoins + `WHERE chapter.title_id=title.id AND ` + publicationVisible + `)`
+const publicationYear = `COALESCE(CASE WHEN title.publication->>'year' ~ '^[0-9]{1,4}$' THEN (title.publication->>'year')::int ELSE 0 END,0)`
 const titleVisible = "(title.is_listed OR " + hasChapters + ")"
 const summaryColumns = `title.id,title.slug,title.name_kk,title.type,title.status_original,title.status_translation,title.cover_asset_id,title.is_demo,title.created_at,title.updated_at,
- (SELECT count(DISTINCT chapter.id)` + publicationJoins + `WHERE chapter.title_id=title.id AND ` + publicationVisible + `),
+` + titleChapterCount + `,
  (SELECT count(*) FROM ratings rating JOIN users rating_user ON rating_user.id=rating.user_id AND NOT rating_user.is_blocked WHERE rating.title_id=title.id) AS rating_count,
  coalesce((SELECT avg(rating.score)::float8 FROM ratings rating JOIN users rating_user ON rating_user.id=rating.user_id AND NOT rating_user.is_blocked WHERE rating.title_id=title.id),0) AS score,title.age_rating`
 
@@ -65,18 +67,49 @@ func (repository *Repository) List(ctx context.Context, filter application.Filte
 		arguments = append(arguments, value)
 		return fmt.Sprintf("$%d", len(arguments))
 	}
-	if filter.AgeRating != nil {
-		conditions = append(conditions, "title.age_rating="+bind(*filter.AgeRating))
+	if len(filter.AgeRatings) > 0 {
+		ratings := make([]int32, len(filter.AgeRatings))
+		for index, rating := range filter.AgeRatings {
+			ratings[index] = int32(rating)
+		}
+		conditions = append(conditions, "title.age_rating = ANY("+bind(ratings)+"::int[])")
 	}
 	if filter.Query != "" {
 		escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(filter.Query)
 		pattern := "%" + escaped + "%"
 		conditions = append(conditions, "(title.search_text LIKE "+bind(pattern)+" OR EXISTS(SELECT 1 FROM title_genres mapping JOIN genres genre ON genre.id=mapping.genre_id WHERE mapping.title_id=title.id AND (lower(genre.name_kk) LIKE "+bind(pattern)+" OR lower(genre.name_ru) LIKE "+bind(pattern)+")))")
 	}
-	for _, constraint := range []struct{ column, value string }{{"title.type", filter.Kind}, {"title.status_original", filter.OriginalStatus}, {"title.status_translation", filter.TranslationStatus}} {
-		if constraint.value != "" {
-			conditions = append(conditions, constraint.column+"="+bind(constraint.value))
+	for _, constraint := range []struct {
+		column string
+		values []string
+	}{{"title.type", filter.Kinds}, {"title.status_original", filter.OriginalStatuses}, {"title.status_translation", filter.TranslationStatuses}} {
+		if len(constraint.values) > 0 {
+			conditions = append(conditions, constraint.column+" = ANY("+bind(constraint.values)+"::text[])")
 		}
+	}
+	if len(filter.Formats) > 0 {
+		conditions = append(conditions, "title.publication->'formats' ?| "+bind(filter.Formats)+"::text[]")
+	}
+	if len(filter.Sources) > 0 {
+		conditions = append(conditions, "title.publication->>'source' = ANY("+bind(filter.Sources)+"::text[])")
+	}
+	if len(filter.Countries) > 0 {
+		conditions = append(conditions, "title.publication->>'country' = ANY("+bind(filter.Countries)+"::text[])")
+	}
+	if filter.ChaptersMin > 0 {
+		conditions = append(conditions, titleChapterCount+" >= "+bind(filter.ChaptersMin))
+	}
+	if filter.ChaptersMax > 0 {
+		conditions = append(conditions, titleChapterCount+" <= "+bind(filter.ChaptersMax))
+	}
+	if filter.YearMin > 0 || filter.YearMax > 0 {
+		conditions = append(conditions, publicationYear+" > 0")
+	}
+	if filter.YearMin > 0 {
+		conditions = append(conditions, publicationYear+" >= "+bind(filter.YearMin))
+	}
+	if filter.YearMax > 0 {
+		conditions = append(conditions, publicationYear+" <= "+bind(filter.YearMax))
 	}
 	for _, slug := range filter.Genres {
 		conditions = append(conditions, `EXISTS(SELECT 1 FROM title_genres mapping JOIN genres genre ON genre.id=mapping.genre_id WHERE mapping.title_id=title.id AND genre.slug=`+bind(slug)+`)`)
@@ -191,13 +224,13 @@ func (repository *Repository) detail(ctx context.Context, condition, id string, 
 	}
 	detail.Categories = []application.Genre{}
 	detail.Collections = []domain.Collection{}
-	categoryRows, categoryError := repository.pool.Query(ctx, "SELECT category.id,category.name_kk,category.slug FROM categories category JOIN title_categories mapping ON mapping.category_id=category.id WHERE mapping.title_id=$1 ORDER BY category.name_kk,category.id", title.ID)
+	categoryRows, categoryError := repository.pool.Query(ctx, "SELECT category.id,category.name_kk,category.name_ru,category.slug FROM categories category JOIN title_categories mapping ON mapping.category_id=category.id WHERE mapping.title_id=$1 ORDER BY category.position,category.id", title.ID)
 	if categoryError != nil {
 		return detail, categoryError
 	}
 	for categoryRows.Next() {
 		var item application.Genre
-		if categoryError = categoryRows.Scan(&item.ID, &item.Name, &item.Slug); categoryError != nil {
+		if categoryError = categoryRows.Scan(&item.ID, &item.Name, &item.NameRU, &item.Slug); categoryError != nil {
 			categoryRows.Close()
 			return detail, categoryError
 		}
@@ -346,7 +379,7 @@ func (repository *Repository) Chapters(ctx context.Context, slug string, filter 
 }
 
 func (repository *Repository) Genres(ctx context.Context) ([]application.Genre, error) {
-	rows, failure := repository.pool.Query(ctx, "SELECT genre.id,genre.name_kk,genre.name_ru,genre.slug,COALESCE(category.slug,''),genre.parent_slug,genre.position FROM genres genre LEFT JOIN categories category ON category.id=genre.category_id ORDER BY COALESCE(category.name_kk,''),genre.position,genre.name_kk")
+	rows, failure := repository.pool.Query(ctx, "SELECT genre.id,genre.name_kk,genre.name_ru,genre.slug,COALESCE(category.slug,''),genre.parent_slug,genre.position FROM genres genre LEFT JOIN categories category ON category.id=genre.category_id ORDER BY COALESCE(category.position,999),genre.position,genre.name_kk")
 	if failure != nil {
 		return nil, failure
 	}

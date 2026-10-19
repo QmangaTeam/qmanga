@@ -172,15 +172,34 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 	if failure != nil || len(page.Items) != 1 || page.Items[0].ChapterCount != 4 {
 		testingTarget.Fatalf("alias/publication filtering failed: %+v %v", page, failure)
 	}
-	for _, filter := range []application.Filter{{Genres: []string{"missing"}}, {Kind: "manhwa"}, {OriginalStatus: "completed"}, {TranslationStatus: "stopped"}} {
+	for _, filter := range []application.Filter{{Genres: []string{"missing"}}, {Kinds: []string{"manhwa"}}, {OriginalStatuses: []string{"completed"}}, {TranslationStatuses: []string{"stopped"}}} {
 		filtered, failure := service.List(ctx, filter)
 		if failure != nil || len(filtered.Items) != 0 {
 			testingTarget.Fatalf("filter ignored: %+v %v", filter, failure)
 		}
 	}
-	filtered, failure := service.List(ctx, application.Filter{Genres: []string{"adventure-tales"}, OriginalStatus: "ongoing", TranslationStatus: "ongoing", Kind: "manga"})
+	filtered, failure := service.List(ctx, application.Filter{Genres: []string{"adventure-tales"}, OriginalStatuses: []string{"ongoing"}, TranslationStatuses: []string{"ongoing"}, Kinds: []string{"manga"}})
 	if failure != nil || len(filtered.Items) != 1 {
 		testingTarget.Fatal("combined filters failed", failure)
+	}
+	for _, facet := range []struct {
+		name   string
+		filter application.Filter
+		count  int
+	}{
+		{"chapters exact", application.Filter{Query: "өркен әлем", ChaptersMin: 4, ChaptersMax: 4}, 1},
+		{"chapters above", application.Filter{Query: "өркен әлем", ChaptersMin: 5}, 0},
+		{"chapters below", application.Filter{Query: "өркен әлем", ChaptersMax: 3}, 0},
+		{"year exact", application.Filter{Query: "өркен әлем", YearMin: 2023, YearMax: 2023}, 1},
+		{"year mismatch", application.Filter{Query: "өркен әлем", YearMax: 2022}, 0},
+		{"format", application.Filter{Query: "өркен әлем", Formats: []string{"Webtoon"}}, 1},
+		{"source", application.Filter{Query: "өркен әлем", Sources: []string{"Новелла"}}, 1},
+		{"country", application.Filter{Query: "өркен әлем", Countries: []string{"Корея"}}, 1},
+	} {
+		page, failure := service.List(ctx, facet.filter)
+		if failure != nil || len(page.Items) != facet.count {
+			testingTarget.Fatalf("facet %s failed: %+v %v", facet.name, page, failure)
+		}
 	}
 	detail, failure := service.Detail(ctx, title.Slug)
 	if failure != nil || len(detail.Projects) != 1 || detail.Title.Direction != "rtl" || len(detail.Genres) != 1 {

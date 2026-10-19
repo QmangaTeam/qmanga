@@ -15,7 +15,7 @@ func (repository *Repository) Taxonomy(ctx context.Context, admin bool) (applica
 	if err != nil {
 		return result, err
 	}
-	rows, err := repository.pool.Query(ctx, "SELECT id,name_kk,name_ru,slug FROM categories ORDER BY name_kk,id")
+	rows, err := repository.pool.Query(ctx, "SELECT id,name_kk,name_ru,slug FROM categories ORDER BY position,name_kk,id")
 	if err != nil {
 		return result, err
 	}

@@ -7,6 +7,7 @@ import (
 	"log"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -113,20 +114,60 @@ func queryInteger(request *gin.Context, key string, fallback, maximum int) (int,
 	}
 	return parsed, true
 }
+func queryValues(request *gin.Context, key string) []string {
+	values := request.QueryArray(key)
+	selected := make([]string, 0, len(values))
+	for _, value := range values {
+		if trimmed := strings.TrimSpace(value); trimmed != "" {
+			selected = append(selected, trimmed)
+		}
+	}
+	return selected
+}
+func queryOptionalInteger(request *gin.Context, key string, minimum, maximum int) (int, bool) {
+	raw := strings.TrimSpace(request.Query(key))
+	if raw == "" {
+		return 0, true
+	}
+	parsed, failure := strconv.Atoi(raw)
+	if failure != nil || parsed < minimum || parsed > maximum {
+		Error(request, 400, "invalid_query", "Сұрау параметрін тексеріңіз")
+		return 0, false
+	}
+	return parsed, true
+}
 func (handler *CatalogHandler) list(request *gin.Context) {
 	limit, valid := queryInteger(request, "limit", 24, 48)
 	if !valid {
 		return
 	}
-	filter := application.Filter{Query: request.Query("q"), Kind: request.Query("kind"), Category: request.Query("category"), Collection: request.Query("collection"), OriginalStatus: request.Query("original_status"), TranslationStatus: request.Query("translation_status"), Sort: request.DefaultQuery("sort", "updated"), Featured: request.Query("featured") == "true", HasChapters: request.Query("has_chapters") == "true", Limit: limit}
-	filter.Genres = request.QueryArray("genre")
-	if raw := request.Query("age_rating"); raw != "" {
-		age, err := strconv.Atoi(raw)
-		if err != nil {
+	filter := application.Filter{Query: request.Query("q"), Category: request.Query("category"), Collection: request.Query("collection"), Sort: request.DefaultQuery("sort", "updated"), Featured: request.Query("featured") == "true", HasChapters: request.Query("has_chapters") == "true", Limit: limit}
+	filter.Kinds = queryValues(request, "kind")
+	filter.OriginalStatuses = queryValues(request, "original_status")
+	filter.TranslationStatuses = queryValues(request, "translation_status")
+	filter.Genres = queryValues(request, "genre")
+	filter.Formats = queryValues(request, "format")
+	filter.Sources = queryValues(request, "source")
+	filter.Countries = queryValues(request, "country")
+	for _, raw := range queryValues(request, "age_rating") {
+		age, failure := strconv.Atoi(raw)
+		if failure != nil {
 			Error(request, 400, "invalid_query", "Invalid age rating")
 			return
 		}
-		filter.AgeRating = &age
+		filter.AgeRatings = append(filter.AgeRatings, age)
+	}
+	if filter.ChaptersMin, valid = queryOptionalInteger(request, "chapters_min", 0, 1_000_000); !valid {
+		return
+	}
+	if filter.ChaptersMax, valid = queryOptionalInteger(request, "chapters_max", 0, 1_000_000); !valid {
+		return
+	}
+	if filter.YearMin, valid = queryOptionalInteger(request, "year_min", 0, 2200); !valid {
+		return
+	}
+	if filter.YearMax, valid = queryOptionalInteger(request, "year_max", 0, 2200); !valid {
+		return
 	}
 	if raw := request.Query("cursor"); raw != "" {
 		decoded, failure := base64.RawURLEncoding.DecodeString(raw)

@@ -72,7 +72,7 @@ func TestAgeRatingPersistenceFilteringAndLegacyWriters(testingTarget *testing.T)
 		}
 	}
 	for _, age := range []int{0, 12, 16, 18} {
-		page, err := service.List(ctx, application.Filter{AgeRating: &age, Limit: 1, Sort: "name"})
+		page, err := service.List(ctx, application.Filter{AgeRatings: []int{age}, Limit: 1, Sort: "name"})
 		if err != nil || len(page.Items) != 1 || page.Items[0].ID != ids[age] || page.Items[0].AgeRating != age {
 			testingTarget.Fatal("incorrect exact age filter", age, err, page)
 		}
@@ -103,7 +103,7 @@ func TestAgeRatingPersistenceFilteringAndLegacyWriters(testingTarget *testing.T)
 		testingTarget.Fatal("reader changed classification", err)
 	}
 	invalid := 14
-	if _, err := service.List(ctx, application.Filter{AgeRating: &invalid}); !errors.Is(err, domain.ErrInvalid) {
+	if _, err := service.List(ctx, application.Filter{AgeRatings: []int{invalid}}); !errors.Is(err, domain.ErrInvalid) {
 		testingTarget.Fatal("invalid filter accepted", err)
 	}
 	execute("INSERT INTO titles(id,slug,name_kk,is_listed) VALUES('legacy','legacy','Legacy title',true)")

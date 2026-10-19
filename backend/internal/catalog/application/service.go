@@ -9,7 +9,7 @@ import (
 )
 
 type Genre struct {
-	ID, Name, NameRU, Slug string
+	ID, Name, NameRU, Slug   string
 	CategorySlug, ParentSlug string
 	Position                 int
 }
@@ -26,13 +26,14 @@ type Cursor struct {
 	Name, ID  string
 }
 type Filter struct {
-	AgeRating                                                                         *int
-	HasChapters                                                                       bool
-	Featured                                                                          bool
-	Query, Kind, Category, Collection, OriginalStatus, TranslationStatus, Sort        string
-	Genres                                                                            []string
-	Limit                                                                             int
-	After                                                                             *Cursor
+	AgeRatings                                           []int
+	HasChapters, Featured                                bool
+	Query, Category, Collection, Sort                    string
+	Kinds, OriginalStatuses, TranslationStatuses, Genres []string
+	Formats, Sources, Countries                          []string
+	ChaptersMin, ChaptersMax, YearMin, YearMax           int
+	Limit                                                int
+	After                                                *Cursor
 }
 type Page struct {
 	Items []Summary
@@ -136,9 +137,6 @@ func New(repository Repository, newID func() string) *Service {
 	return &Service{repository: repository, newID: newID}
 }
 func (service *Service) List(ctx context.Context, filter Filter) (Page, error) {
-	if filter.AgeRating != nil && !domain.ValidAgeRating(*filter.AgeRating) {
-		return Page{}, domain.ErrInvalid
-	}
 	filter.Query = strings.ToLower(strings.TrimSpace(filter.Query))
 	if utf8.RuneCountInString(filter.Query) > 80 {
 		return Page{}, domain.ErrInvalid
@@ -153,35 +151,98 @@ func (service *Service) List(ctx context.Context, filter Filter) (Page, error) {
 		filter.Limit = 24
 	}
 	filter.Limit = min(max(filter.Limit, 1), 48)
-	if filter.Kind != "" && filter.Kind != "manga" && filter.Kind != "manhwa" && filter.Kind != "manhua" {
+	var valid bool
+	if filter.Kinds, valid = selection(filter.Kinds, 3); !valid {
 		return Page{}, domain.ErrInvalid
 	}
-	if filter.OriginalStatus != "" && filter.OriginalStatus != "ongoing" && filter.OriginalStatus != "completed" && filter.OriginalStatus != "hiatus" && filter.OriginalStatus != "cancelled" {
+	for _, kind := range filter.Kinds {
+		if !domain.ValidKind(kind) {
+			return Page{}, domain.ErrInvalid
+		}
+	}
+	if filter.OriginalStatuses, valid = selection(filter.OriginalStatuses, 4); !valid {
 		return Page{}, domain.ErrInvalid
 	}
-	if filter.TranslationStatus != "" && filter.TranslationStatus != "ongoing" && filter.TranslationStatus != "completed" && filter.TranslationStatus != "paused" && filter.TranslationStatus != "stopped" {
+	for _, status := range filter.OriginalStatuses {
+		if !domain.ValidOriginalStatus(status) {
+			return Page{}, domain.ErrInvalid
+		}
+	}
+	if filter.TranslationStatuses, valid = selection(filter.TranslationStatuses, 4); !valid {
+		return Page{}, domain.ErrInvalid
+	}
+	for _, status := range filter.TranslationStatuses {
+		if !domain.ValidTranslationStatus(status) {
+			return Page{}, domain.ErrInvalid
+		}
+	}
+	if filter.Formats, valid = selection(filter.Formats, 8); !valid {
+		return Page{}, domain.ErrInvalid
+	}
+	if filter.Sources, valid = selection(filter.Sources, 16); !valid {
+		return Page{}, domain.ErrInvalid
+	}
+	if filter.Countries, valid = selection(filter.Countries, 16); !valid {
 		return Page{}, domain.ErrInvalid
 	}
 	if len(filter.Category) > 64 || len(filter.Collection) > 64 || (filter.After != nil && (filter.After.ID == "" || len(filter.After.ID) > 36 || utf8.RuneCountInString(filter.After.Name) > 200 || filter.After.UpdatedAt.IsZero())) {
 		return Page{}, domain.ErrInvalid
 	}
-	if len(filter.Genres) > 12 {
+	if len(filter.AgeRatings) > 0 {
+		seenRatings := map[int]bool{}
+		ratings := make([]int, 0, len(filter.AgeRatings))
+		for _, rating := range filter.AgeRatings {
+			if !domain.ValidAgeRating(rating) {
+				return Page{}, domain.ErrInvalid
+			}
+			if seenRatings[rating] {
+				continue
+			}
+			seenRatings[rating] = true
+			ratings = append(ratings, rating)
+		}
+		filter.AgeRatings = ratings
+	}
+	if filter.ChaptersMin < 0 || filter.ChaptersMax < 0 || filter.ChaptersMax > 1_000_000 || (filter.ChaptersMin > 0 && filter.ChaptersMax > 0 && filter.ChaptersMin > filter.ChaptersMax) {
 		return Page{}, domain.ErrInvalid
 	}
-	seenGenres := map[string]bool{}
-	selected := make([]string, 0, len(filter.Genres))
+	if filter.YearMin < 0 || filter.YearMax < 0 || filter.YearMin > 2200 || filter.YearMax > 2200 || (filter.YearMin > 0 && filter.YearMin < 1000) || (filter.YearMax > 0 && filter.YearMax < 1000) || (filter.YearMin > 0 && filter.YearMax > 0 && filter.YearMin > filter.YearMax) {
+		return Page{}, domain.ErrInvalid
+	}
+	if filter.Genres, valid = selection(filter.Genres, 12); !valid {
+		return Page{}, domain.ErrInvalid
+	}
 	for _, slug := range filter.Genres {
 		if !domain.ValidSlug(slug) {
 			return Page{}, domain.ErrInvalid
 		}
-		if seenGenres[slug] {
+	}
+	return service.repository.List(ctx, filter)
+}
+
+// selection trims values, drops empty entries, removes duplicates and rejects
+// a group that still holds more than limit distinct values.
+func selection(values []string, limit int) ([]string, bool) {
+	seen := make(map[string]bool, len(values))
+	selected := make([]string, 0, len(values))
+	for _, value := range values {
+		trimmed := strings.TrimSpace(value)
+		if trimmed == "" {
 			continue
 		}
-		seenGenres[slug] = true
-		selected = append(selected, slug)
+		if utf8.RuneCountInString(trimmed) > 160 {
+			return nil, false
+		}
+		if seen[trimmed] {
+			continue
+		}
+		seen[trimmed] = true
+		selected = append(selected, trimmed)
 	}
-	filter.Genres = selected
-	return service.repository.List(ctx, filter)
+	if len(selected) > limit {
+		return nil, false
+	}
+	return selected, true
 }
 
 func (service *Service) Rankings(ctx context.Context, kind string, limit int) ([]Summary, error) {
