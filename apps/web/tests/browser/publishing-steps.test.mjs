@@ -58,6 +58,7 @@ test('chapter steps retain edits, recover failed saves and expose only the chose
   for(const width of [320,360,1280]){
    await page.setViewportSize({width,height:800});
    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'steps fit at '+width);
+   for(const id of ['draft-pages','draft-details','draft-preview'])assert.equal(await page.locator('#'+id).isVisible(),width>=1000||id==='draft-preview','responsive visibility '+id);
    if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'publishing-steps-'+width+'.png'),fullPage:true});}
   }
   await page.getByRole('button',{name:'Удалить черновик',exact:true}).first().click();
@@ -90,6 +91,7 @@ test('step navigation fits Kazakh and Russian in both themes with keyboard acces
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,locale+' '+theme+' '+width);
     const links=await rail.locator('a').evaluateAll(elements=>elements.map(el=>el.getBoundingClientRect().height));
     assert.ok(links.every(height=>height>=44),'step targets are at least 44px');
+    if(width>=1000){for(const id of ['draft-pages','draft-details','draft-preview'])assert.equal(await page.locator('#'+id).isVisible(),true);await rail.locator('a[href="#draft-preview"]').press('Enter');assert.equal(await page.locator('#draft-preview h3').evaluate(el=>el===document.activeElement),true);assert.equal(await page.locator('#draft-details').isVisible(),true);}
     if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,`steps-${locale}-${theme}-${width}.png`),fullPage:false});}
    }
   }finally{await context.close();}
