@@ -76,6 +76,15 @@ func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 		testingTarget.Fatal(own, failure)
 	}
 	foreign, failure := repository.List(ctx, "second", "")
+	ownStatuses, statusFailure := repository.Statuses(ctx, "first", []string{"title", "absent"})
+	if statusFailure != nil || len(ownStatuses) != 1 || ownStatuses["title"] != "reading" {
+		testingTarget.Fatal(ownStatuses, statusFailure)
+	}
+	foreignStatuses, statusFailure := repository.Statuses(ctx, "second", []string{"title"})
+	if statusFailure != nil || len(foreignStatuses) != 0 {
+		testingTarget.Fatal("status crossed accounts", foreignStatuses, statusFailure)
+	}
+
 	stale := selection
 	selection.Version = own[0].Version
 	selection.Status = "paused"

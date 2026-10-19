@@ -5,7 +5,7 @@
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import IconButton from '$lib/shared/presentation/ui/IconButton.svelte';
  import CoverCard from './CoverCard.svelte';
- let {items,label,eager=false}:{items:Summary[];label:string;eager?:boolean}=$props();
+ let {items,label,eager=false,statuses={}}:{statuses?:Record<string,string>;items:Summary[];label:string;eager?:boolean}=$props();
  const {locale}=useLocale();
  let shelf:HTMLDivElement;
  let canGoBack=$state(false),canGoForward=$state(false);
@@ -16,7 +16,7 @@
 <div class="shelf-wrap">
  <div class="cover-shelf" role="region" aria-label={label} bind:this={shelf} onscroll={measure}>
   {#each items as title,index (title.id)}
-   <div class="shelf-item"><CoverCard ageRating={title.ageRating} href={'/titles/'+encodeURIComponent(title.slug)} name={title.name} coverURL={title.coverURL} metadata={kindNames[title.kind]} tag={title.demo?text($locale,'Үлгі','Пример'):''} score={title.score} ratingCount={title.ratingCount} fallback={text($locale,'Мұқаба жоқ','Нет обложки')} priority={eager&&index<3}/></div>
+   <div class="shelf-item"><CoverCard readingStatus={statuses[title.id]} ageRating={title.ageRating} href={'/titles/'+encodeURIComponent(title.slug)} name={title.name} coverURL={title.coverURL} metadata={kindNames[title.kind]} tag={title.demo?text($locale,'Үлгі','Пример'):''} score={title.score} ratingCount={title.ratingCount} fallback={text($locale,'Мұқаба жоқ','Нет обложки')} priority={eager&&index<3}/></div>
   {/each}
  </div>
  {#if canGoBack||canGoForward}<div class="shelf-controls"><IconButton name="left" label={text($locale,'Алдыңғы тайтлдар','Предыдущие тайтлы')} disabled={!canGoBack} onclick={()=>move(-1)}/><IconButton name="right" label={text($locale,'Келесі тайтлдар','Следующие тайтлы')} disabled={!canGoForward} onclick={()=>move(1)}/></div>{/if}

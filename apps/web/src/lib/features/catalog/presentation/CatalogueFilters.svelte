@@ -60,7 +60,7 @@
  </dialog>
 </div>
 <style>
- .filters-shell{min-width:0;grid-column:2;grid-row:1}
+ .filters-shell{min-width:0;grid-column:1;grid-row:1}
  .filter-trigger{display:inline-flex;align-items:center;gap:8px;margin:0;min-height:44px}
  .catalogue-filters{display:none}
  h2{font-size:17px;line-height:1.35;margin:0;font-weight:700}

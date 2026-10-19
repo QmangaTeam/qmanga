@@ -1,9 +1,11 @@
 ---
 id: TASK-54
 title: Статус чтения поверх обложек каталога и главной
-status: To Do
-assignee: []
+status: Review
+assignee:
+  - '@codex'
 created_date: '2026-10-19 00:02'
+updated_date: '2026-10-19 00:34'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -35,3 +37,15 @@ ordinal: 28026
 - [ ] #1 На обложках каталога и главной справа сверху показан текущий статус чтения пользователя, если он есть.
 - [ ] #2 Статус обновляется после изменения закладки и не переносится между аккаунтами.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Добавить ограниченный запрос личных статусов только для видимых тайтлов, с защитой аккаунта/no-store. Собрать данные в композиции страниц, передать метки карточкам без сетевых вызовов внутри каталога. Проверить смену аккаунта, гостя, удалённую закладку, kk/ru и изменение статуса.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Добавлен private/no-store GET /reading/statuses: максимум 60 id, только текущий аккаунт, без удалённых закладок и без полного сканирования библиотеки. Главная/каталог получают статусы для видимых обложек в композиции; карточки локализуют подписи, возрастная маркировка сохранена. При смене аккаунта данные очищаются, запоздавший ответ игнорируется. Go application/PostgreSQL/HTTP green; 2 application regression green; Docker web/API build green (116 application +34 SSR), Svelte 0 errors/0 warnings. Browser cover-statuses green: реальные изменения, обе страницы, 320/360/1280 обе темы, kk/ru, no-store/409/422/401 и выход через меню; library-cards также green. Скриншот просмотрен. До выпуска нужен полный integration/browser прогон, production не обновлён.
+<!-- SECTION:NOTES:END -->

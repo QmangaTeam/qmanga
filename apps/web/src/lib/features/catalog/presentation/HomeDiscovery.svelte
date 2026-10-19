@@ -6,7 +6,7 @@
  import Icon from '$lib/shared/presentation/ui/Icon.svelte';
  import CoverShelf from './CoverShelf.svelte';
  import Updates from './Updates.svelte';
- let {mostRead,updates,top,topKind='manhwa',continuation}:{mostRead:{available:boolean;page:ResultPage<Summary>};updates:{available:boolean;page:ResultPage<ReleaseUpdate>};top:{available:boolean;page:ResultPage<Summary>};topKind?:string;continuation?:Snippet}=$props();
+ let {mostRead,updates,top,topKind='manhwa',continuation,statuses={}}:{statuses?:Record<string,string>;mostRead:{available:boolean;page:ResultPage<Summary>};updates:{available:boolean;page:ResultPage<ReleaseUpdate>};top:{available:boolean;page:ResultPage<Summary>};topKind?:string;continuation?:Snippet}=$props();
  const {locale}=useLocale();
  const tabs=$derived([{value:'manhwa',label:text($locale,'Топ манхва','Топ манхв')},{value:'manga',label:text($locale,'Топ манга','Топ манг')},{value:'manhua',label:text($locale,'Топ маньхуа','Топ маньхуа')}]);
 </script>
@@ -15,7 +15,7 @@
   <div class="section-title"><h1 id="browse-heading">{text($locale,'Ең көп оқылатын','Самое читаемое')}</h1><a class="section-link" href="/catalog" aria-label="Каталог"><Icon name="catalog" size={18}/></a></div>
   {#if !mostRead.available}<StateMessage kind="error" title={text($locale,'Рейтинг жүктелмеді','Рейтинг не загрузился')}>{#snippet actions()}<a class="retry-link" href="/">{text($locale,'Қайталау','Повторить')}</a>{/snippet}</StateMessage>
   {:else if !mostRead.page.items.length}<StateMessage kind="empty" title={text($locale,'Әзірге тайтл жоқ','Тайтлов пока нет')}/>
-  {:else}<CoverShelf items={mostRead.page.items} label={text($locale,'Ең көп оқылатын','Самое читаемое')} eager/>{/if}
+  {:else}<CoverShelf {statuses} items={mostRead.page.items} label={text($locale,'Ең көп оқылатын','Самое читаемое')} eager/>{/if}
  </section>
  <section aria-labelledby="continue-heading">
   <div class="section-title"><h2 id="continue-heading">{text($locale,'Оқуды жалғастыру','Продолжить чтение')}</h2><a class="section-link" href="/library" aria-label={text($locale,'Кітапхана','Библиотека')}><Icon name="bookmark" size={18}/></a></div>
@@ -30,7 +30,7 @@
   <nav class="shelf-tabs" aria-label={text($locale,'Түрі бойынша топ','Топ по типу')}>{#each tabs as tab}<a href={'/?top='+tab.value+'#tops'} aria-current={topKind===tab.value?'page':undefined}>{tab.label}</a>{/each}</nav>
   {#if !top.available}<StateMessage kind="error" title={text($locale,'Рейтинг жүктелмеді','Рейтинг не загрузился')}>{#snippet actions()}<a class="retry-link" href={'/?top='+topKind+'#tops'}>{text($locale,'Қайталау','Повторить')}</a>{/snippet}</StateMessage>
   {:else if !top.page.items.length}<StateMessage kind="empty" title={text($locale,'Бұл бөлімде әзірге тайтл жоқ','В этом разделе пока нет тайтлов')}/>
-  {:else}<CoverShelf items={top.page.items} label={tabs.find(tab=>tab.value===topKind)?.label||tabs[0].label}/>{/if}
+  {:else}<CoverShelf {statuses} items={top.page.items} label={tabs.find(tab=>tab.value===topKind)?.label||tabs[0].label}/>{/if}
  </section>
 </div>
 <style>

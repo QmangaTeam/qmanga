@@ -1,9 +1,11 @@
 ---
 id: TASK-55
 title: 'Каталог: оставить фильтры и убрать локальный поиск'
-status: To Do
-assignee: []
+status: Review
+assignee:
+  - '@codex'
 created_date: '2026-10-19 00:02'
+updated_date: '2026-10-19 00:32'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -35,3 +37,15 @@ ordinal: 29026
 - [ ] #1 В каталоге нет отдельной формы поиска; фильтры сохранены.
 - [ ] #2 Общий поиск в шапке остаётся рабочим.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Убрать только отдельную поисковую форму каталога; сохранить q из общей шапки в фильтрах и переходах. Проверить общий поиск, применение фильтров и адаптивный вид.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Убрана отдельная форма каталога; сохранены фильтры, q из общего поиска и сброс cursor при их применении. Локальная web сборка green, Svelte 0 errors/0 warnings, 34 SSR green; catalogue-filters 4/4 (kk/ru, обе темы, 320/360/1280), search 4/4 с реальным Enter → /catalog?q=... . На production не выпущено.
+<!-- SECTION:NOTES:END -->

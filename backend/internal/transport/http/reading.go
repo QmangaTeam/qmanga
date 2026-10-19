@@ -17,6 +17,7 @@ func (handler *ReadingHandler) Register(api *gin.RouterGroup, identity *Identity
 	api.GET("/reading/references", handler.references)
 	group := api.Group("", identity.RequireUser(), expectedAccount())
 	group.GET("/reading/recent", handler.recent)
+	group.GET("/reading/statuses", handler.statuses)
 	group.GET("/reading/suggestion/:id", handler.suggestion)
 	group.GET("/library", handler.list)
 	group.GET("/library/:id", handler.selection)
@@ -211,4 +212,18 @@ func (handler *ReadingHandler) suggestion(request *gin.Context) {
 		return
 	}
 	request.JSON(200, gin.H{"eligible": eligible})
+}
+
+func (handler *ReadingHandler) statuses(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	ids := []string{}
+	if value := request.Query("ids"); value != "" {
+		ids = strings.Split(value, ",")
+	}
+	statuses, failure := handler.service.Statuses(request.Request.Context(), account.ID, ids)
+	if failure != nil {
+		readingError(request, failure)
+		return
+	}
+	request.JSON(200, gin.H{"statuses": statuses})
 }

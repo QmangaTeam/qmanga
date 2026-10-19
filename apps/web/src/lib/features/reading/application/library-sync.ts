@@ -36,6 +36,7 @@ export class LibrarySync {
 export class CachedReadingGateway implements ReadingGateway {
  constructor(private remote:ReadingGateway,private sync:LibrarySync){}
  account(){return this.remote.account();}
+ statuses(account:string,ids:string[]){return this.remote.statuses?.(account,ids)||Promise.resolve({});}
  suggestion(account:string,title:string){return this.remote.suggestion?.(account,title)||Promise.resolve(false);}
  recent(account:string,limit=4){return this.remote.recent(account,limit);}
  references(releases:string[]){return this.remote.references(releases);}

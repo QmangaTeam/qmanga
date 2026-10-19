@@ -19,6 +19,7 @@ for(const locale of ['kk','ru'])for(const theme of ['light','dark'])test(`catalo
   page.on('console',entry=>{if(entry.type()==='error')browserErrors.push({kind:'console',message:entry.text()});});
   const url='/catalog?q=DrawerFixture&age_rating=18&kind=manhwa&sort=name';
   await page.goto(url);
+  assert.equal(await page.locator('.catalogue-search,#catalogue-query').count(),0,'only global search remains');
   const aside=page.locator('aside.catalogue-filters');
   assert.equal(await aside.isVisible(),true,'desktop filters must be permanently visible on the right');
   const sidebar=await aside.boundingBox(),results=await page.locator('.catalogue-results').boundingBox();assert.ok(sidebar.x>results.x+results.width-1);
