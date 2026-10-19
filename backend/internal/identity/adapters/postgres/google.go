@@ -42,30 +42,37 @@ func (r *Repository) googleAccount(ctx context.Context, identity application.Goo
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return a, err
 	}
-	// An email match never grants account access or links an external identity.
-	var exists bool
-	if err = tx.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users WHERE lower(email)=$1) OR EXISTS(SELECT 1 FROM external_identities WHERE issuer=$2 AND subject=$3)`, identity.Email, identity.Issuer, identity.Subject).Scan(&exists); err != nil {
-		return a, err
-	}
-	if exists {
+	// A verified Google email links a password-registered account and signs it in
+	// (owner decision 19 October 2026, TASK-62): profile, role, ID and edits stay untouched.
+	var member domain.Account
+	var blocked bool
+	found := tx.QueryRow(ctx, `SELECT id,email,password_hash,role,is_verified,is_blocked,display_name FROM users WHERE lower(email)=$1 FOR UPDATE`, identity.Email).Scan(&member.ID, &member.Email, &member.PasswordHash, &member.Role, &member.Verified, &blocked, &member.DisplayName)
+	if errors.Is(found, pgx.ErrNoRows) {
+		if candidate.DisplayName == "" {
+			return a, application.ErrNicknameRequired
+		}
+		if _, err = tx.Exec(ctx, `INSERT INTO users(id,email,password_hash,role,is_verified,display_name) VALUES($1,$2,$3,'reader',true,$4)`, candidate.ID, candidate.Email, candidate.PasswordHash, candidate.DisplayName); err != nil {
+			return a, translate(err)
+		}
+	} else if found != nil {
+		return a, found
+	} else if blocked {
 		return a, domain.ErrConflict
 	}
-	if candidate.DisplayName == "" {
-		return a, application.ErrNicknameRequired
+	user := member
+	if member.ID == "" {
+		user = candidate
 	}
-	if _, err = tx.Exec(ctx, `INSERT INTO users(id,email,password_hash,role,is_verified,display_name) VALUES($1,$2,$3,'reader',true,$4)`, candidate.ID, candidate.Email, candidate.PasswordHash, candidate.DisplayName); err != nil {
+	if _, err = tx.Exec(ctx, `INSERT INTO external_identities(issuer,subject,user_id) VALUES($1,$2,$3)`, identity.Issuer, identity.Subject, user.ID); err != nil {
 		return a, translate(err)
 	}
-	if _, err = tx.Exec(ctx, `INSERT INTO external_identities(issuer,subject,user_id) VALUES($1,$2,$3)`, identity.Issuer, identity.Subject, candidate.ID); err != nil {
-		return a, translate(err)
-	}
-	if receiptHash != "" {
+	if user.ID == candidate.ID && receiptHash != "" {
 		if _, err = tx.Exec(ctx, `DELETE FROM registration_reading_imports WHERE expires_at<now()`); err != nil {
 			return a, err
 		}
-		if _, err = tx.Exec(ctx, `INSERT INTO registration_reading_imports(user_id,receipt_hash,expires_at) VALUES($1,$2,$3)`, candidate.ID, receiptHash, expires); err != nil {
+		if _, err = tx.Exec(ctx, `INSERT INTO registration_reading_imports(user_id,receipt_hash,expires_at) VALUES($1,$2,$3)`, user.ID, receiptHash, expires); err != nil {
 			return a, err
 		}
 	}
-	return candidate, tx.Commit(ctx)
+	return user, tx.Commit(ctx)
 }

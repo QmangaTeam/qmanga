@@ -70,9 +70,10 @@ func TestGooglePersistenceAndAvatarVisibility(t *testing.T) {
 	if err != nil || again.ID != account.ID || again.DisplayName != "Edited nickname" || again.Email != account.Email {
 		t.Fatal("stable subject lost", err)
 	}
+	// One user keeps exactly one Google identity, so a second subject with the same email conflicts.
 	identity.Subject = "attacker"
 	if _, err = repo.GoogleAccount(ctx, identity, candidate); !errors.Is(err, domain.ErrConflict) {
-		t.Fatal("email-only takeover accepted", err)
+		t.Fatal("second Google identity accepted", err)
 	}
 
 	// Registration import receipts are created atomically only for new accounts.
@@ -138,21 +139,19 @@ func TestGooglePersistenceAndAvatarVisibility(t *testing.T) {
 		}
 	}
 	linkedIdentity := application.GoogleIdentity{Issuer: "https://accounts.google.com", Subject: "explicit-link", Email: owner.Email, Verified: true, Name: "Google changed name"}
-	if _, err = repo.GoogleAccount(ctx, linkedIdentity, domain.Account{ID: "must-not-create", Email: owner.Email, DisplayName: "Google name"}); !errors.Is(err, domain.ErrConflict) {
-		t.Fatal("same-email identity auto-linked", err)
+	// A verified Google email links a password-registered account and signs it in (owner decision 19 October 2026).
+	if linked, err := repo.GoogleLinked(ctx, owner.ID); err != nil || linked {
+		t.Fatal("unlinked status", err)
+	}
+	if actualGoogle, err := repo.GoogleAccount(ctx, linkedIdentity, domain.Account{ID: "must-not-create", Email: owner.Email, DisplayName: "Google name"}); err != nil || actualGoogle != owner {
+		t.Fatalf("same-email identity did not auto-link: %+v %v", actualGoogle, err)
 	}
 	customAvatar := application.Avatar{Kind: "user", OwnerID: owner.ID, Key: "avatars/custom-link-owner", Bytes: 100, UpdatedAt: now}
 	if err = repo.SaveAvatar(ctx, customAvatar); err != nil {
 		t.Fatal(err)
 	}
-	if linked, err := repo.GoogleLinked(ctx, owner.ID); err != nil || linked {
-		t.Fatal("unlinked status", err)
-	}
-	if err = repo.LinkGoogleIdentity(ctx, owner.ID, owner.ID+"-session", linkedIdentity, now); err != nil {
-		t.Fatal("explicit link failed", err)
-	}
 	if linked, err := repo.GoogleLinked(ctx, owner.ID); err != nil || !linked {
-		t.Fatal("linked status", err)
+		t.Fatal("auto-link status", err)
 	}
 	if actual, err := repo.GoogleAccount(ctx, linkedIdentity, domain.Account{ID: "new-candidate", Email: "changed@example.test", DisplayName: "New name"}); err != nil || actual != owner {
 		t.Fatalf("linked login changed account: %+v %v", actual, err)
@@ -237,3 +236,64 @@ func TestGooglePersistenceAndAvatarVisibility(t *testing.T) {
 		t.Fatal("blocked Google identity accepted", err)
 	}
 }
+
+func TestGoogleEmailMatchLinksRegisteredAccount(t *testing.T) {
+	connection := os.Getenv("TEST_DATABASE_URL")
+	if connection == "" {
+		t.Skip("TEST_DATABASE_URL required")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	base, err := databaseAdapter.New(ctx, connection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer base.Close()
+	schema := "google_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	if _, err = base.Pool().Exec(ctx, "CREATE SCHEMA "+schema); err != nil {
+		t.Fatal(err)
+	}
+	defer base.Pool().Exec(context.Background(), "DROP SCHEMA "+schema+" CASCADE")
+	parsedURL, _ := url.Parse(connection)
+	query := parsedURL.Query()
+	query.Set("search_path", schema)
+	parsedURL.RawQuery = query.Encode()
+	db, err := databaseAdapter.New(ctx, parsedURL.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err = db.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	repo := New(db.Pool())
+	password := domain.Account{ID: "pwd-user", Email: "pwd@example.test", PasswordHash: "hash", Role: "reader", Verified: true, DisplayName: "Password reader"}
+	if err := repo.CreateAccount(ctx, password); err != nil {
+		t.Fatal(err)
+	}
+	identity := application.GoogleIdentity{Issuer: "https://accounts.google.com", Subject: "email-link-sub", Email: "pwd@example.test", Verified: true}
+	linked, err := repo.GoogleAccount(ctx, identity, domain.Account{ID: "unused", Email: "pwd@example.test", PasswordHash: "opaque", DisplayName: "Google override", Role: "reader", Verified: true})
+	if err != nil || linked.ID != password.ID {
+		t.Fatalf("auto-link missing: %+v %v", linked, err)
+	}
+	if linked != password {
+		t.Fatalf("linked account changed: %+v", linked)
+	}
+	if again, err := repo.GoogleAccount(ctx, identity, domain.Account{ID: "unused", Email: "pwd@example.test", DisplayName: "x"}); err != nil || again.ID != password.ID {
+		t.Fatalf("repeat login after link: %+v %v", again, err)
+	}
+	var users int
+	if err = db.Pool().QueryRow(ctx, "SELECT count(*) FROM users WHERE lower(email)=$1", password.Email).Scan(&users); err != nil || users != 1 {
+		t.Fatalf("users for email: %d %v", users, err)
+	}
+	if _, err = repo.GoogleAccount(ctx, application.GoogleIdentity{Issuer: identity.Issuer, Subject: "another-sub", Email: password.Email, Verified: true}, domain.Account{ID: "unused", Email: password.Email, DisplayName: "y"}); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("second subject accepted: %v", err)
+	}
+	if _, err = db.Pool().Exec(ctx, "UPDATE users SET is_blocked=true WHERE id=$1", password.ID); err != nil {
+		t.Fatal(err)
+	}
+	if _, err = repo.GoogleAccount(ctx, identity, domain.Account{ID: "unused", Email: password.Email, DisplayName: "z"}); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("blocked email match accepted: %v", err)
+	}
+}
+
