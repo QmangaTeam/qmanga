@@ -2,6 +2,7 @@ import { before, after, test } from 'node:test';
 import assert from 'node:assert/strict';
 import { chromium } from 'playwright';
 import { readFile } from 'node:fs/promises';
+import { randomUUID } from 'node:crypto';
 import { mkdir } from 'node:fs/promises';
 import { join } from 'node:path';
 
@@ -60,6 +61,37 @@ test('load and selection are not saved; confirmed write is; rejected write retai
   assert.equal(await name.inputValue(), original + ' · unsaved');
   assert.equal(await page.getByRole('status').count(), 0, 'rejected write must clear previous success');
  } finally { await context.close(); }
+});
+
+test('admin tag picker stays closed after a mouse pick and chip removal', { timeout: 60000 }, async () => {
+ const { context, page } = await adminPage();
+ const suffix = randomUUID().slice(0, 8), name = 'Тег ' + suffix, slug = 'picker-' + suffix;
+ let headers, genre;
+ try {
+  headers = { Origin: baseURL, 'X-CSRF-Token': (await (await context.request.get('/api/v1/auth/csrf')).json()).csrf_token };
+  const created = await context.request.post('/api/v1/admin/genres', { headers, data: { name, slug } });
+  assert.equal(created.status(), 201);
+  genre = await created.json();
+  await page.goto('/admin/catalog?title=' + process.env.QMANGA_TITLE_ID);
+  const input = page.getByRole('combobox', { name: 'Теги', exact: true });
+  await input.waitFor();
+  await input.fill(name);
+  const option = page.getByRole('option', { name, exact: true });
+  await option.waitFor();
+  await option.click();
+  assert.equal(await page.getByRole('listbox').count(), 0, 'a mouse pick must not reopen the suggestions');
+  assert.equal(await input.getAttribute('aria-expanded'), 'false');
+  assert.equal(await input.evaluate(element => element === document.activeElement), true, 'focus returns to the search input');
+  const chip = page.getByRole('button', { name, exact: true });
+  await chip.waitFor();
+  await chip.click();
+  assert.equal(await page.getByRole('listbox').count(), 0, 'chip removal must not reopen the suggestions');
+  assert.equal(await input.getAttribute('aria-expanded'), 'false');
+  assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), true, 'the admin picker fits 360px');
+ } finally {
+  if (headers && genre) await context.request.delete('/api/v1/admin/genres/' + genre.id, { headers });
+  await context.close();
+ }
 });
 
 test('admin outside team follows catalogue project link to a read-only card', { timeout: 60000 }, async () => {

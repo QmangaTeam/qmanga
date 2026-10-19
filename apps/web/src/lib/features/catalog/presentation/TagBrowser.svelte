@@ -32,7 +32,7 @@
 			buckets.set(key, bucket);
 		}
 		const order = categories.map(group => group.slug).filter(slug => buckets.has(slug));
-		if (buckets.has('')) order.push('');
+		for (const slug of buckets.keys()) if (!order.includes(slug)) order.push(slug);
 		return order.map(slug => ({ slug, name: groupName(slug), items: buckets.get(slug) || [], popular: !needle && (buckets.get(slug) || []).length > 5 }));
 	});
 	const full = $derived(selected.length >= limit);
@@ -78,7 +78,7 @@
 	.search-field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 	.search-field input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
 	.search-icon { position: absolute; left: 14px; display: flex; color: var(--muted); pointer-events: none; }
-	.search-clear { position: absolute; right: 2px; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 999px; background: none; color: var(--muted); cursor: pointer; }
+	.search-clear { position: absolute; right: 0; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: none; color: var(--muted); cursor: pointer; }
 	.search-clear:hover { color: var(--text); }
 	.search-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 	.tag-hint, .tag-notice, .tag-empty { margin: 0; font-size: 12px; line-height: 1.4; color: var(--muted); }

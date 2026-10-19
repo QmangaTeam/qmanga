@@ -62,11 +62,14 @@
 		open = false;
 		await tick();
 		inputElement?.focus();
+		// Focusing the input re-opens the suggestions via onfocus; a mouse pick must keep them closed.
+		open = false;
 	}
 	async function remove(slug: string) {
 		onchange(selected.filter(item => item !== slug));
 		await tick();
 		inputElement?.focus();
+		open = false;
 	}
 	function onkeydown(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
@@ -127,12 +130,12 @@
  .tag-search-field input{width:100%;min-width:0;min-height:44px;padding:10px 44px 10px 12px;border:1px solid var(--muted);border-radius:8px;background:var(--panel);color:var(--text);font:inherit;font-size:16px;line-height:1.4}
  .tag-search-field input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
  .tag-search-field input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none}
- .tag-search-clear{position:absolute;right:2px;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
+ .tag-search-clear{position:absolute;right:0;display:flex;align-items:center;justify-content:center;width:44px;height:44px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
  .tag-search-clear:hover{color:var(--text)}
  .tag-search-clear:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
  .tag-search-notice{margin:0;font-size:12px;color:var(--accent)}
  .tag-search-selected{display:flex;flex-wrap:wrap;gap:6px;margin:0;padding:0;list-style:none}
- .tag-search-selected button{display:inline-flex;align-items:center;gap:6px;min-height:32px;max-width:100%;padding:5px 10px;border:1px solid var(--line);border-radius:999px;background:var(--raised);color:var(--text);font:inherit;font-size:13px;line-height:1.3;cursor:pointer;overflow-wrap:anywhere}
+ .tag-search-selected button{display:inline-flex;align-items:center;gap:6px;min-height:44px;max-width:100%;padding:8px 12px;border:1px solid var(--line);border-radius:999px;background:var(--raised);color:var(--text);font:inherit;font-size:13px;line-height:1.3;cursor:pointer;overflow-wrap:anywhere}
  .tag-search-selected button:hover{color:var(--accent)}
  .tag-search-selected button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
  .tag-search-results{max-height:260px;overflow-y:auto;overscroll-behavior:contain;border:1px solid var(--line);border-radius:10px;background:var(--bg)}

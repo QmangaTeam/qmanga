@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { onMount } from 'svelte';
 	import type { Genre } from '../application/catalog';
 	import { useLocale, text } from '$lib/shared/presentation/locale';
 	import Icon from '$lib/shared/presentation/ui/Icon.svelte';
@@ -8,6 +9,8 @@
 	const instance = $props.id();
 	const inputId = 'tag-group-search-' + instance;
 	let query = $state('');
+	let backElement: HTMLButtonElement | undefined;
+	onMount(() => backElement?.focus());
 	function label(item: Genre): string {
 		return $locale === 'ru' && item.nameRu ? item.nameRu : item.name;
 	}
@@ -18,7 +21,7 @@
 
 <section class="tag-group-panel" aria-label={name}>
 	<div class="panel-head">
-		<button class="back" type="button" aria-label={text($locale, 'Артқа', 'Назад')} onclick={onback}><Icon name="left" /></button>
+		<button bind:this={backElement} class="back" type="button" aria-label={text($locale, 'Артқа', 'Назад')} onclick={onback}><Icon name="left" /></button>
 		<h3>{name}</h3>
 	</div>
 	<div class="panel-search">
@@ -57,7 +60,7 @@
 	.search-field input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 	.search-field input::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; display: none; }
 	.search-icon { position: absolute; left: 14px; display: flex; color: var(--muted); pointer-events: none; }
-	.search-clear { position: absolute; right: 2px; display: flex; align-items: center; justify-content: center; width: 40px; height: 40px; border: 0; border-radius: 999px; background: none; color: var(--muted); cursor: pointer; }
+	.search-clear { position: absolute; right: 0; display: flex; align-items: center; justify-content: center; width: 44px; height: 44px; border: 0; border-radius: 999px; background: none; color: var(--muted); cursor: pointer; }
 	.search-clear:hover { color: var(--text); }
 	.tag-notice, .tag-empty { margin: 0; padding: 0 16px 6px; font-size: 12px; line-height: 1.4; color: var(--accent); }
 	.tag-empty { color: var(--muted); font-size: 13px; }

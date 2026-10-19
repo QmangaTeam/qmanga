@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, untrack } from 'svelte';
+	import { onMount, tick, untrack } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { catalogParams, type CatalogFilter, type Genre, type Collection } from '../application/catalog';
 	import { ageRatings, kinds, originalStatuses, translationStatuses } from '../domain/catalog';
@@ -42,8 +42,9 @@
 	$effect(() => { filters = stateFrom(filter); });
 	let dialog: HTMLDialogElement | undefined;
 	let openGroup = $state<string | null>(null);
+	let lastTrigger: HTMLElement | null = null;
 	const group = $derived.by(() => {
-		if (!openGroup) return null;
+		if (openGroup === null) return null;
 		const category = categories.find(item => item.slug === openGroup);
 		return {
 			name: category ? ($locale === 'ru' && category.nameRu ? category.nameRu : category.name) : text($locale, 'Басқа', 'Прочее'),
@@ -112,10 +113,21 @@
 		openGroup = null;
 		dialog?.close();
 	}
-	function escape(event: KeyboardEvent) {
-		if (!openGroup) return;
-		event.preventDefault();
+	function showGroup(slug: string) {
+		const active = document.activeElement;
+		lastTrigger = active instanceof HTMLElement ? active : null;
+		openGroup = slug;
+	}
+	function hideGroup() {
 		openGroup = null;
+		const target = lastTrigger;
+		lastTrigger = null;
+		tick().then(() => target?.focus());
+	}
+	function escape(event: KeyboardEvent) {
+		if (openGroup === null) return;
+		event.preventDefault();
+		hideGroup();
 	}
 	function backdrop(event: MouseEvent) {
 		if (event.target !== dialog || !dialog) return;
@@ -159,8 +171,8 @@
 {/snippet}
 
 {#snippet body()}
-	<div class="panel-scroll">
-		<TagBrowser {genres} {categories} selected={filters.genres} limit={12} ontoggle={toggleGenre} onopen={(slug: string) => (openGroup = slug)} />
+	<div class="panel-scroll" inert={group !== null}>
+		<TagBrowser {genres} {categories} selected={filters.genres} limit={12} ontoggle={toggleGenre} onopen={showGroup} />
 		{@render checklist(text($locale, 'Түрі', 'Тип тайтла'), kindOptions, 'kinds')}
 		{@render checklist(text($locale, 'Жас санаты', 'Возрастной рейтинг'), ageOptions, 'ageRatings')}
 		{@render range(text($locale, 'Тарау саны', 'Количество глав'), 'chaptersMin', 'chaptersMax', 100000, chapterQuick)}
@@ -190,7 +202,7 @@
 {/snippet}
 
 {#snippet drill()}
-	{#if group}<TagGroupPanel name={group.name} items={group.items} selected={filters.genres} limit={12} ontoggle={toggleGenre} onback={() => (openGroup = null)} />{/if}
+	{#if group}<TagGroupPanel name={group.name} items={group.items} selected={filters.genres} limit={12} ontoggle={toggleGenre} onback={hideGroup} />{/if}
 {/snippet}
 
 <svelte:window onkeydown={escape} />
