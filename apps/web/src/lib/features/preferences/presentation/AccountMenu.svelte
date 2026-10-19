@@ -22,6 +22,7 @@
  <nav aria-label={text($locale,'Аккаунт әрекеттері','Действия аккаунта')}>
   <a href="/settings" onclick={close}><Icon name="settings"/>{text($locale,'Профиль және баптаулар','Профиль и настройки')}</a>
   <a href="/library" onclick={close}><Icon name="bookmark"/>{text($locale,'Кітапхана','Библиотека')}</a>
+  <a href="/saved" onclick={close}><Icon name="download"/>{text($locale,'Сақталған тараулар','Сохранённые главы')}</a>
   {#if translator}<a href="/studio/projects" onclick={close}><Icon name="upload"/>{text($locale,'Аудармашы кабинеті','Кабинет переводчика')}</a>{/if}
   {#if user.role==='admin'&&user.verified}<a href="/admin" onclick={close}><Icon name="shield"/>{text($locale,'Басқару','Управление')}</a>{:else if user.role==='moderator'&&user.verified}<a href="/moderation" onclick={close}><Icon name="shield"/>Модерация</a>{/if}
   <button onclick={logout} disabled={busy}>{text($locale,'Шығу','Выйти')}</button>

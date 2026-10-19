@@ -96,24 +96,21 @@ test('library and project filters find matches beyond 100 and reset pagination',
  try {
   await page.goto('/library');
   await page.getByText('Найдено: 110', { exact: true }).waitFor();
-  await page.getByLabel('Список', { exact: true }).selectOption('planned');
+  await page.locator('.library-filters').getByRole('button',{name:'В планах',exact:true}).click();
   await page.getByText('Найдено: 1', { exact: true }).waitFor();
-  await page.locator(`a[href="/titles/${libraryTarget.slug}"]`).waitFor();
+  await page.locator(`.card-heading a[href="/titles/${libraryTarget.slug}"]`).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Загрузить ещё', exact: true }).count(), 0);
+  await page.locator('.library-card .options').first().click();
   await page.locator('.entry-controls select').first().selectOption('reading');
   await page.getByText('Найдено: 0', { exact: true }).waitFor();
   assert.equal(await page.locator(`a[href="/titles/${libraryTarget.slug}"]`).count(), 0);
 
-  await page.getByLabel('Список', { exact: true }).selectOption('all');
+  await page.locator('.library-filters').getByRole('button',{name:'Все',exact:true}).click();
   await page.getByText('Найдено: 110', { exact: true }).waitFor();
 
-  const searchInput = page.locator('.library-search input[type="search"]');
-  await searchInput.fill('Ұзақ сынақ');
-  await page.getByRole('button', { name: 'Найти', exact: true }).click();
-  await page.getByText('Найдено: 110', { exact: true }).waitFor();
-  await searchInput.fill('Unsubmitted Draft');
+  assert.equal(await page.locator('.library-search').count(),0);
   await page.getByRole('button', { name: 'Загрузить ещё', exact: true }).click();
-  await page.locator(`a[href="/titles/${titles[109].slug}"]`).waitFor();
+  await page.locator(`.card-heading a[href="/titles/${titles[109].slug}"]`).waitFor();
   assert.equal(await page.getByRole('button', { name: 'Загрузить ещё', exact: true }).count(), 0);
 
   await page.goto('/studio/projects');
@@ -178,22 +175,20 @@ test('account recent history uses activity and no library scan; guest v1 data up
  } finally { await guest.close(); }
 });
 
-test('library search error is displayed with retry and does not mask as empty state', { timeout: 60000 }, async () => {
+test('library filter error is displayed with retry and does not mask as empty state', { timeout: 60000 }, async () => {
  const page = await owner.newPage();
  try {
   await page.goto('/library');
   await page.getByText('Найдено: 110', { exact: true }).waitFor();
 
-  const failRegex = /\/api\/v1\/library\?.*q=FailQuery/;
+  const failRegex = /\/api\/v1\/library\?.*status=dropped/;
   await page.route(failRegex, route => route.fulfill({
    status: 500,
    contentType: 'application/json',
    body: JSON.stringify({ error: { code: 'server_down', message: 'Internal error' } })
   }));
 
-  const searchInput = page.locator('.library-search input[type="search"]');
-  await searchInput.fill('FailQuery');
-  await page.getByRole('button', { name: 'Найти', exact: true }).click();
+  await page.locator('.library-filters').getByRole('button',{name:'Брошено',exact:true}).click();
 
   await page.locator('p[role="alert"]').waitFor();
   assert.equal(await page.locator('.empty-state').count(), 0);
@@ -228,6 +223,7 @@ test('two rapid changes to entry status and favorite do not trigger artificial v
    await route.continue();
   });
 
+  await page.locator('.library-card .options').first().click();
   const row = page.locator('.entry-controls').first();
   const select = row.locator('select');
   const checkbox = row.locator('input[type="checkbox"]');
@@ -252,6 +248,7 @@ test('two rapid changes to entry status and favorite do not trigger artificial v
   await page.unroute(putPattern);
   await page.reload();
   await page.getByText('Найдено: 110', { exact: true }).waitFor();
+  await page.locator('.library-card .options').first().click();
   const reloadedRow = page.locator('.entry-controls').first();
   assert.equal(await reloadedRow.locator('select').inputValue(), 'completed');
   assert.equal(await reloadedRow.locator('input[type="checkbox"]').isChecked(), true);

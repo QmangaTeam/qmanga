@@ -87,7 +87,7 @@ func progressView(item domain.Progress) gin.H {
 	return gin.H{"title_id": item.TitleID, "release_id": item.ReleaseID, "revision_id": item.RevisionID, "page_id": item.PageID, "fraction": item.Fraction, "furthest_order": item.FurthestOrder, "version": item.Version, "device_id": item.DeviceID, "sequence": item.Sequence, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "page_position": item.PagePosition, "updated_at": item.UpdatedAt}
 }
 func entryView(item application.Entry) gin.H {
-	return gin.H{"version": item.Version, "removed": item.Removed, "title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "status": item.Status, "favorite": item.Favorite, "preferred_team_id": item.PreferredTeamID, "notify": item.Notify, "unseen": item.Unseen, "progress": progressView(item.Progress)}
+	return gin.H{"version": item.Version, "removed": item.Removed, "title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "cover_url": coverURL(item.CoverID), "status": item.Status, "favorite": item.Favorite, "preferred_team_id": item.PreferredTeamID, "notify": item.Notify, "unseen": item.Unseen, "progress": progressView(item.Progress)}
 }
 func (handler *ReadingHandler) selection(request *gin.Context) {
 	account, _ := CurrentAccount(request)
@@ -120,7 +120,7 @@ func (handler *ReadingHandler) list(request *gin.Context) {
 	}
 	result := []gin.H{}
 	for _, item := range page.Items {
-		result = append(result, gin.H{"version": item.Version, "removed": item.Removed, "title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "status": item.Status, "favorite": item.Favorite, "preferred_team_id": item.PreferredTeamID, "notify": item.Notify, "unseen": item.Unseen, "progress": progressView(item.Progress)})
+		result = append(result, gin.H{"version": item.Version, "removed": item.Removed, "title_id": item.TitleID, "name": item.Name, "slug": item.Slug, "cover_url": coverURL(item.CoverID), "status": item.Status, "favorite": item.Favorite, "preferred_team_id": item.PreferredTeamID, "notify": item.Notify, "unseen": item.Unseen, "progress": progressView(item.Progress)})
 	}
 	request.JSON(200, gin.H{"items": result, "has_more": page.Next != "", "next_cursor": page.Next, "total": page.Total})
 }

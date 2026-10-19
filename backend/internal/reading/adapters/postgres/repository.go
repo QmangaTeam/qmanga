@@ -25,13 +25,13 @@ const libraryColumns = `library.title_id,title.name_kk,title.slug,library.status
  (SELECT COUNT(DISTINCT chapter.id) FROM chapters chapter JOIN releases release ON release.chapter_id=chapter.id JOIN revisions revision ON revision.id=release.current_revision_id AND revision.status='published' WHERE chapter.title_id=title.id AND release.status='published' AND chapter.order_num>COALESCE(progress.furthest_chapter_order,0) AND (library.preferred_team_id IS NULL OR release.team_id=library.preferred_team_id)),
  COALESCE(progress.title_id,''),COALESCE(progress.release_id,''),COALESCE(progress.revision_id,''),COALESCE(progress.page_id,''),COALESCE(progress.fraction,0),COALESCE(progress.furthest_chapter_order,0),COALESCE(progress.version,0),COALESCE(progress.device_id,''),COALESCE(progress.sequence,0),COALESCE(progress.page_position,0),COALESCE((extract(epoch from progress.updated_at)*1000)::bigint,0),
  COALESCE((SELECT chapter.label FROM releases release JOIN chapters chapter ON chapter.id=release.chapter_id WHERE release.id=progress.release_id),''),
- COALESCE((SELECT team.name FROM releases release JOIN teams team ON team.id=release.team_id WHERE release.id=progress.release_id),'')`
+ COALESCE((SELECT team.name FROM releases release JOIN teams team ON team.id=release.team_id WHERE release.id=progress.release_id),''),COALESCE(title.cover_asset_id,'')`
 const libraryJoins = ` FROM library_entries library JOIN titles title ON title.id=library.title_id LEFT JOIN reading_progress progress ON progress.user_id=library.user_id AND progress.title_id=library.title_id `
 
 func scanEntry(row pgx.Row) (application.Entry, error) {
 	var item application.Entry
 	failure := row.Scan(&item.TitleID, &item.Name, &item.Slug, &item.Status, &item.PreferredTeamID, &item.Favorite, &item.Notify, &item.UpdatedAt, &item.Version, &item.Removed, &item.Unseen,
-		&item.Progress.TitleID, &item.Progress.ReleaseID, &item.Progress.RevisionID, &item.Progress.PageID, &item.Progress.Fraction, &item.Progress.FurthestOrder, &item.Progress.Version, &item.Progress.DeviceID, &item.Progress.Sequence, &item.Progress.PagePosition, &item.Progress.UpdatedAt, &item.Progress.ChapterLabel, &item.Progress.TeamName)
+		&item.Progress.TitleID, &item.Progress.ReleaseID, &item.Progress.RevisionID, &item.Progress.PageID, &item.Progress.Fraction, &item.Progress.FurthestOrder, &item.Progress.Version, &item.Progress.DeviceID, &item.Progress.Sequence, &item.Progress.PagePosition, &item.Progress.UpdatedAt, &item.Progress.ChapterLabel, &item.Progress.TeamName, &item.CoverID)
 	return item, failure
 }
 

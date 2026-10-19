@@ -70,8 +70,9 @@ func TestReadingIsolationReplayAndConflict(testingTarget *testing.T) {
 	if failure = repository.Save(ctx, "first", selection); failure != nil {
 		testingTarget.Fatal(failure)
 	}
+	execute(`UPDATE titles SET cover_asset_id='library-cover' WHERE id='title'`)
 	own, failure := repository.List(ctx, "first", "")
-	if failure != nil || len(own) != 1 || !own[0].Favorite || own[0].Unseen != 1 {
+	if failure != nil || len(own) != 1 || !own[0].Favorite || own[0].Unseen != 1 || own[0].CoverID != "library-cover" {
 		testingTarget.Fatal(own, failure)
 	}
 	foreign, failure := repository.List(ctx, "second", "")

@@ -3,7 +3,7 @@ import type {Position} from '../domain/policies';
 export interface Progress extends Position {chapterLabel?:string;teamName?:string;pagePosition?:number;updatedAt?:number;titleId:string;releaseId:string;revisionId:string;version:number;furthestOrder:number;deviceId:string;sequence:number}
 export interface ProgressEvent {id:string;deviceId:string;sequence:number;baseVersion:number;titleId:string;releaseId:string;revisionId:string;pageId:string;fraction:number;completed:boolean}
 export interface LocalProgress {scope:string;titleId:string;name:string;slug:string;progress:Progress;pending:ProgressEvent|null;conflict:Progress|null;updatedAt?:number;coverURL?:string;chapterLabel?:string;pagePosition?:number}
-export interface LibraryEntry {version?:number;removed?:boolean;titleId:string;name:string;slug:string;status:string;favorite:boolean;preferredTeamId:string;notify:boolean;unseen:number;progress:Progress}
+export interface LibraryEntry {coverURL?:string;version?:number;removed?:boolean;titleId:string;name:string;slug:string;status:string;favorite:boolean;preferredTeamId:string;notify:boolean;unseen:number;progress:Progress}
 export interface Selection {version?:number;removed?:boolean;titleId:string;status:string;favorite:boolean;preferredTeamId:string;notify:boolean}
 export interface LibraryFilter {query?:string;status?:string;favorite?:boolean}
 export interface LibraryPage {items:LibraryEntry[];hasMore:boolean;nextCursor?:string;total?:number;partial?:boolean}

@@ -9,13 +9,13 @@ import (
 )
 
 type Entry struct {
-	Version                                      int64
-	Removed                                      bool
-	TitleID, Name, Slug, Status, PreferredTeamID string
-	Favorite, Notify                             bool
-	Unseen                                       int
-	UpdatedAt                                    time.Time
-	Progress                                     domain.Progress
+	Version                                               int64
+	Removed                                               bool
+	TitleID, Name, Slug, Status, PreferredTeamID, CoverID string
+	Favorite, Notify                                      bool
+	Unseen                                                int
+	UpdatedAt                                             time.Time
+	Progress                                              domain.Progress
 }
 type Selection struct {
 	Version                          int64
