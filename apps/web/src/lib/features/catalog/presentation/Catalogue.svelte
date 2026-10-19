@@ -18,7 +18,7 @@
   view.filter.ageRating&&ageRatings.map(String).includes(view.filter.ageRating)&&text($locale,'Жас санаты: ','Возраст: ')+(view.filter.ageRating==='0'?text($locale,'Көрсетілмеген','Не указано'):view.filter.ageRating+'+'),
   view.filter.query&&text($locale,'Іздеу: ','Поиск: ')+view.filter.query,
   view.filter.kind&&names.kind[view.filter.kind as keyof typeof names.kind],
-  view.filter.genre&&(view.genres.find(genre=>genre.slug===view.filter.genre)?.name||view.filter.genre),
+  ...(view.filter.genres||[]).map(slug=>{const item=view.genres.find(genre=>genre.slug===slug);return item?($locale==='ru'&&item.nameRu?item.nameRu:item.name):slug;}),
   view.filter.originalStatus&&names.original[view.filter.originalStatus as keyof typeof names.original],
   view.filter.translationStatus&&names.translation[view.filter.translationStatus as keyof typeof names.translation],
   view.filter.hasChapters&&text($locale,'Тараулары бар','Есть главы'),

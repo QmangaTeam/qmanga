@@ -48,7 +48,9 @@ test('taxonomy maps distinct categories and ordered collections and preserves co
  }) as typeof fetch);
  const gateway=new HttpCatalogGateway(client),result=await gateway.taxonomy();
  expect(result.categories[0].id).toBe('category');expect(result.collections[0].titleIds).toEqual(['second','first']);expect('title_ids' in result.collections[0]).toBe(false);
- await gateway.list({category:'fantasy-worlds',collection:'selection',genre:'adventure',ageRating:'18'},'cursor');
+ await gateway.list({category:'fantasy-worlds',collection:'selection',genres:['adventure','horror'],ageRating:'18'},'cursor');
  const params=new URL(requested,'http://localhost').searchParams;
- expect(Object.fromEntries(params)).toEqual({category:'fantasy-worlds',collection:'selection',age_rating:'18',genre:'adventure',cursor:'cursor'});
+ const rest=new URLSearchParams(params);rest.delete('genre');
+ expect(Object.fromEntries(rest)).toEqual({category:'fantasy-worlds',collection:'selection',age_rating:'18',cursor:'cursor'});
+ expect(params.getAll('genre')).toEqual(['adventure','horror']);
 });

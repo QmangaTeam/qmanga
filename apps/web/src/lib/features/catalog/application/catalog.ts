@@ -3,9 +3,9 @@ import type {Publication} from '../domain/publication';
 
 export interface Collection extends Genre {description:string;position:number;visible:boolean;titleIds:string[]}
 export interface Taxonomy {genres:Genre[];categories:Genre[];collections:Collection[]}
-export interface CatalogFilter {category?:string;collection?:string;ageRating?:string;hasChapters?:boolean; featured?:boolean; query?: string; kind?: string; genre?: string; originalStatus?: string; translationStatus?: string; sort?: string }
+export interface CatalogFilter {category?:string;collection?:string;ageRating?:string;hasChapters?:boolean; featured?:boolean; query?: string; kind?: string; genres?:string[]; originalStatus?: string; translationStatus?: string; sort?: string }
 export interface ChapterFilter { query?:string; sort?:'asc'|'desc'; limit?:number }
-export interface Genre { id: string; name: string; slug: string }
+export interface Genre { id: string; name: string; slug: string; nameRu?:string; categorySlug?:string; parentSlug?:string; position?:number }
 export interface Summary {
  ageRating?:AgeRating;
  id: string; slug: string; name: string; kind: Kind; originalStatus: OriginalStatus; translationStatus: TranslationStatus;
@@ -34,7 +34,8 @@ export interface CatalogGateway {
 }
 export async function loadCatalogue(gateway: CatalogGateway, filter: CatalogFilter, cursor?: string) {
  try {
-  const [page, genres, taxonomy] = await Promise.all([gateway.list(filter, cursor), gateway.genres(),gateway.taxonomy?.()]);
+  const [page, taxonomy] = await Promise.all([gateway.list(filter, cursor), gateway.taxonomy?.()]);
+  const genres = taxonomy?.genres?.length ? taxonomy.genres : await gateway.genres();
   return { available: true, page, genres, categories:taxonomy?.categories||[],collections:taxonomy?.collections||[], message: '' };
  } catch {
   return { available: false, page: { items: [], nextCursor: null } as ResultPage<Summary>, genres: [] as Genre[],categories:[] as Genre[],collections:[] as Collection[], message: 'Каталогты жүктеу мүмкін болмады. Қайта көріңіз.' };

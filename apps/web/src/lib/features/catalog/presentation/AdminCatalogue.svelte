@@ -10,6 +10,7 @@
  import { emptyMetadata, metadataError } from '../domain/metadata';
  import {catalogNames} from './messages';
  import PublicationFields from './PublicationFields.svelte';
+ import TagSearch from './TagSearch.svelte';
  import {emptyPublication} from '../domain/publication';
  const kindNames=$derived(catalogNames($locale).kind),originalStatusNames=$derived(catalogNames($locale).original),translationStatusNames=$derived(catalogNames($locale).translation);
  let { user, gateway, initialTitleId = '' }: { user: Account | null; gateway: CatalogManagementGateway; initialTitleId?: string } = $props();
@@ -19,6 +20,8 @@
  async function loadMoreTitles(){const next=await gateway.titles(titles.length);titles=[...titles,...next];moreTitles=next.length===100;}
  async function loadMoreTeams(){const next=await gateway.teams(teams.length);teams=[...teams,...next];moreTeams=next.length===100;}
  let selected = $state(''), input = $state(emptyMetadata()), aliases = $state(''), authors = $state(''), detail = $state<TitleDetail | null>(null);
+ const genreSlugs=$derived(input.genreIds.map(id=>genres.find(genre=>genre.id===id)?.slug||'').filter(Boolean));
+ function setGenreSlugs(slugs:string[]){input.genreIds=slugs.map(slug=>genres.find(genre=>genre.slug===slug)?.id||'').filter(Boolean);}
  let busy = $state(false), notice = $state(''), failure = $state('');
  let chapterLabel = $state(''), chapterOrder = $state(1), volume = $state(''), chapterName = $state(''), teamId = $state(''), genreName = $state(''), genreSlug = $state('');
  async function reload() { categories=(await gateway.taxonomy()).categories; [titles, genres, teams] = await Promise.all([gateway.titles(), gateway.genres(), gateway.teams()]);moreTitles=titles.length===100;moreTeams=teams.length===100; }
@@ -49,7 +52,7 @@
  <label>{copy($locale,"Оқу бағыты")}<select bind:value={input.direction}><option value="ltr">{copy($locale,"Солдан оңға")}</option><option value="rtl">{copy($locale,"Оңнан солға")}</option></select></label>
  <label>{copy($locale,"Сипаттама")}<textarea bind:value={input.description} rows="5" maxlength="10000"></textarea></label>
  <PublicationFields bind:value={input.publication}/>
- <fieldset><legend>{copy($locale,"Жанрлар")}</legend>{#each genres as genre}<label class="check"><input type="checkbox" bind:group={input.genreIds} value={genre.id}/>{genre.name}</label>{/each}</fieldset>
+ <fieldset><legend>{copy($locale,"Жанрлар")}</legend><TagSearch {genres} {categories} field="" selected={genreSlugs} onchange={setGenreSlugs}/></fieldset>
  <fieldset><legend>{text($locale,"Мазмұн санаттары","Категории содержания")}</legend>{#each categories as category}<label class="check"><input type="checkbox" bind:group={categoryIds} value={category.id}/>{category.name}</label>{/each}</fieldset>
  <label class="check"><input type="checkbox" bind:checked={input.demo}/>{copy($locale,"Үлгі туынды")}</label>
  <button class="button primary" disabled={busy} type="submit">{copy($locale,"Тайтлды сақтау")}</button>

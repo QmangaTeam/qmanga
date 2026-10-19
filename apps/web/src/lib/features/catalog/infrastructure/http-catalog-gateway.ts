@@ -42,7 +42,7 @@ function page<Item>(value: unknown, map: (entry: unknown) => Item): ResultPage<I
  const payload = object(value);
  return { items: array(payload.items, map), nextCursor: payload.next_cursor === null ? null : text(payload.next_cursor) };
 }
-function genre(value: unknown): Genre { const item = object(value); return { id: text(item.id), name: text(item.name), slug: text(item.slug) }; }
+function genre(value: unknown): Genre { const item = object(value); return { id: text(item.id), name: text(item.name), slug: text(item.slug), nameRu: typeof item.name_ru==='string'?item.name_ru:'', categorySlug: typeof item.category_slug==='string'?item.category_slug:'', parentSlug: typeof item.parent_slug==='string'?item.parent_slug:'', position: typeof item.position==='number'?item.position:0 }; }
 function collection(value:unknown):Collection{const item=object(value);return {...genre(item),description:text(item.description),position:integer(item.position),visible:boolean(item.visible),titleIds:array(item.title_ids,text)};}
 function taxonomy(value:unknown):Taxonomy{const item=object(value);return {genres:array(item.genres,genre),categories:array(item.categories,genre),collections:array(item.collections,collection)};}
 function project(value: unknown): Project { const item = object(value); return { id: text(item.id), titleId: text(item.title_id), teamId: text(item.team_id), titleName: text(item.title_name), titleSlug: text(item.title_slug), teamName: text(item.team_name), teamSlug: text(item.team_slug), status: text(item.status) }; }
@@ -72,7 +72,8 @@ export class HttpCatalogGateway implements CatalogGateway {
  }
  async list(filter: CatalogFilter, cursor?: string) {
   const query = new URLSearchParams();
-  for (const [key, value] of Object.entries({ category:filter.category,collection:filter.collection,age_rating:filter.ageRating, q: filter.query, kind: filter.kind, genre: filter.genre, original_status: filter.originalStatus, translation_status: filter.translationStatus, sort: filter.sort, has_chapters:filter.hasChapters?'true':undefined,featured:filter.featured?'true':undefined,cursor })) if (value) query.set(key, value);
+  for (const [key, value] of Object.entries({ category:filter.category,collection:filter.collection,age_rating:filter.ageRating, q: filter.query, kind: filter.kind, original_status: filter.originalStatus, translation_status: filter.translationStatus, sort: filter.sort, has_chapters:filter.hasChapters?'true':undefined,featured:filter.featured?'true':undefined,cursor })) if (value) query.set(key, value);
+  for (const slug of filter.genres||[]) query.append('genre', slug);
   return page(await this.api.call('/api/v1/titles?' + query), summary);
  }
  async genres() { return page(await this.api.call('/api/v1/genres'), genre).items; }

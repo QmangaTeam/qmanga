@@ -5,11 +5,12 @@
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {catalogNames} from './messages';
  import Icon from '$lib/shared/presentation/ui/Icon.svelte';
+ import TagSearch from './TagSearch.svelte';
  let {filter,genres,categories=[],collections=[]}:{filter:CatalogFilter;genres:Genre[];categories?:Genre[];collections?:Collection[]}=$props();
  const {locale}=useLocale();
  const names=$derived(catalogNames($locale));
  const heading=$derived(text($locale,'Каталог сүзгілері','Фильтры каталога'));
- function values(value:CatalogFilter){return {category:value.category||'',collection:value.collection||'',kind:value.kind||'',genre:value.genre||'',originalStatus:value.originalStatus||'',translationStatus:value.translationStatus||'',ageRating:value.ageRating||'',sort:value.sort||'updated',hasChapters:value.hasChapters===true};}
+ function values(value:CatalogFilter){return {category:value.category||'',collection:value.collection||'',kind:value.kind||'',genres:[...(value.genres||[])],originalStatus:value.originalStatus||'',translationStatus:value.translationStatus||'',ageRating:value.ageRating||'',sort:value.sort||'updated',hasChapters:value.hasChapters===true};}
  let draft=$state(untrack(()=>values(filter)));
  let dialog:HTMLDialogElement|undefined;
  $effect(()=>{draft=values(filter);});
@@ -36,7 +37,7 @@
   <label>{text($locale,'Түрі','Тип')}<select name="kind" bind:value={draft.kind}><option value="">{text($locale,'Барлығы','Все')}</option>{#each Object.entries(names.kind) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
   <label>{text($locale,'Мазмұн санаты','Категория содержания')}<select name="category" bind:value={draft.category}><option value="">{text($locale,'Барлығы','Все')}</option>{#each categories as item}<option value={item.slug}>{item.name}</option>{/each}</select></label>
   <label>{text($locale,'Редакциялық жинақ','Редакционная подборка')}<select name="collection" bind:value={draft.collection}><option value="">{text($locale,'Барлығы','Все')}</option>{#each collections as item}<option value={item.slug}>{item.name}</option>{/each}</select></label>
-  <label>Жанр<select name="genre" bind:value={draft.genre}><option value="">{text($locale,'Барлығы','Все')}</option>{#each genres as genre}<option value={genre.slug}>{genre.name}</option>{/each}</select></label>
+  <TagSearch {genres} {categories} selected={draft.genres} onchange={(slugs:string[])=>(draft.genres=slugs)}/>
   <label>{text($locale,'Түпнұсқа','Статус оригинала')}<select name="original_status" bind:value={draft.originalStatus}><option value="">{text($locale,'Барлығы','Все')}</option>{#each Object.entries(names.original) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
   <label>{text($locale,'Аударма','Статус перевода')}<select name="translation_status" bind:value={draft.translationStatus}><option value="">{text($locale,'Барлығы','Все')}</option>{#each Object.entries(names.translation) as [value,name]}<option {value}>{name}</option>{/each}</select></label>
   <label>{text($locale,'Жас санаты','Возрастная маркировка')}<select name="age_rating" bind:value={draft.ageRating}><option value="">{text($locale,'Барлығы','Все')}</option>{#each ageRatings as age}<option value={String(age)}>{age===0?text($locale,'Көрсетілмеген','Не указано'):age+'+'}</option>{/each}</select></label>
