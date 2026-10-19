@@ -12,6 +12,7 @@ const baseURL = fixture.app_url;
 if (!['localhost', '127.0.0.1'].includes(new URL(baseURL).hostname) || !fixture.env_file || !/^qmanga-(ci$|stage[0-9]+-)/.test(fixture.project_name || '')) throw Error('A dedicated qmanga-ci or qmanga-stageN-* fixture is required; never seed the owner environment.');
 let browser, owner, ownerId, teamId, otherTeam, libraryTarget, guestRows, coverURL;
 const distantChapters = [];
+const readingActorID=randomUUID(),readingEmail='reading-'+readingActorID+'@test.local';
 const titlePrefix = randomUUID().slice(0, 8);
 const titles = Array.from({ length: 110 }, (_, index) => ({ id: titlePrefix + '-0000-4000-8000-' + (110 - index).toString(16).padStart(12, '0'), slug: 'reading-' + randomUUID(), project: randomUUID(), chapter: randomUUID(), release: randomUUID(), revision: randomUUID(), page: randomUUID(), order: index + 1 }));
 function sql(text) {
@@ -49,7 +50,11 @@ before(async () => {
  browser = await chromium.launch({ headless: true, ...(process.env.QMANGA_BROWSER_EXECUTABLE ? { executablePath: process.env.QMANGA_BROWSER_EXECUTABLE } : {}) });
  owner = await browser.newContext({ baseURL, viewport: { width: 360, height: 800 } });
  await owner.addCookies([{ name: 'qmanga_locale', value: 'ru', url: baseURL }]);
- const login = await owner.request.post('/api/v1/auth/login', { headers: { Origin: baseURL }, data: { email: fixture.owner_email, password: fixture.owner_password } });
+ assert.match(fixture.owner_email,/^[a-zA-Z0-9@._+-]+$/);assert.match(fixture.project_id,/^[a-f0-9-]{36}$/);
+ // Pagination totals belong to this test account, independent of bookmarks left by other flows.
+ sql(`INSERT INTO users(id,email,password_hash,display_name,is_verified) SELECT '${readingActorID}','${readingEmail}',password_hash,'Reading isolated fixture',true FROM users WHERE email='${fixture.owner_email}';INSERT INTO team_memberships(id,team_id,user_id,role) SELECT '${randomUUID()}',team_id,'${readingActorID}','editor' FROM projects WHERE id='${fixture.project_id}';`);
+
+ const login = await owner.request.post('/api/v1/auth/login', { headers: { Origin: baseURL }, data: { email: readingEmail, password: fixture.owner_password } });
  assert.equal(login.status(), 200);
  ownerId = (await (await owner.request.get('/api/v1/auth/me')).json()).user.id;
  const project = await (await owner.request.get('/api/v1/studio/projects/' + fixture.project_id)).json();
@@ -85,6 +90,7 @@ INSERT INTO teams(id,slug,name,is_approved)VALUES('${otherTeam}','reading-${othe
 after(async () => {
  try {
   if(ownerId && otherTeam) sql(cleanupSql());
+  sql(`DELETE FROM users WHERE id='${readingActorID}';`);
  } finally {
   await owner?.close();
   await browser?.close();
