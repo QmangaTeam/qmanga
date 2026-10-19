@@ -13,6 +13,10 @@ jobs:
   local-acceptance:
     runs-on: ubuntu-latest
     timeout-minutes: 35
+    strategy:
+      fail-fast: false
+      matrix:
+        browser_shard: [0, 1]
     steps:
       - uses: actions/checkout@v6
         with:
@@ -85,11 +89,17 @@ jobs:
         working-directory: apps/web
         env:
           QMANGA_FIXTURE_FILE: ${{ github.workspace }}/tmp/ci/fixture.json
+          BROWSER_SHARD: ${{ matrix.browser_shard }}
         shell: bash
         run: |
           # A fast runner can exceed the real 30/minute IP budget even serially.
-          # Separate disposable test groups; never relax production auth limits.
-          files=(tests/browser/*.test.mjs)
+          # Each matrix job has its own disposable stack and auth budget.
+          all_files=(tests/browser/*.test.mjs)
+          files=()
+          for ((i=0; i<${#all_files[@]}; i++)); do
+            if ((i % 2 == BROWSER_SHARD)); then files+=("${all_files[i]}"); fi
+          done
+          test ${#files[@]} -gt 0
           for ((offset=0; offset<${#files[@]}; offset+=8)); do
             if ((offset>0)); then
               (cd ../.. && docker compose up -d --force-recreate --no-deps --no-build --pull never --wait --wait-timeout 120 api)
