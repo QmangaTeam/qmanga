@@ -3,7 +3,17 @@ import type {Publication} from '../domain/publication';
 
 export interface Collection extends Genre {description:string;position:number;visible:boolean;titleIds:string[]}
 export interface Taxonomy {genres:Genre[];categories:Genre[];collections:Collection[]}
-export interface CatalogFilter {category?:string;collection?:string;ageRating?:string;hasChapters?:boolean; featured?:boolean; query?: string; kind?: string; genres?:string[]; originalStatus?: string; translationStatus?: string; sort?: string }
+export interface CatalogFilter {category?:string;collection?:string;ageRatings?:string[];hasChapters?:boolean; featured?:boolean; query?: string; kinds?:string[]; genres?:string[]; originalStatuses?: string[]; translationStatuses?: string[]; formats?:string[]; sources?:string[]; countries?:string[]; chaptersMin?:number; chaptersMax?:number; yearMin?:number; yearMax?:number; sort?:string }
+export function catalogParams(filter:CatalogFilter):URLSearchParams {
+ const params=new URLSearchParams();
+ for(const [key,value] of [['category',filter.category],['collection',filter.collection],['q',filter.query]] as const) if(value)params.set(key,value);
+ if(filter.sort&&filter.sort!=='updated')params.set('sort',filter.sort);
+ if(filter.featured)params.set('featured','true');
+ if(filter.hasChapters)params.set('has_chapters','true');
+ for(const [key,values] of [['kind',filter.kinds],['age_rating',filter.ageRatings],['genre',filter.genres],['original_status',filter.originalStatuses],['translation_status',filter.translationStatuses],['format',filter.formats],['source',filter.sources],['country',filter.countries]] as const) for(const value of values||[]) if(value)params.append(key,value);
+ for(const [key,value] of [['chapters_min',filter.chaptersMin],['chapters_max',filter.chaptersMax],['year_min',filter.yearMin],['year_max',filter.yearMax]] as const) if(value&&value>0)params.set(key,String(value));
+ return params;
+}
 export interface ChapterFilter { query?:string; sort?:'asc'|'desc'; limit?:number }
 export interface Genre { id: string; name: string; slug: string; nameRu?:string; categorySlug?:string; parentSlug?:string; position?:number }
 export interface Summary {

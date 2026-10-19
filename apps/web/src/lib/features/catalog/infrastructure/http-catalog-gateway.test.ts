@@ -32,7 +32,7 @@ test('catalogue carries validated age ratings and preserves the age filter inclu
   const gateway=new HttpCatalogGateway(client);
   if(value===14||value==='18')await expect(gateway.list({})).rejects.toThrow();
   else{
-   const result=await gateway.list({ageRating:'0'});
+   const result=await gateway.list({ageRatings:['0']});
    expect(result.items[0].ageRating).toBe(value??0);
    expect(new URL(requested,'http://localhost').searchParams.get('age_rating')).toBe('0');
   }
@@ -48,7 +48,7 @@ test('taxonomy maps distinct categories and ordered collections and preserves co
  }) as typeof fetch);
  const gateway=new HttpCatalogGateway(client),result=await gateway.taxonomy();
  expect(result.categories[0].id).toBe('category');expect(result.collections[0].titleIds).toEqual(['second','first']);expect('title_ids' in result.collections[0]).toBe(false);
- await gateway.list({category:'fantasy-worlds',collection:'selection',genres:['adventure','horror'],ageRating:'18'},'cursor');
+ await gateway.list({category:'fantasy-worlds',collection:'selection',genres:['adventure','horror'],ageRatings:['18']},'cursor');
  const params=new URL(requested,'http://localhost').searchParams;
  const rest=new URLSearchParams(params);rest.delete('genre');
  expect(Object.fromEntries(rest)).toEqual({category:'fantasy-worlds',collection:'selection',age_rating:'18',cursor:'cursor'});

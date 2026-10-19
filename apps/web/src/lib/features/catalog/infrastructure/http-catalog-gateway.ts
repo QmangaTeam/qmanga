@@ -1,6 +1,7 @@
 import {validAgeRating, type AgeRating} from '../domain/catalog';
 import { ApiFailure, type ApiClient } from '../../../shared/infrastructure/api-client';
 import { kinds, originalStatuses, translationStatuses } from '../domain/catalog';
+import { catalogParams } from '../application/catalog';
 import type { Taxonomy,Collection, ReleaseUpdate, CatalogGateway, CatalogFilter, ChapterFilter, Summary, Genre, Project, Release, Chapter, TitleDetail, ResultPage, PublicTeam } from '../application/catalog';
 import type { CatalogManagementGateway } from '../application/management';
 import {emptyPublication,validPublication,type Publication} from '../domain/publication';
@@ -71,9 +72,8 @@ export class HttpCatalogGateway implements CatalogGateway {
   return page(await this.api.call('/api/v1/rankings?'+new URLSearchParams({kind})),summary);
  }
  async list(filter: CatalogFilter, cursor?: string) {
-  const query = new URLSearchParams();
-  for (const [key, value] of Object.entries({ category:filter.category,collection:filter.collection,age_rating:filter.ageRating, q: filter.query, kind: filter.kind, original_status: filter.originalStatus, translation_status: filter.translationStatus, sort: filter.sort, has_chapters:filter.hasChapters?'true':undefined,featured:filter.featured?'true':undefined,cursor })) if (value) query.set(key, value);
-  for (const slug of filter.genres||[]) query.append('genre', slug);
+  const query = catalogParams(filter);
+  if (cursor) query.set('cursor', cursor);
   return page(await this.api.call('/api/v1/titles?' + query), summary);
  }
  async genres() { return page(await this.api.call('/api/v1/genres'), genre).items; }
