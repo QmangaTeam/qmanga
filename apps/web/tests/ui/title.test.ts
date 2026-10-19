@@ -41,3 +41,10 @@ test('title distinguishes explicit age ratings without classifying unknown title
   expect(await elements(html,'.chapter-search button[name="sort"][value="desc"]')).toHaveLength(1);
   expect(await elements(html,'.search-field svg')).toHaveLength(0);
  });
+
+test('title uses a wide cover fallback and an explicit banner when provided',async()=>{
+ const fallback=render(Title).body;
+ expect((await elements(fallback,'.title-banner img'))[0].src).toBe('/api/v1/media/cover');
+ const explicit=render(Title,{props:{bannerURL:'/api/v1/media/banner'}}).body;
+ expect((await elements(explicit,'.title-banner img'))[0].src).toBe('/api/v1/media/banner');
+});

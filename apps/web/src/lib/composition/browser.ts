@@ -52,3 +52,6 @@ import {HttpRegistrationPermit} from '$lib/features/reading/infrastructure/http-
 export function createRegistrationImport(){const {api,scope}=scopedApi();return {readingGateway:new HttpReadingGateway(api,scope),progressStorage:new BrowserProgressStorage(),readingChanges,registrationPermit:new HttpRegistrationPermit(api)};}
 
 import {readingChanges} from '$lib/features/reading/infrastructure/reading-changes';
+
+import {HttpTitleChanges} from '$lib/features/catalog/infrastructure/http-title-changes';
+export function createTitleChanges(){const {api,scope}=scopedApi();return new HttpTitleChanges(api,scope);}

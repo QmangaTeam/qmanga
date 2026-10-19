@@ -40,6 +40,7 @@ type Detail struct {
 	RatingDistribution [10]int
 	Title              domain.Title
 	CoverID            string
+	BannerID           string
 	Score              float64
 	RatingCount        int
 	Genres             []Genre

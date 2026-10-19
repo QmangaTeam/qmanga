@@ -167,6 +167,28 @@ func (repository *Repository) Manifest(ctx context.Context, actor, releaseID, pr
 }
 func (repository *Repository) Asset(ctx context.Context, actor, id string) (application.Asset, error) {
 	var asset application.Asset
+	// Pending artwork and evidence remain private; only the currently selected approved artwork is public.
+	var changeProject string
+	var selected bool
+	changeError := repository.pool.QueryRow(ctx, `SELECT asset.id,asset.object_key,asset.mime,asset.checksum,asset.width,asset.height,asset.byte_size,request.created_at,coalesce(request.project_id,''),request.status='approved' AND ((asset.purpose='cover' AND title.cover_asset_id=asset.id) OR (asset.purpose='banner' AND title.banner_asset_id=asset.id)) FROM title_change_assets asset JOIN title_change_requests request ON request.id=asset.request_id JOIN titles title ON title.id=request.title_id WHERE asset.id=$1`, id).Scan(&asset.ID, &asset.ObjectKey, &asset.Mime, &asset.Checksum, &asset.Width, &asset.Height, &asset.Bytes, &asset.ModifiedAt, &changeProject, &selected)
+	if changeError == nil {
+		if !selected {
+			var allowed bool
+			failure := repository.pool.QueryRow(ctx, `SELECT EXISTS(SELECT 1 FROM users account WHERE account.id=$1 AND account.is_verified AND NOT account.is_blocked AND (account.role IN('admin','moderator') OR EXISTS(SELECT 1 FROM projects project JOIN teams team ON team.id=project.team_id AND team.is_approved JOIN team_memberships member ON member.team_id=team.id WHERE project.id=$2 AND member.user_id=account.id)))`, actor, changeProject).Scan(&allowed)
+			if failure != nil {
+				return application.Asset{}, failure
+			}
+			if !allowed {
+				return application.Asset{}, domain.ErrNotFound
+			}
+		}
+		asset.Public = selected
+		asset.Tier = "eco"
+		return asset, nil
+	}
+	if changeError != pgx.ErrNoRows {
+		return asset, changeError
+	}
 	failure := repository.pool.QueryRow(ctx, `SELECT cover.id,cover.object_key,cover.mime,cover.checksum,cover.width,cover.height,cover.byte_size,cover.created_at FROM title_cover_assets cover JOIN titles title ON title.id=cover.title_id AND title.cover_asset_id=cover.id WHERE cover.id=$1`, id).Scan(&asset.ID, &asset.ObjectKey, &asset.Mime, &asset.Checksum, &asset.Width, &asset.Height, &asset.Bytes, &asset.ModifiedAt)
 	if failure == nil {
 		asset.Public = true

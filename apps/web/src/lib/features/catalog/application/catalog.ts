@@ -12,7 +12,7 @@ export interface Summary {
  coverURL: string; demo: boolean; chapterCount: number; ratingCount: number; score: number; updatedAt: string;
 }
 export interface Project { id: string; titleId: string; teamId: string; titleName: string; titleSlug: string; teamName: string; teamSlug: string; status: string }
-export interface TitleDetail {categories?:Genre[];collections?:Collection[];ageRating?:AgeRating;listed?:boolean; authors?:string[]; featured?:boolean;
+export interface TitleDetail {bannerURL?:string;categories?:Genre[];collections?:Collection[];ageRating?:AgeRating;listed?:boolean; authors?:string[]; featured?:boolean;
  publication?:Publication; commentCount?:number; chapterCount?:number; readerCount?:number; ratingDistribution?:number[];
  id: string; slug: string; name: string; originalName: string; aliases: string[]; kind: Kind; originalStatus: OriginalStatus; translationStatus: TranslationStatus;
  description: string; direction: 'ltr' | 'rtl'; demo: boolean; coverURL: string; score: number; ratingCount: number; genres: Genre[]; projects: Project[];

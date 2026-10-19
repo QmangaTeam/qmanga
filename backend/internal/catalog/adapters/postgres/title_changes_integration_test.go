@@ -6,8 +6,11 @@ import (
 	"github.com/google/uuid"
 	"net/url"
 	"os"
+	"qmanga/internal/catalog/application"
 	"qmanga/internal/catalog/domain"
 	platform "qmanga/internal/platform/postgres"
+	media "qmanga/internal/publishing/adapters/postgres"
+	mediaDomain "qmanga/internal/publishing/domain"
 	"strings"
 	"testing"
 	"time"
@@ -65,9 +68,25 @@ func TestTitleChangeApprovalAndConflict(testingTarget *testing.T) {
 	data := current.Snapshot.Data
 	data.Name = "Changed"
 	input := domain.TitleChangeInput{BaseVersion: current.Snapshot.Version(), Data: data, Reason: "Official source", Links: []string{"https://example.org/source"}, CoverAction: "keep", BannerAction: "keep"}
-	request, err := repo.CreateChange(ctx, "editor", "project", "request", input, nil)
+	input.CoverAction = "replace"
+	input.BannerAction = "replace"
+	assets := []application.TitleChangeAsset{}
+	for position, purpose := range []string{"cover", "banner", "evidence"} {
+		assets = append(assets, application.TitleChangeAsset{ID: purpose + "-asset", Purpose: purpose, ObjectKey: "title-changes/request/" + purpose + ".webp", Mime: "image/webp", Checksum: strings.Repeat("a", 64), Width: 100, Height: 100, Bytes: 100, Position: position + 1})
+	}
+	request, err := repo.CreateChange(ctx, "editor", "project", "request", input, assets)
 	if err != nil {
 		testingTarget.Fatal(err)
+	}
+	mediaRepo := media.New(database.Pool())
+	if _, err = mediaRepo.Asset(ctx, "", "cover-asset"); !errors.Is(err, mediaDomain.ErrNotFound) {
+		testingTarget.Fatal("pending cover leaked", err)
+	}
+	if _, err = mediaRepo.Asset(ctx, "foreign", "evidence-asset"); !errors.Is(err, mediaDomain.ErrNotFound) {
+		testingTarget.Fatal("evidence leaked", err)
+	}
+	if asset, err := mediaRepo.Asset(ctx, "editor", "evidence-asset"); err != nil || asset.Public {
+		testingTarget.Fatal("editor evidence", err)
 	}
 	if request.Status != "pending" {
 		testingTarget.Fatal(request.Status)
@@ -87,6 +106,17 @@ func TestTitleChangeApprovalAndConflict(testingTarget *testing.T) {
 	if name != "Changed" {
 		testingTarget.Fatal("not applied", name)
 	}
+	if asset, err := mediaRepo.Asset(ctx, "", "cover-asset"); err != nil || !asset.Public {
+		testingTarget.Fatal("approved cover not public", err)
+	}
+	if asset, err := mediaRepo.Asset(ctx, "", "banner-asset"); err != nil || !asset.Public {
+		testingTarget.Fatal("approved banner not public", err)
+	}
+	if _, err = mediaRepo.Asset(ctx, "", "evidence-asset"); !errors.Is(err, mediaDomain.ErrNotFound) {
+		testingTarget.Fatal("approved evidence leaked", err)
+	}
+	input.CoverAction = "keep"
+	input.BannerAction = "keep"
 	current, err = repo.ChangeContext(ctx, "editor", "project")
 	if err != nil {
 		testingTarget.Fatal(err)

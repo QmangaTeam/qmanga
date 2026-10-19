@@ -325,48 +325,13 @@ func (handler *PublishingHandler) restore(request *gin.Context) {
 	}
 	request.Status(204)
 }
+
+// Legacy manual artwork commands must not bypass the title-change review workflow.
 func (handler *PublishingHandler) selectCover(request *gin.Context) {
-	var input struct {
-		PageID string `json:"page_id"`
-	}
-	if !decode(request, &input) {
-		return
-	}
-	if err := handler.service.SelectCover(request.Request.Context(), handler.actor(request), request.Param("id"), input.PageID); err != nil {
-		publicationError(request, err)
-		return
-	}
-	request.Status(204)
+	Error(request, 409, "moderation_required", "Мұқаба өзгерісін жоба деректері арқылы модерацияға жіберіңіз")
 }
 func (handler *PublishingHandler) uploadCover(request *gin.Context) {
-	select {
-	case handler.uploads <- struct{}{}:
-		defer func() { <-handler.uploads }()
-	default:
-		request.Header("Retry-After", "2")
-		Error(request, 429, "busy", "Жүктеу кезегі толы. Қайта көріңіз.")
-		return
-	}
-	if request.Request.ContentLength > 25<<20 {
-		Error(request, 413, "upload_size", "Мұқаба 25 MiB-тан аспауы керек")
-		return
-	}
-	controller := http.NewResponseController(request.Writer)
-	_ = controller.SetReadDeadline(time.Now().Add(10 * time.Minute))
-	defer controller.SetReadDeadline(time.Time{})
-	request.Request.Body = http.MaxBytesReader(request.Writer, request.Request.Body, 25<<20)
-	id, failure := handler.service.UploadCover(request.Request.Context(), handler.actor(request), request.Param("id"), request.Request.Body)
-	if failure != nil {
-		var tooLarge *http.MaxBytesError
-		if errors.As(failure, &tooLarge) {
-			Error(request, 413, "upload_size", "Мұқаба 25 MiB-тан аспауы керек")
-			return
-		}
-		publicationError(request, failure)
-		return
-	}
-	request.Header("Cache-Control", "no-store")
-	request.JSON(201, gin.H{"cover_id": id, "url": coverURL(id)})
+	Error(request, 409, "moderation_required", "Мұқаба өзгерісін жоба деректері арқылы модерацияға жіберіңіз")
 }
 func (handler *PublishingHandler) retryPage(request *gin.Context) {
 	if err := handler.service.RetryPage(request.Request.Context(), handler.actor(request), request.Param("id"), request.Param("page_id")); err != nil {

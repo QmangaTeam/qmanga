@@ -19,11 +19,12 @@ export class ApiClient {
    if (!object(value) || typeof value.csrf_token !== 'string') throw new Error('Қайта кіріңіз');
    this.csrf = value.csrf_token;
   }
+  const multipart=typeof FormData!=='undefined'&&body instanceof FormData;
   let response:Response;
   try{response = await this.request(path, {
-   method, credentials: 'same-origin', signal: AbortSignal.timeout(20000),
-   headers: { 'Content-Type': 'application/json', ...(accountId?{'X-Qmanga-Account':accountId}:{}),...(method === 'GET' ? {} : { 'X-CSRF-Token': this.csrf }) },
-   ...(body === undefined ? {} : { body: JSON.stringify(body) })
+   method, credentials: 'same-origin', signal: AbortSignal.timeout(multipart?120000:20000),
+   headers: { ...(multipart?{}:{'Content-Type': 'application/json'}), ...(accountId?{'X-Qmanga-Account':accountId}:{}),...(method === 'GET' ? {} : { 'X-CSRF-Token': this.csrf }) },
+   ...(body === undefined ? {} : { body: multipart?body as FormData:JSON.stringify(body) })
   });}catch{throw new ApiFailure(0,'Қосылым үзілді. Желіге қосылып, қайта көріңіз.');}
   if (response.status === 204) return null;
   let value:unknown;try{value=await response.json();}catch{throw new ApiFailure(response.status>=400?response.status:503,'Қызмет уақытша қолжетімсіз. Кейінірек қайталап көріңіз.');}
