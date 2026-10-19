@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-identity'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-19 00:59'
+updated_date: '2026-10-19 01:07'
 labels:
   - stage-7
 dependencies:
@@ -33,6 +33,8 @@ ordinal: 26
 
 <!-- SECTION:PLAN:BEGIN -->
 1. Implement server OIDC authorization-code flow with state/nonce/PKCE and verified token claims. 2. Persist one-use flows and stable issuer/sub identities; refuse email-only linking. 3. Add disabled-until-configured UI, nickname registration and cancellation return path; test security decisions.
+
+Owner profile defaults: add verified Google name/picture claims, derive safe nickname without manual prompt, import bounded Google-host avatar through existing sanitizer only for newly created accounts; preserve existing profiles and stable identity security. Verify unit/provider/real PostgreSQL regressions; parent owns production wiring and release.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -51,4 +53,6 @@ Review fix7548685 routes successful Google sessions through a one-use 60-second 
 Remote10d39b8 CI passed and exactSHA serves staging. Deployed /api/v1/auth/google/status currently reports enabled:false because serverOAuth pair is not yet installed. Localowner Google acceptance remains valid; remoteconfiguration/consent/contact and release acceptance still pending. Keep Review.
 
 Уточнение владельца: «аву сразу с гугла ник с гугла и почту тоже». Заменяет прежнее требование обязательного ручного ввода ника при Google-регистрации. Дополнительное описание: использовать данные Google как начальные данные нового профиля; повторный вход не должен затирать сделанные пользователем изменения профиля.
+
+Google profile defaults implemented in 78323df: verified signed name/picture claims initialize new users; safe nickname derived from Google name (email local-part/fixed fallback when unsuitable), verified email retained. No manual Google nickname required; repeat issuer/sub login never changes edited name/email/avatar. New AvatarImporter permits only HTTPS lh3–lh6.googleusercontent.com, denies redirects and non-public resolved addresses, pins checked DNS addresses, bounds response to 5 MiB/8 seconds, then calls existing sanitized origin-avatar Upload pipeline. Picture unavailable/invalid leaves normal fallback without blocking login; no hotlink or new scope. No migration required. Verified: initial nickname regression failed before implementation; SSRF CGN/0-range regression failed then passed. Full go test ./... passed on actual PostgreSQL; after final IP hardening identity/... and transport/http/... passed again. bun run web:check: 0 errors/warnings; git diff --check clean. Parent owns bootstrap wiring (construct avatarService before NewGoogle and pass googleoidc.NewAvatarImporter(avatarService)), new google-profile browser regression run, independent review, production OAuth configuration and release acceptance. No production action, push, service restart or shared browser fixture performed by identity agent. AC2 browser integration remains pending parent verification; AC3 production acceptance remains pending.
 <!-- SECTION:NOTES:END -->
