@@ -4,7 +4,7 @@ title: Панель фильтров каталога как у Senkuro
 status: In Progress
 assignee: []
 created_date: '2026-10-19 20:54'
-updated_date: '2026-10-19 21:33'
+updated_date: '2026-10-19 22:13'
 labels:
   - catalog
   - frontend
@@ -51,6 +51,22 @@ Frontend: панель Senkuro-типа (поиск по тегам, 6 груп�
 Браузерная приёмка (локальный стек + studio fixture): catalogue-filters 4/4 (kk/ru × light/dark, 320/360/desktop), tag-search, age-rating, taxonomy, search, cover-statuses, admin, title-metadata — зелёные. Скриншоты панели (desktop, drill-down, мобильный диалог, поиск) проверены визуально.
 
 Осталось: пуш, CI (3 images), staging, production release того же SHA, проверка /api/v1/genres=713 и панели на prod.
+
+---
+
+created: 2026-10-19 22:13
+
+---
+
+20.10.2026, независимый review и исправления (коммит 11a56ef поверх d2f675e).
+
+Исправлено по review: #1 админский TagSearch больше не открывает подсказки после выбора мышью/удаления чипа (+ browser-тест admin); #5 группа «Прочее» открывает drill, порядок групп строится и по бакетам при неполной таксономии; #6 drill забирает фокус на «Назад», базовая панель inert, фокус возвращается на кнопку группы; #7 тач-цели 44px; #4 ложный индекс publication jsonb_path_ops заменён выражением (publication->'formats') jsonb_ops в migration 000034, EXPLAIN подтверждает Bitmap Index Scan для ?|.
+
+Проверено на production-данных: genres/categories = 0 (сид применится чисто), один тайтл с publication без source/country/formats — legacy-значений для backfill нет, поэтому #2 не блокирует; канонические select/чекбоксы применяются к новым данным.
+
+Отложено (не блокирует выпуск, записать в follow-up): #2 показывать/мигрировать legacy-значения, если появятся, и серверная каноническая валидация; #3 санитизация некорректных URL-фильтров в SSR вместо общей ошибки каталога; #8 семантика Back при replaceState (состояние переживает reload и возврат с тайтла); #9 тест канонических select'ов; #10 конфликт сида при непустой таксономии; #11 fingerprint фильтров в курсоре; #12 нулевые sentinel'ы диапазонов.
+
+Проверки после исправлений: svelte-check 0/0, unit 127, UI 41, architecture pass, полный Go-набор с PostgreSQL зелёный, browser admin 3/3, tag-search, catalogue-filters 4/4 (kk/ru × light/dark, 320/360/desktop), age-rating, taxonomy — зелёные.
 
 ---
 <!-- COMMENTS:END -->
