@@ -24,7 +24,10 @@ if test -f "$active_file"; then
   }
   if test "$old_sha" = "$desired"; then
     local_health "$(port_for_color "$old_color")"
-    public_health
+    if test "$DEPLOY_TARGET" = staging; then
+      "$QMANGA_REPO_ROOT/deploy/route.sh" staging off
+    fi
+    target_health "$(port_for_color "$old_color")"
     echo "$DEPLOY_TARGET is already healthy on $desired"
     exit 0
   fi
@@ -79,10 +82,10 @@ local_health "$new_port"
 switched=true
 healthy=false
 for _ in {1..18}; do
-  if public_health; then healthy=true; break; fi
+  if target_health "$new_port"; then healthy=true; break; fi
   sleep 5
 done
-"$healthy" || { echo 'Public smoke failed after route switch' >&2; exit 1; }
+"$healthy" || { echo 'Target smoke failed after route switch' >&2; exit 1; }
 
 if test -n "$old_sha"; then
   app_compose "$old_color" "$old_sha" --profile worker stop worker
@@ -90,7 +93,7 @@ if test -n "$old_sha"; then
 fi
 app_compose "$new_color" "$desired" --profile worker up -d --no-deps worker --wait
 new_worker=true
-public_health
+target_health "$new_port"
 
 if test -n "$old_sha"; then
   printf '%s %s\n' "$old_color" "$old_sha" > "$QMANGA_HOST_ROOT/state/$DEPLOY_TARGET.previous"

@@ -4,6 +4,11 @@ source "$(dirname "$0")/lib.sh"
 target_config "${1:?target required}"
 color=${2:?blue, green or off required}
 mode=${3:-normal}
+# Staging is an internal release gate. Never publish its former hostname.
+if test "$DEPLOY_TARGET" = staging && test "$color" != off; then
+  port_for_color "$color" >/dev/null
+  color=off
+fi
 site="$QMANGA_HOST_ROOT/state/sites/$DEPLOY_TARGET.caddy"
 old=$(mktemp "$QMANGA_HOST_ROOT/state/sites/.previous.XXXXXX")
 draft=$(mktemp "$QMANGA_HOST_ROOT/state/sites/.draft.XXXXXX")

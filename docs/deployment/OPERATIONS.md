@@ -15,7 +15,7 @@
 | Репозиторий | https://github.com/maqsatto/qmanga |
 | Локальный checkout владельца | `/home/maqsatto/Documents/projects/qmanga` |
 | Production | https://qmanga.maqsatto.dev |
-| Staging | https://qmanga-dev.maqsatto.dev |
+| Staging | Только на VM: `127.0.0.1:18280` (blue) или `127.0.0.1:18281` (green); цвет в `staging.active` |
 | Oracle ARM64 VM | `138.3.254.185` |
 | Deploy SSH user | `qmanga` |
 | Основной приватный ключ | `/home/maqsatto/.ssh/qmanga_deploy` (0600) |
@@ -74,7 +74,7 @@ Push `main` запускает Verify Qmanga. Только после acceptance
 bash /opt/qmanga/repo/deploy/release.sh staging <tested-40-character-sha>
 ```
 
-Проверить внешний staging health, build SHA в footer и изменённые сценарии. Затем **тот же SHA**:
+Проверить `staging.active`, локальные API и главную по активному порту с заголовком `Host: qmanga-dev.maqsatto.dev`; при необходимости открыть сценарии через SSH-туннель. Публичного dev-сайта и маршрута Caddy больше нет. Затем **тот же SHA**:
 
 ```sh
 bash /opt/qmanga/repo/deploy/release.sh production <same-tested-40-character-sha>
@@ -85,12 +85,12 @@ bash /opt/qmanga/repo/deploy/release.sh production <same-tested-40-character-sha
 Одинаковый уже активный SHA — no-op: **не применит новые env**. Секреты/конфигурация требуют согласованного нового выпуска; не считать запись env фактом включения сервиса.
 
 ```sh
-curl --fail https://qmanga-dev.maqsatto.dev/api/v1/health
+curl --fail -H 'Host: qmanga-dev.maqsatto.dev' http://127.0.0.1:18280/api/v1/health # blue; для green — 18281
 curl --fail https://qmanga.maqsatto.dev/api/v1/health
 curl --fail https://qmanga.maqsatto.dev/api/v1/auth/google/status
 ```
 
-Внутри VM OCI public-IP hairpin не работает: deployment использует `curl --resolve DOMAIN:443:127.0.0.1`; отдельно проверить HTTPS извне. Только после наблюдаемого выпуска и требуемой приёмки ставить продуктовой задаче Done; локальный успех означает Review. Записывать SHA/результаты/остаток в ту же карточку, логи и screenshots — ignored tmp.
+Внутри VM OCI public-IP hairpin не работает: production deployment использует `curl --resolve DOMAIN:443:127.0.0.1`; отдельно проверить production HTTPS извне. Только после наблюдаемого выпуска и требуемой приёмки ставить продуктовой задаче Done; локальный успех означает Review. Записывать SHA/результаты/остаток в ту же карточку, логи и screenshots — ignored tmp.
 
 ## Google и аккаунты
 

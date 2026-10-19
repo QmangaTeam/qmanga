@@ -39,12 +39,12 @@ restore_active() {
   exit "$result"
 }
 trap restore_active EXIT
-public_health
+target_health "$previous_port"
 app_compose "$active_color" "$active_sha" --profile worker stop worker
 active_stopped=true
 app_compose "$previous_color" "$previous_sha" --profile worker up -d --no-deps worker --wait
 previous_started=true
-public_health
+target_health "$previous_port"
 printf '%s %s\n' "$active_color" "$active_sha" > "$previous_file"
 state_tmp=$(mktemp "$QMANGA_HOST_ROOT/state/.active.XXXXXX")
 printf '%s %s\n' "$previous_color" "$previous_sha" > "$state_tmp"

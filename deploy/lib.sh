@@ -63,6 +63,15 @@ public_health() {
     --resolve "$DOMAIN:443:127.0.0.1" "$APP_ORIGIN/" >/dev/null
 }
 
+target_health() {
+  local port=${1:?port required}
+  if test "$DEPLOY_TARGET" = staging; then
+    local_health "$port"
+  else
+    public_health
+  fi
+}
+
 load_public_origin() {
   APP_ORIGIN=$(sed -n 's/^APP_ORIGIN=//p' "$CONFIG_FILE" | tail -n 1)
   test "$APP_ORIGIN" = "https://$DOMAIN" || {

@@ -1,5 +1,7 @@
 # Qmanga release design
 
+Historical design from 2026-10-18. For the current internal-only staging deployment and release procedure, use [RUNBOOK.md](RUNBOOK.md) and [OPERATIONS.md](OPERATIONS.md).
+
 Two public origins are planned: `qmanga-dev.maqsatto.dev` (staging) and `qmanga.maqsatto.dev` (production). Both can run on one Oracle Ampere A1 VM, but they must have separate Compose projects, PostgreSQL volumes, MinIO volumes, application secrets and SMTP configuration. Only Caddy publishes ports 80/443. Database, object storage and application gateways remain private or bound to loopback.
 
 GitHub CI already tests the application. A successful push to `main` builds immutable Linux/arm64 API, web and gateway images tagged with the commit SHA in GHCR. The same images are deployed automatically to staging once the owner enables its environment. Production promotes an already tested SHA through a manual GitHub workflow and its protected environment; it never builds different code.
