@@ -1,4 +1,4 @@
-import type { PublishingGateway } from './publishing';
+import type { PublishingGateway, ProjectListItem } from './publishing';
 
 export interface AppliedProjectCriteria {
  query: string;
@@ -13,7 +13,7 @@ function failureCode(failure: unknown): string {
 }
 
 export class ProjectDirectory {
- items: { id: string; titleName: string; teamName: string; teamId?: string }[] = [];
+ items: ProjectListItem[] = [];
  cursor = '';
  hasMore = false;
  total: number | undefined = undefined;

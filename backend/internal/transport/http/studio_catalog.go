@@ -7,7 +7,7 @@ import (
 )
 
 func projectRequestView(item domain.ProjectRequest) gin.H {
-	return gin.H{"id": item.ID, "team_id": item.TeamID, "team_name": item.TeamName, "title_id": item.TitleID, "title_name": item.TitleName, "name": item.Name, "original_name": item.OriginalName, "slug": item.Slug, "kind": item.Kind, "description": item.Description, "source_url": item.SourceURL, "note": item.Note, "status": item.Status, "resolution": item.Resolution, "project_id": item.ProjectID, "created_at": item.CreatedAt, "updated_at": item.UpdatedAt}
+	return gin.H{"cover_url": coverURL(item.CoverID), "id": item.ID, "team_id": item.TeamID, "team_name": item.TeamName, "title_id": item.TitleID, "title_name": item.TitleName, "name": item.Name, "original_name": item.OriginalName, "slug": item.Slug, "kind": item.Kind, "description": item.Description, "source_url": item.SourceURL, "note": item.Note, "status": item.Status, "resolution": item.Resolution, "project_id": item.ProjectID, "created_at": item.CreatedAt, "updated_at": item.UpdatedAt}
 }
 func (handler *CatalogHandler) projectRequests(request *gin.Context) {
 	account, _ := CurrentAccount(request)

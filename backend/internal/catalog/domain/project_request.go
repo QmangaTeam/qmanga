@@ -13,8 +13,8 @@ type ProjectRequestInput struct {
 type ProjectRequest struct {
 	ID string
 	ProjectRequestInput
-	TeamName, TitleName, Status, Resolution, ProjectID string
-	CreatedAt, UpdatedAt                               time.Time
+	TeamName, TitleName, Status, Resolution, ProjectID, CoverID string
+	CreatedAt, UpdatedAt                                        time.Time
 }
 
 func NewProjectRequest(id string, input ProjectRequestInput) (ProjectRequest, error) {

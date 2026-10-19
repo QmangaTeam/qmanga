@@ -61,7 +61,7 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 	}
 	input := domain.Metadata{Slug: "dala-uni", Name: "Дала үні", Kind: "manga", OriginalStatus: "ongoing", TranslationStatus: "ongoing", Direction: "rtl", Aliases: []string{"ӨРКЕН ӘЛЕМ", "100% нақты"}}
 	input.GenreIDs = []string{genre.ID}
- input.Publication = domain.Publication{Year:2023,Publishers:[]string{"Publisher"},Country:"Корея",Source:"Новелла",Formats:[]string{"Webtoon"},Links:[]domain.ExternalLink{{Label:"Official",URL:"https://example.com/title"}}}
+	input.Publication = domain.Publication{Year: 2023, Publishers: []string{"Publisher"}, Country: "Корея", Source: "Новелла", Formats: []string{"Webtoon"}, Links: []domain.ExternalLink{{Label: "Official", URL: "https://example.com/title"}}}
 	title, failure := service.CreateTitle(ctx, "admin", input)
 	if failure != nil {
 		testingTarget.Fatal(failure)
@@ -118,7 +118,9 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		testingTarget.Fatal(failure)
 	}
 	privateDetail, failure := service.AdminDetail(ctx, "admin", title.ID)
- if failure==nil&&(privateDetail.Title.Publication.Year!=2023||len(privateDetail.Title.Publication.Links)!=1||privateDetail.ChapterCount!=0) {testingTarget.Fatal("publication metadata round trip",privateDetail)}
+	if failure == nil && (privateDetail.Title.Publication.Year != 2023 || len(privateDetail.Title.Publication.Links) != 1 || privateDetail.ChapterCount != 0) {
+		testingTarget.Fatal("publication metadata round trip", privateDetail)
+	}
 	if failure != nil || privateDetail.Title.Description != input.Description || len(privateDetail.Title.Authors) != 1 || !privateDetail.Title.Featured {
 		testingTarget.Fatal("metadata editing failed", failure)
 	}
@@ -147,8 +149,10 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		execute("INSERT INTO revisions(id,release_id,status) VALUES($1,$2,$3)", revisionID, releaseID, state)
 	}
 	execute("UPDATE titles SET cover_asset_id='cover-test' WHERE id=$1", title.ID)
- publicDetail,detailFailure:=service.Detail(ctx,title.Slug)
- if detailFailure!=nil||publicDetail.ChapterCount!=4||publicDetail.Title.Publication.Country!="Корея" {testingTarget.Fatal("public facts must count visible chapters and preserve metadata",publicDetail,detailFailure)}
+	publicDetail, detailFailure := service.Detail(ctx, title.Slug)
+	if detailFailure != nil || publicDetail.ChapterCount != 4 || publicDetail.Title.Publication.Country != "Корея" {
+		testingTarget.Fatal("public facts must count visible chapters and preserve metadata", publicDetail, detailFailure)
+	}
 	updates, failure := service.Updates(ctx, "", "", 2)
 	if failure != nil || len(updates.Items) != 2 || updates.Next == "" {
 		testingTarget.Fatal("release feed missing", updates, failure)
@@ -387,6 +391,19 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		hidden, failure := service.StudioProjectPage(ctx, "foreign", application.ProjectFilter{TeamID: "page-team"})
 		if failure != nil || hidden.Total != 0 || len(hidden.Items) != 0 {
 			testingTarget.Fatal("projects leaked through team filter", failure)
+		}
+	})
+	testingTarget.Run("project cards expose own chapter count and public title rating", func(testingTarget *testing.T) {
+		execute(`INSERT INTO chapters(id,title_id,label,order_num) VALUES('card-chapter','project-title-110','1',1);
+        INSERT INTO releases(id,chapter_id,project_id,team_id,status) VALUES('card-release','card-chapter','page-project-110','page-team','draft');
+        INSERT INTO ratings(id,user_id,title_id,score) VALUES('card-rating','reader','project-title-110',8)`)
+		page, failure := service.StudioProjectPage(ctx, "reader", application.ProjectFilter{TeamID: "page-team"})
+		if failure != nil || len(page.Items) != 1 {
+			testingTarget.Fatalf("card page: %+v %v", page, failure)
+		}
+		item := page.Items[0]
+		if item.ChapterCount != 1 || item.RatingCount != 1 || item.Score != 8 {
+			testingTarget.Fatalf("card statistics: %+v", item)
 		}
 	})
 	testingTarget.Run("305 published chapters are searched before pagination and ordered without duplicates", func(testingTarget *testing.T) {

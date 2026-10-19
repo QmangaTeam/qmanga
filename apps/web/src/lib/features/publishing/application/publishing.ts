@@ -6,7 +6,8 @@ export interface ChapterChoice { id: string; label: string; name: string; order:
 export interface UploadSource { name: string; size: number; key: string; content: unknown }
 export interface UploadTask { done: Promise<void>; cancel(): void }
 export interface StudioProject {id:string;titleId:string;titleName:string;teamId:string;teamName:string;role:string;approved:boolean;status:string;coverId:string}
-export interface ProjectPage {items:{id:string;titleName:string;teamName:string;teamId?:string}[];nextCursor:string;total:number}
+export interface ProjectListItem {id:string;titleName:string;teamName:string;teamId?:string;coverURL?:string;chapterCount?:number;ratingCount?:number;score?:number}
+export interface ProjectPage {items:ProjectListItem[];nextCursor:string;total:number}
 export interface ProjectFilter {query?:string;teamId?:string}
 export interface PublishingGateway {
  projectPage(filter:ProjectFilter,cursor?:string):Promise<ProjectPage>;

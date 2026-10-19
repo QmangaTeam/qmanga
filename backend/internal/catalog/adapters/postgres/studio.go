@@ -11,12 +11,12 @@ import (
 	"strings"
 )
 
-const requestColumns = `request.id,request.team_id,COALESCE(request.title_id,''),request.name_kk,request.name_original,request.title_slug,request.kind,request.description_kk,request.source_url,request.note,request.status,request.resolution,COALESCE(request.project_id,''),team.name,COALESCE(title.name_kk,request.name_kk),request.created_at,request.updated_at`
+const requestColumns = `request.id,request.team_id,COALESCE(request.title_id,''),request.name_kk,request.name_original,request.title_slug,request.kind,request.description_kk,request.source_url,request.note,request.status,request.resolution,COALESCE(request.project_id,''),team.name,COALESCE(title.name_kk,request.name_kk),request.created_at,request.updated_at,coalesce(title.cover_asset_id,'')`
 const requestJoins = ` FROM project_requests request JOIN teams team ON team.id=request.team_id LEFT JOIN titles title ON title.id=request.title_id `
 
 func scanRequest(row interface{ Scan(...any) error }) (domain.ProjectRequest, error) {
 	var item domain.ProjectRequest
-	failure := row.Scan(&item.ID, &item.TeamID, &item.TitleID, &item.Name, &item.OriginalName, &item.Slug, &item.Kind, &item.Description, &item.SourceURL, &item.Note, &item.Status, &item.Resolution, &item.ProjectID, &item.TeamName, &item.TitleName, &item.CreatedAt, &item.UpdatedAt)
+	failure := row.Scan(&item.ID, &item.TeamID, &item.TitleID, &item.Name, &item.OriginalName, &item.Slug, &item.Kind, &item.Description, &item.SourceURL, &item.Note, &item.Status, &item.Resolution, &item.ProjectID, &item.TeamName, &item.TitleName, &item.CreatedAt, &item.UpdatedAt, &item.CoverID)
 	return item, translate(failure)
 }
 func studioTeam(ctx context.Context, transaction pgx.Tx, actor, teamID string, approved bool) error {

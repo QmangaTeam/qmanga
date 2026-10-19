@@ -6,6 +6,7 @@
  import type {TeamsGateway} from '$lib/features/teams/application/teams';
  import type {ProjectRequestsGateway} from '../application/project-requests';
  import type {Team} from '$lib/features/teams/domain/team';
+ import ProjectCard from './ProjectCard.svelte';
  import SectionHeading from '$lib/shared/presentation/ui/SectionHeading.svelte';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {failureCode,noticeText} from '$lib/shared/presentation/copy';
@@ -63,10 +64,10 @@
  {#if loading&&!items.length}<p role="status">{text($locale,'Жобалар жүктелуде…','Загружаем проекты…')}</p>
  {:else if !items.length&&!error&&!directoryError&&(appliedCriteria.teamId||appliedCriteria.query)}<p class="empty-state">{text($locale,'Жоба табылмады. Сұрау не команданы өзгерт.','Проекты не найдены. Измени запрос или команду.')}</p>
  {:else if !items.length&&!error&&!directoryError}<div class="next-step"><h2>{teams.some(team=>team.approved)?text($locale,'Бірінші жобаңды сұра','Запроси первый проект'):text($locale,'Командадан баста','Начни с команды')}</h2><p>{teams.some(team=>team.approved)?text($locale,'Каталогтан тайтл таңда немесе жаңа шығарма ұсын. Мақұлданған жоба осында пайда болады.','Выбери тайтл из каталога или предложи новый. Одобренный проект появится здесь.'):text($locale,'Команда құруға өтінім бер. Мақұлдағаннан кейін тайтл сұрап, тараулар жүктей аласың.','Подай заявку на команду. После одобрения можно запросить тайтл и загружать главы.')}</p><div class="actions"><a class="button primary" href={teams.some(team=>team.approved)?'/studio/requests?new=1':'/studio/teams?new=1'}>{teams.some(team=>team.approved)?text($locale,'Өтінім жіберу','Подать заявку'):text($locale,'Командаларға өту','Перейти к командам')}</a><a class="button subtle" href="/studio/requests">{text($locale,'Өтінімдерім','Мои заявки')}</a></div></div>
- {:else}<div class="projects">{#each items as item}<article><div><h2><a href={'/studio/projects/'+item.id}>{item.titleName}</a></h2><p>{item.teamName}</p></div><a class="button subtle" href={'/studio/projects/'+item.id}>{text($locale,'Тарауларды басқару','Управлять главами')}</a></article>{/each}</div>{/if}
+ {:else}<div class="projects">{#each items as item (item.id)}<ProjectCard {item}/>{/each}</div>{/if}
  {#if hasMore}<button class="button subtle" disabled={loading} onclick={()=>directory.more()}>{text($locale,'Тағы жобалар','Ещё проекты')}</button>{/if}
 {/if}
 <style>
  .project-search{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:20px 0}.project-search label{display:grid;gap:8px;flex:1 1 220px;min-width:0}
- .next-step{max-width:720px;padding:24px 0;border-block:1px solid var(--line);margin:20px 0}.next-step h2{font-size:20px;margin:0 0 12px}.next-step p{line-height:1.6;color:var(--muted);max-width:600px}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}.projects{max-width:900px}.projects article{display:flex;justify-content:space-between;align-items:center;gap:16px;padding:22px 0;border-bottom:1px solid var(--line)}article h2{font-size:18px;margin:0}article h2 a{display:inline-flex;align-items:center;min-height:44px;overflow-wrap:anywhere}article p{font-size:14px;color:var(--muted);margin:4px 0 0}article>div{min-width:0}@media(max-width:600px){.projects article{align-items:start;flex-direction:column;gap:12px}}
+ .next-step{max-width:720px;padding:24px 0;border-block:1px solid var(--line);margin:20px 0}.next-step h2{font-size:20px;margin:0 0 12px}.next-step p{line-height:1.6;color:var(--muted);max-width:600px}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:20px}.projects{display:grid;gap:12px;max-width:900px}
 </style>

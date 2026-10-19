@@ -46,7 +46,11 @@ type Detail struct {
 	Collections        []domain.Collection
 	Projects           []Project
 }
-type Project struct{ ID, TitleID, TeamID, TitleName, TitleSlug, TeamName, TeamSlug, Status string }
+type Project struct {
+	ID, TitleID, TeamID, TitleName, TitleSlug, TeamName, TeamSlug, Status, CoverID string
+	ChapterCount, RatingCount                                                      int
+	Score                                                                          float64
+}
 type ProjectFilter struct {
 	Query, TeamID string
 	Offset        int

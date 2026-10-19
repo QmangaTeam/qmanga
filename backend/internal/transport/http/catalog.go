@@ -189,6 +189,23 @@ func projectViews(projects []application.Project) []projectDTO {
 	}
 	return items
 }
+
+type studioProjectDTO struct {
+	projectDTO
+	CoverURL     string  `json:"cover_url"`
+	ChapterCount int     `json:"chapter_count"`
+	RatingCount  int     `json:"rating_count"`
+	Score        float64 `json:"score"`
+}
+
+func studioProjectViews(projects []application.Project) []studioProjectDTO {
+	base := projectViews(projects)
+	items := make([]studioProjectDTO, 0, len(projects))
+	for i, item := range projects {
+		items = append(items, studioProjectDTO{base[i], coverURL(item.CoverID), item.ChapterCount, item.RatingCount, item.Score})
+	}
+	return items
+}
 func genreViews(genres []application.Genre) []genreDTO {
 	items := make([]genreDTO, 0, len(genres))
 	for _, item := range genres {
@@ -320,7 +337,7 @@ func (handler *CatalogHandler) studioProjects(request *gin.Context) {
 		catalogError(request, failure)
 		return
 	}
-	request.JSON(200, gin.H{"items": projectViews(page.Items), "next_cursor": page.Next, "total": page.Total})
+	request.JSON(200, gin.H{"items": studioProjectViews(page.Items), "next_cursor": page.Next, "total": page.Total})
 }
 func (handler *CatalogHandler) adminTitles(request *gin.Context) {
 	account, _ := CurrentAccount(request)
