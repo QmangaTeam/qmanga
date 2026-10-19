@@ -11,7 +11,7 @@
  $effect(()=>{const url=user.avatarURL,currentVersion=version;avatarFailed=false;});
  let translator=$state(false),busy=$state(false),failed=$state(false);
  const initials=$derived((user.displayName||'Q').trim().slice(0,2).toUpperCase());
- function close(){dialog.close();trigger.focus();}
+ function close(){dialog?.close();trigger?.focus();}
  async function open(){failed=false;dialog.showModal();try{translator=(await teams.list()).some(team=>team.approved&&!!team.role);}catch{translator=false;}}
  function backdrop(event:MouseEvent){if(event.target===dialog){const b=dialog.getBoundingClientRect();if(event.clientX<b.left||event.clientX>b.right||event.clientY<b.top||event.clientY>b.bottom)close();}}
  async function logout(){if(busy)return;busy=true;failed=false;try{const result=await auth.logout();if(result.ok){close();await onlogout();}else failed=true;}catch{failed=true;}finally{busy=false;}}

@@ -22,7 +22,7 @@ export function createCommunity(){const {api,scope}=scopedApi();return new HttpC
 export function createNotifications(){const {api,scope}=scopedApi();return new HttpNotificationsGateway(api,scope);}
 import {LibrarySync,CachedReadingGateway} from '$lib/features/reading/application/library-sync';
 import {BrowserLibraryStorage} from '$lib/features/reading/infrastructure/browser-library-storage';
-export function createReading(){const {api,scope}=scopedApi();const remote=new HttpReadingGateway(api,scope),librarySync=new LibrarySync(remote,new BrowserLibraryStorage(),()=>crypto.randomUUID());return {readingGateway:new CachedReadingGateway(remote,librarySync),librarySync,progressStorage:new BrowserProgressStorage()};}
+export function createReading(){const {api,scope}=scopedApi();const remote=new HttpReadingGateway(api,scope),librarySync=new LibrarySync(remote,new BrowserLibraryStorage(),()=>crypto.randomUUID());return {readingGateway:new CachedReadingGateway(remote,librarySync),librarySync,progressStorage:new BrowserProgressStorage(),readingChanges};}
 export function createDownloads(){return new Downloads(new BrowserDownloadStorage(),()=>Date.now());}
 import { HttpCatalogGateway } from '$lib/features/catalog/infrastructure/http-catalog-gateway';
 import { BrowserReaderPlatform } from '$lib/features/reading/infrastructure/browser-reader-platform';
@@ -47,3 +47,8 @@ import {HttpMetricsGateway} from '$lib/features/metrics/infrastructure/http-metr
 export function createMetrics(){return new HttpMetricsGateway(new ApiClient(globalThis.fetch.bind(globalThis)));}
 import {HttpAvatarGateway} from '$lib/features/identity/infrastructure/http-avatar-gateway';
 export function createAvatars(){return new HttpAvatarGateway(globalThis.fetch.bind(globalThis));}
+
+import {HttpRegistrationPermit} from '$lib/features/reading/infrastructure/http-registration-permit';
+export function createRegistrationImport(){const {api,scope}=scopedApi();return {readingGateway:new HttpReadingGateway(api,scope),progressStorage:new BrowserProgressStorage(),readingChanges,registrationPermit:new HttpRegistrationPermit(api)};}
+
+import {readingChanges} from '$lib/features/reading/infrastructure/reading-changes';

@@ -5,6 +5,7 @@ export class ApiFailure extends AppFailure {
 }
 export class ApiClient {
  private csrf = '';
+ private csrfAccount = '';
  constructor(private request: typeof fetch) {}
  async csrfToken(): Promise<string> {
   if (!this.csrf) { const value = await this.call('/api/v1/auth/csrf'); if (!object(value) || typeof value.csrf_token !== 'string') throw new Error('Қайта кіріңіз'); this.csrf = value.csrf_token; }
@@ -12,6 +13,7 @@ export class ApiClient {
  }
  async call(path: string, method = 'GET', body?: unknown,accountId=''): Promise<unknown> {
   if (!path.startsWith('/api/v1/')) throw new Error('Жарамсыз сұрау');
+  if(accountId&&accountId!==this.csrfAccount){this.csrf='';this.csrfAccount=accountId;}
   if (method !== 'GET' && !this.csrf) {
    const value = await this.call('/api/v1/auth/csrf');
    if (!object(value) || typeof value.csrf_token !== 'string') throw new Error('Қайта кіріңіз');

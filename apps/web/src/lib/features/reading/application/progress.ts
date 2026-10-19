@@ -54,3 +54,5 @@ export class ReadingSession {
  async resolve(useLocal:boolean){if(!this.row?.conflict)return;const cloud=this.row.conflict;this.row.progress.version=cloud.version;if(useLocal&&this.row.pending){const identity=this.storage.identity();this.row.pending={...this.row.pending,...identity,baseVersion:cloud.version};}else{this.row.progress=cloud;this.row.pending=null;this.acceptedRelease=cloud.releaseId;}this.row.conflict=null;await this.storage.write(this.row);this.changed();if(useLocal)await this.flush();return this.row.progress;}
  close(){this.stopped=true;this.cancelTimer?.();this.stopWatch?.();}
 }
+
+export interface ReadingChanges {subscribe(listener:()=>void):()=>void;publish():void}

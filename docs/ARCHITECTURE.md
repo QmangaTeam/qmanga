@@ -101,6 +101,14 @@ Public title details expose `comment_count`: visible, non-deleted title-discussi
 
 Only an administrator may change title metadata. On an update, omitted `age_rating` preserves the stored classification for older clients; explicit `0` clears it. This additive field does not introduce a reader access gate, a new genre, or automatic content classification.
 
+## Registration and guest reading
+
+`registration_reading_imports` belongs to Identity: a seven-day, one-use permission is created atomically with a new email/Google account. Only a hash of an opaque HttpOnly/SameSite browser receipt is stored. Ordinary login and duplicate registration never create a permission for an existing account. The receipt alone authenticates nobody, and a different account or device cannot consume it. The private eligibility/completion endpoints enforce the current account; completion also requires CSRF. A browser receipt survives registration retries and may refer to independently created accounts; each permission is separately completed/expired.
+
+Reading's browser application coordinator imports only after this permission is confirmed. It keeps existing cloud progress and explicit library choices (including removal), never overwrites them with guest data, and retains the guest record on the device. Remote writes must succeed before completion; an interrupted import retries safely against the current cloud versions. A local reading-change hint refreshes library, continuation and cover badges, each re-fetching protected data. The former manual guest-import block is removed.
+
+Personal cover statuses use `GET /reading/statuses` for at most 60 visible title IDs per request, scoped to the authenticated account with `private, no-store`; removed library entries are absent. Public catalogue responses/SSR caches never contain personal statuses. The browser clears old values and ignores delayed results after account changes.
+
 ## Reading completions and operational metrics
 
 Metrics owns additive UTC daily event counters (`metrics_daily`) and a first-publication receipt per release. Collection starts at migration 000027; unknown historical confirmation/publication dates are not invented. Database triggers record confirmed-account transitions, first publication of a translation release, first rating, new/restored library entries and newly enabled title notification opt-ins in the same transaction as their source operation. Rating edits do not create new ratings. Removal/unsubscribe does not subtract an earlier event: these are additions over a period, not current balances. Republishing/revising an already published translation does not create another first-publication event.

@@ -1,21 +1,19 @@
 <script lang="ts">
  import {onMount} from 'svelte';
- import type {ReadingGateway,ProgressStorage} from '../application/progress';
+ import type {ReadingGateway,ProgressStorage,ReadingChanges} from '../application/progress';
  import {loadContinuation,type Continuation} from '../application/continuation';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import Icon from '$lib/shared/presentation/ui/Icon.svelte';
- let {readingGateway,progressStorage}:{readingGateway:ReadingGateway;progressStorage:ProgressStorage}=$props();
+ let {readingGateway,progressStorage,readingChanges}:{readingChanges?:ReadingChanges;readingGateway:ReadingGateway;progressStorage:ProgressStorage}=$props();
  const {locale}=useLocale();
  let rows=$state<Continuation[]>([]);
  let status=$state<'loading'|'ready'|'error'>('loading');
- let valid=true;
+ let valid=true,generation=0;
+ async function load(){const current=++generation;rows=[];status='loading';try{const loaded=await loadContinuation(readingGateway,progressStorage);if(valid&&current===generation){rows=loaded;status='ready';}}catch{if(valid&&current===generation)status='error';}}
  onMount(()=>{
-  const stop=progressStorage.watchAccountChange(()=>{valid=false;rows=[];status='ready';});
-  void(async()=>{try{
-   const loaded=await loadContinuation(readingGateway,progressStorage);
-   if(valid){rows=loaded;status='ready';}
-  }catch{if(valid)status='error';}})();
-  return()=>{valid=false;stop();};
+  const stop=progressStorage.watchAccountChange(()=>{rows=[];void load();});
+  const stopImports=readingChanges?.subscribe(()=>{void load();});void load();
+  return()=>{valid=false;generation++;stop();stopImports?.();};
  });
 </script>
 {#if status==='loading'}<div class="loading" role="status" aria-label={text($locale,'Оқу орны жүктелуде','Загружается продолжение чтения')}><span aria-hidden="true"></span></div>

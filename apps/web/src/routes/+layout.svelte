@@ -1,8 +1,10 @@
 <script lang="ts">
  import '../app.css';
+ import RegistrationImport from '$lib/features/reading/presentation/RegistrationImport.svelte';
+ const registrationImport=createRegistrationImport();
  import {page} from '$app/stores';
  import {onMount,untrack} from 'svelte';
- import {createPreferences,createLocalePreferences,createNotifications,createAuth,createTeams} from '$lib/composition/browser';
+ import {createRegistrationImport,createPreferences,createLocalePreferences,createNotifications,createAuth,createTeams} from '$lib/composition/browser';
  import {initializeTheme} from '$lib/features/preferences/application/theme';
  import {changeLocale} from '$lib/features/preferences/application/locale';
  import {provideLocale,text} from '$lib/shared/presentation/locale';
@@ -49,6 +51,7 @@
  ]);
  const loginReturn=$derived($page.url.pathname==='/saved'?'/saved':safeReturnPath(/^\/(login|register|forgot-password|reset-password|verify-email)(\/|$)/.test($page.url.pathname)?$page.url.searchParams.get('returnTo'):$page.url.pathname+$page.url.search));
 </script>
+<RegistrationImport {...registrationImport}/>
 {#snippet content()}
  {#if authRoute}{@render children()}{:else}{#key data.user?.id||'guest'}{@render children()}{/key}{/if}
 {/snippet}
