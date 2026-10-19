@@ -26,13 +26,18 @@ test('status updates the title button immediately and ratings save from ten acce
    await choices.nth(6).click();await dialog.waitFor({state:'hidden'});
    assert.equal(await page.locator('.rating-trigger .rate-label').textContent(),'Ваша: 7');
    await page.locator('.rating-trigger').click();assert.equal(await choices.nth(6).getAttribute('aria-pressed'),'true');
+   let hoverWrites=0;const observe=request=>{if(request.method()==='PUT'&&request.url().endsWith('/rating'))hoverWrites++;};page.on('request',observe);
+   await choices.nth(1).hover();assert.equal(await dialog.locator('.rating-number').textContent(),'2');assert.equal(await dialog.locator('.rating-phrase').textContent(),'Слабое впечатление');assert.equal(await dialog.locator('svg.filled').count(),2);
+   await dialog.locator('h2').hover();assert.equal(await dialog.locator('.rating-number').textContent(),'7');assert.equal(hoverWrites,0);page.off('request',observe);
+
    await page.route('**/api/v1/community/titles/*/rating',async route=>route.request().method()==='PUT'?route.fulfill({status:500,json:{error:{code:'internal'}}}):route.continue());
    await choices.nth(7).click();await dialog.getByRole('alert').waitFor();assert.equal(await dialog.isVisible(),true);assert.equal(await choices.nth(6).getAttribute('aria-pressed'),'true');
    await page.unroute('**/api/v1/community/titles/*/rating');
+   await dialog.getByRole('button',{name:'Закрыть',exact:true}).click();await page.locator('.rating-trigger').click();await page.waitForFunction(()=>document.querySelector('.rating-choices button')?.disabled===false);
    for(const theme of ['dark','light'])for(const width of [320,360,1280]){
     await page.evaluate(value=>document.documentElement.dataset.theme=value,theme);await page.setViewportSize({width,height:850});
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
-    const size=await choices.first().boundingBox();assert.ok(size.width>=44&&size.height>=44);
+    const size=await choices.first().boundingBox();assert.ok(size.height>=44);const row=await dialog.locator('.rating-choices').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));assert.ok(row.scroll<=row.width,'all ten ratings fit without horizontal scrolling');
     if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:`${process.env.QMANGA_SCREENSHOT_DIR}/rating-${theme}-${width}.png`});}
    }
    const comments=Array.from({length:20},(_,index)=>({id:'fixture-'+index,user_id:'other',display_name:'Synthetic reader',parent_id:'',root_id:'',body:('Synthetic discussion line '+index+'\n').repeat(6),spoiler:false,hidden:false,created_at:new Date(Date.UTC(2026,0,1,0,index)).toISOString(),replies:0}));
