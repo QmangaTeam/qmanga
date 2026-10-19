@@ -70,7 +70,18 @@ func (h *GoogleHandler) callback(c *gin.Context) {
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 20*time.Second)
 	defer cancel()
-	result, destination, err := h.service.Finish(ctx, state, c.Query("code"))
+	var result application.LoginResult
+	var destination, receipt string
+	if service, ok := h.service.(interface {
+		FinishWithGuestImport(context.Context, string, string, string) (application.LoginResult, string, error)
+	}); ok {
+		receipt, err = h.identity.registrationImportToken(c)
+		if err == nil {
+			result, destination, err = service.FinishWithGuestImport(ctx, state, c.Query("code"), receipt)
+		}
+	} else {
+		result, destination, err = h.service.Finish(ctx, state, c.Query("code"))
+	}
 	if err != nil {
 		if c.Query("error") == "access_denied" {
 			c.Redirect(303, application.SafeAuthReturn(destination))
@@ -87,6 +98,9 @@ func (h *GoogleHandler) callback(c *gin.Context) {
 		}
 		c.Redirect(303, page+"?google_error="+code+"&returnTo="+url.QueryEscape(application.SafeAuthReturn(destination)))
 		return
+	}
+	if receipt != "" {
+		h.identity.rememberRegistrationImport(c, receipt)
 	}
 	h.identity.cookie(c, "qmanga_session", result.SessionToken, result.ExpiresAt)
 	h.identity.cookie(c, "qmanga_csrf", result.CSRFToken, result.ExpiresAt)

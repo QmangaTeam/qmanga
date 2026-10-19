@@ -23,6 +23,12 @@ func (r *Repository) ConsumeGoogleFlow(ctx context.Context, hash string, now tim
 	return f, translate(err)
 }
 func (r *Repository) GoogleAccount(ctx context.Context, identity application.GoogleIdentity, candidate domain.Account) (domain.Account, error) {
+	return r.googleAccount(ctx, identity, candidate, "", time.Time{})
+}
+func (r *Repository) GoogleAccountForImport(ctx context.Context, identity application.GoogleIdentity, candidate domain.Account, receiptHash string, expires time.Time) (domain.Account, error) {
+	return r.googleAccount(ctx, identity, candidate, receiptHash, expires)
+}
+func (r *Repository) googleAccount(ctx context.Context, identity application.GoogleIdentity, candidate domain.Account, receiptHash string, expires time.Time) (domain.Account, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return domain.Account{}, err
@@ -52,6 +58,14 @@ func (r *Repository) GoogleAccount(ctx context.Context, identity application.Goo
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO external_identities(issuer,subject,user_id) VALUES($1,$2,$3)`, identity.Issuer, identity.Subject, candidate.ID); err != nil {
 		return a, translate(err)
+	}
+	if receiptHash != "" {
+		if _, err = tx.Exec(ctx, `DELETE FROM registration_reading_imports WHERE expires_at<now()`); err != nil {
+			return a, err
+		}
+		if _, err = tx.Exec(ctx, `INSERT INTO registration_reading_imports(user_id,receipt_hash,expires_at) VALUES($1,$2,$3)`, candidate.ID, receiptHash, expires); err != nil {
+			return a, err
+		}
 	}
 	return candidate, tx.Commit(ctx)
 }

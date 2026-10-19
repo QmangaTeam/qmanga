@@ -70,6 +70,57 @@ func TestGooglePersistenceAndAvatarVisibility(t *testing.T) {
 	if _, err = repo.GoogleAccount(ctx, identity, candidate); !errors.Is(err, domain.ErrConflict) {
 		t.Fatal("email-only takeover accepted", err)
 	}
+
+	// Registration import receipts are created atomically only for new accounts.
+	now := time.Now()
+	fresh := domain.Account{ID: "registration-new", Email: "registration-new@example.test", PasswordHash: "hash", Role: "reader", Verified: true, DisplayName: "New reader"}
+	receipt := strings.Repeat("a", 64)
+	if err = repo.CreateAccountForImport(ctx, fresh, receipt, now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	for _, check := range []struct {
+		actor, hash string
+		want        bool
+	}{{fresh.ID, receipt, true}, {account.ID, receipt, false}, {fresh.ID, strings.Repeat("b", 64), false}} {
+		allowed, failure := repo.RegistrationImportAllowed(ctx, check.actor, check.hash, now)
+		if failure != nil || allowed != check.want {
+			t.Fatal(check.actor, allowed, failure)
+		}
+	}
+	duplicate := fresh
+	duplicate.ID = "registration-duplicate"
+	if err = repo.CreateAccountForImport(ctx, duplicate, strings.Repeat("b", 64), now.Add(time.Hour)); !errors.Is(err, domain.ErrConflict) {
+		t.Fatal("duplicate registration created receipt", err)
+	}
+	if err = repo.CompleteRegistrationImport(ctx, account.ID, receipt, now); !errors.Is(err, domain.ErrForbidden) {
+		t.Fatal("foreign completion accepted", err)
+	}
+	if err = repo.CompleteRegistrationImport(ctx, fresh.ID, receipt, now); err != nil {
+		t.Fatal(err)
+	}
+	if err = repo.CompleteRegistrationImport(ctx, fresh.ID, receipt, now); err != nil {
+		t.Fatal("completion replay must be harmless", err)
+	}
+	if allowed, failure := repo.RegistrationImportAllowed(ctx, fresh.ID, receipt, now); failure != nil || allowed {
+		t.Fatal("receipt replay", allowed, failure)
+	}
+	googleIdentity := application.GoogleIdentity{Issuer: "https://accounts.google.com", Subject: "registration-new-google", Email: "registration-google@example.test", Verified: true}
+	googleCandidate := domain.Account{ID: "registration-google", Email: googleIdentity.Email, PasswordHash: "hash", Role: "reader", Verified: true, DisplayName: "Google reader"}
+	if _, err = repo.GoogleAccountForImport(ctx, googleIdentity, googleCandidate, receipt, now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if allowed, failure := repo.RegistrationImportAllowed(ctx, googleCandidate.ID, receipt, now); failure != nil || !allowed {
+		t.Fatal("new Google import missing", allowed, failure)
+	}
+	if _, err = repo.GoogleAccountForImport(ctx, googleIdentity, googleCandidate, strings.Repeat("b", 64), now.Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if allowed, failure := repo.RegistrationImportAllowed(ctx, googleCandidate.ID, strings.Repeat("b", 64), now); failure != nil || allowed {
+		t.Fatal("ordinary Google login granted import", allowed, failure)
+	}
+	if allowed, failure := repo.RegistrationImportAllowed(ctx, googleCandidate.ID, receipt, now.Add(2*time.Hour)); failure != nil || allowed {
+		t.Fatal("expired receipt accepted", allowed, failure)
+	}
 	avatar := application.Avatar{Kind: "user", OwnerID: account.ID, Key: "avatars/immutable", Bytes: 100, UpdatedAt: time.Now()}
 	if err = repo.SaveAvatar(ctx, avatar); err != nil {
 		t.Fatal(err)

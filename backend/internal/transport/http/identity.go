@@ -53,6 +53,8 @@ func (handler *IdentityHandler) Register(api *gin.RouterGroup) {
 	auth.POST("/reset-password", handler.limit(), handler.resetPassword)
 	auth.POST("/verify-email", handler.limit(), handler.verifyEmail)
 	auth.GET("/me", handler.RequireUser(), handler.me)
+	auth.GET("/guest-import", handler.RequireUser(), expectedAccount(), handler.guestImport)
+	auth.POST("/guest-import/complete", handler.RequireUser(), expectedAccount(), handler.finishGuestImport)
 	auth.POST("/profile", handler.RequireUser(), handler.updateProfile)
 	auth.GET("/csrf", handler.RequireUser(), handler.csrf)
 	auth.POST("/logout", handler.RequireUser(), handler.logout)
@@ -137,10 +139,16 @@ func (handler *IdentityHandler) register(request *gin.Context) {
 	if !decode(request, &input) {
 		return
 	}
-	if failure := handler.service.Register(request.Request.Context(), input.Email, input.Password, input.DisplayName); failure != nil {
+	token, failure := handler.registrationImportToken(request)
+	if failure != nil {
 		handler.respondError(request, failure)
 		return
 	}
+	if failure := handler.service.RegisterWithGuestImport(request.Request.Context(), input.Email, input.Password, input.DisplayName, token); failure != nil {
+		handler.respondError(request, failure)
+		return
+	}
+	handler.rememberRegistrationImport(request, token)
 	request.JSON(202, gin.H{"message": "Поштаңызды тексеріңіз. Растау сілтемесі жіберілді."})
 }
 func (handler *IdentityHandler) login(request *gin.Context) {

@@ -98,6 +98,15 @@ func (s *GoogleService) Start(ctx context.Context, returnPath, nickname string) 
 	return state, s.provider.AuthorizationURL(state, nonce, verifier), nil
 }
 func (s *GoogleService) Finish(ctx context.Context, state, code string) (LoginResult, string, error) {
+	return s.finish(ctx, state, code, "")
+}
+func (s *GoogleService) FinishWithGuestImport(ctx context.Context, state, code, token string) (LoginResult, string, error) {
+	if !validRegistrationReceipt(token) {
+		return LoginResult{}, "/", domain.ErrInvalid
+	}
+	return s.finish(ctx, state, code, s.credentials.Digest(token))
+}
+func (s *GoogleService) finish(ctx context.Context, state, code, receiptHash string) (LoginResult, string, error) {
 	if len(state) != 43 || s.provider == nil {
 		return LoginResult{}, "/", domain.ErrCredentials
 	}
@@ -126,7 +135,18 @@ func (s *GoogleService) Finish(ctx context.Context, state, code string) (LoginRe
 		return LoginResult{}, flow.ReturnPath, err
 	}
 	candidate := domain.Account{ID: s.credentials.NewID(), Email: email, PasswordHash: hash, Role: "reader", Verified: true, DisplayName: flow.Nickname}
-	account, err := s.repository.GoogleAccount(ctx, identity, candidate)
+	var account domain.Account
+	if receiptHash != "" {
+		repository, ok := s.repository.(interface {
+			GoogleAccountForImport(context.Context, GoogleIdentity, domain.Account, string, time.Time) (domain.Account, error)
+		})
+		if !ok {
+			return LoginResult{}, flow.ReturnPath, domain.ErrInvalid
+		}
+		account, err = repository.GoogleAccountForImport(ctx, identity, candidate, receiptHash, s.now().Add(RegistrationImportLifetime))
+	} else {
+		account, err = s.repository.GoogleAccount(ctx, identity, candidate)
+	}
 	if err != nil {
 		return LoginResult{}, flow.ReturnPath, err
 	}

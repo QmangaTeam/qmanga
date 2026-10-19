@@ -56,6 +56,9 @@ func New(repository Repository, credentials Credentials, mailer Mailer, origin s
 	return &Service{repository: repository, credentials: credentials, mailer: mailer, origin: origin, now: time.Now}
 }
 func (service *Service) Register(ctx context.Context, email, password, displayName string) error {
+	return service.register(ctx, email, password, displayName, "")
+}
+func (service *Service) register(ctx context.Context, email, password, displayName, receiptHash string) error {
 	name, failure := domain.NormalizeDisplayName(displayName)
 	if failure != nil || name == "" {
 		return domain.ErrInvalid
@@ -76,7 +79,19 @@ func (service *Service) Register(ctx context.Context, email, password, displayNa
 		return createError
 	}
 	account.DisplayName = name
-	if saveError := service.repository.CreateAccount(ctx, account); saveError != nil {
+	var saveError error
+	if receiptHash != "" {
+		repository, ok := service.repository.(interface {
+			CreateAccountForImport(context.Context, domain.Account, string, time.Time) error
+		})
+		if !ok {
+			return domain.ErrInvalid
+		}
+		saveError = repository.CreateAccountForImport(ctx, account, receiptHash, service.now().Add(RegistrationImportLifetime))
+	} else {
+		saveError = service.repository.CreateAccount(ctx, account)
+	}
+	if saveError != nil {
 		if errors.Is(saveError, domain.ErrConflict) {
 			return nil
 		}
