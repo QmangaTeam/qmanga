@@ -16,7 +16,8 @@ test('library cover grid, inline filters and bookmark dialog fit phone and deskt
    // Keep the real account selection; extra synthetic copies exercise a full grid without modifying catalogue data.
    const account=(await (await context.request.get('/api/v1/auth/me')).json()).user.id;
    const originalResponse=await context.request.get('/api/v1/library/'+fixture.title_id,{headers:{'X-Qmanga-Account':account}});assert.equal(originalResponse.status(),200);
-   const original=await originalResponse.json();
+   let original=await originalResponse.json();
+   if(!original.entry||original.entry.removed){const csrf=(await(await context.request.get('/api/v1/auth/csrf')).json()).csrf_token;const saved=await context.request.put('/api/v1/library/'+fixture.title_id,{headers:{Origin:fixture.app_url,'X-CSRF-Token':csrf,'X-Qmanga-Account':account},data:{version:original.entry?.version||0,status:'reading',favorite:false,preferred_team_id:'',notify:true}});assert.equal(saved.status(),204);original=await(await context.request.get('/api/v1/library/'+fixture.title_id,{headers:{'X-Qmanga-Account':account}})).json();}
    assert.ok(original.entry,'fixture title must already belong to owner library');
    const entry=original.entry;assert.equal(typeof entry.cover_url,'string');
    const pattern='**/api/v1/library?*';
@@ -27,6 +28,7 @@ test('library cover grid, inline filters and bookmark dialog fit phone and deskt
    for(const theme of ['dark','light'])for(const width of [320,360,1280]){
     await page.evaluate(value=>document.documentElement.dataset.theme=value,theme);await page.setViewportSize({width,height:850});
     const boxes=await page.locator('.library-card').evaluateAll(items=>items.map(e=>{const r=e.getBoundingClientRect();return {x:r.x,y:r.y,width:r.width};}));
+    const target=await page.locator('.library-card .options').first().boundingBox();assert.ok(target.width>=44&&target.height>=44);
     const count=boxes.filter(b=>Math.abs(b.y-boxes[0].y)<1).length;assert.equal(count,width<600?3:6);
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     if(entry.cover_url)assert.equal(await page.locator('.library-card .cover img').first().getAttribute('src'),entry.cover_url);
