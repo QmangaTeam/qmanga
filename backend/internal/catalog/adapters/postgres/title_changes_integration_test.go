@@ -108,6 +108,11 @@ func TestTitleChangeApprovalAndConflict(testingTarget *testing.T) {
 	if err = repo.ReviewChange(ctx, "editor", "request", "approve", ""); !errors.Is(err, domain.ErrForbidden) {
 		testingTarget.Fatal("editor reviewed", err)
 	}
+	execute("UPDATE users SET is_blocked=true WHERE id='mod'")
+	if err = repo.ReviewChange(ctx, "mod", "request", "approve", ""); !errors.Is(err, domain.ErrForbidden) {
+		testingTarget.Fatal("blocked moderator reviewed", err)
+	}
+	execute("UPDATE users SET is_blocked=false WHERE id='mod'")
 	if err = repo.ReviewChange(ctx, "mod", "request", "approve", ""); err != nil {
 		testingTarget.Fatal(err)
 	}
@@ -130,6 +135,30 @@ func TestTitleChangeApprovalAndConflict(testingTarget *testing.T) {
 	}
 	if _, err = mediaRepo.Asset(ctx, "", "evidence-asset"); !errors.Is(err, mediaDomain.ErrNotFound) {
 		testingTarget.Fatal("approved evidence leaked", err)
+	}
+	current, err = repo.ChangeContext(ctx, "editor", "project")
+	if err != nil {
+		testingTarget.Fatal(err)
+	}
+	input.BaseVersion = current.Snapshot.Version()
+	input.Data = current.Snapshot.Data
+	input.CoverAction = "replace"
+	input.BannerAction = "keep"
+	replacement := assets[0]
+	replacement.ID = "second-cover"
+	replacement.ObjectKey = "title-changes/cover-only/cover.webp"
+	if _, err = repo.CreateChange(ctx, "editor", "project", "cover-only", input, []application.TitleChangeAsset{replacement}); err != nil {
+		testingTarget.Fatal(err)
+	}
+	if err = repo.ReviewChange(ctx, "mod", "cover-only", "approve", ""); err != nil {
+		testingTarget.Fatal(err)
+	}
+	var preserved string
+	if err = database.Pool().QueryRow(ctx, "SELECT banner_asset_id FROM titles WHERE id='title'").Scan(&preserved); err != nil || preserved != "banner-asset" {
+		testingTarget.Fatal("cover change replaced explicit banner", preserved, err)
+	}
+	if _, err = mediaRepo.Asset(ctx, "", "cover-asset"); !errors.Is(err, mediaDomain.ErrNotFound) {
+		testingTarget.Fatal("superseded cover remained public", err)
 	}
 	input.CoverAction = "keep"
 	input.BannerAction = "keep"
@@ -155,7 +184,7 @@ func TestTitleChangeApprovalAndConflict(testingTarget *testing.T) {
 	}
 	var count int
 	database.Pool().QueryRow(ctx, "SELECT count(*) FROM notifications WHERE user_id='editor'").Scan(&count)
-	if count != 2 {
+	if count != 3 {
 		testingTarget.Fatal("missing decisions", count)
 	}
 }

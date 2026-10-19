@@ -1,8 +1,9 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {chromium} from 'playwright';
-import {mkdir} from 'node:fs/promises';
-const baseURL=process.env.QMANGA_TEST_URL||'http://localhost:8080';
+import {mkdir,readFile} from 'node:fs/promises';
+const fixture=process.env.QMANGA_FIXTURE_FILE?JSON.parse(await readFile(process.env.QMANGA_FIXTURE_FILE,'utf8')):null;
+const baseURL=fixture?.app_url||process.env.QMANGA_TEST_URL||'http://localhost:8080';
 if(!['localhost','127.0.0.1','::1'].includes(new URL(baseURL).hostname))throw new Error('Local-only browser checks');
 test('studio sidebar adapts to phone disclosure, supports keyboard and closes after navigation', {timeout:60000},async()=>{
  const browser=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});
