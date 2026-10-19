@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-identity'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 22:31'
+updated_date: '2026-10-19 00:59'
 labels:
   - stage-7
 dependencies: []
@@ -23,6 +23,7 @@ ordinal: 25
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 Для сайта нужен OAuth-клиент в Google Cloud проекта владельца, с разрешёнными доменами и redirect URI для тестового и основного адресов. Личный `deka3ax@gmail.com` — учётная запись владельца для настройки консоли, а не адрес, который надо вшивать в продукт или выдавать другим пользователям. Секреты хранятся только на сервере вне Git.
+- [ ] #2 Google-вход включён и проверен на основном домене qmanga.maqsatto.dev; локальная настройка не считается выпуском.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -39,4 +40,6 @@ Owner signed into Google Cloud and explicitly confirmed saving callbacks and cre
 Owner-requested review reconfirmed actual repeat Google login on rebuilt local API7548685; same approved identity scopes, standard Qmanga session, no additional credentials or grants created during review. Remote deployment and production consent/contact acceptance remain pending.
 
 Ревью владельца завершено для23 карточек на базе3302515: проверены реализация, права доступа, границы API/хранилищ и интеграция. Итоговые локальные проверки:106 Go-тестов/подтестов,114 прикладных и29 SSR-тестов,40/40 браузерных сценариев;0 ошибок и0 пропусков, Svelte0 ошибок/предупреждений. Логи tmp/review-complete-go.jsonl, tmp/review-complete-web-build.log, tmp/review-final-browser-acceptance.log. Точные auth/publishing/reading CI smoke пройдены на настоящих PostgreSQL/MinIO/Mailpit. Это локальная приёмка; Review сохранён до удалённого CI, staging и наблюдаемого выпуска того же SHA. Для TASK17 дополнительно нужны утверждение правовых текстов владельцем и действующий ящик поддержки; для TASK26 остаётся предрелизная проверка consent/contact.
+
+Новое поручение владельца: «когда будешь завершать сделай еще раз review субагентом, и также добавь в prod google auth, аву сразу с гугла ник с гугла и почту тоже по сути есчо, добавь в задачи». Дополнительное описание: настроить и проверить Google OAuth именно в production, сохранив серверное хранение секретов.
 <!-- SECTION:NOTES:END -->

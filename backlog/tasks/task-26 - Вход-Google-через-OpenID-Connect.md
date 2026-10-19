@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-identity'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-18 23:04'
+updated_date: '2026-10-19 00:59'
 labels:
   - stage-7
 dependencies:
@@ -25,7 +25,8 @@ ordinal: 26
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 Использовать OpenID Connect для **входа**, минимальные `openid email profile`; не запрашивать Gmail/Drive или другие данные «на всякий случай». Сервер проверяет `state`, ID token, issuer, audience, expiry, `email_verified` и устойчивый `sub`; создаёт обычную Qmanga-сессию. Связывание с существующим email требует безопасного подтверждения, без захвата аккаунта одним совпадением email.
-- [ ] #2 На регистрации через Google запросить никнейм, если он ещё не задан. Отмена входа возвращает пользователя без потери текущей страницы. Сохраняется обычный вход по почте. Перед выпуском проверить consent screen и ограничения Google на тестовых пользователях.
+- [ ] #2 При первом входе через Google почта, ник и аватар берутся из профиля Google; отдельный ручной ввод ника не требуется. Отмена сохраняет исходную страницу, обычный вход по почте остаётся доступен.
+- [ ] #3 Перед выпуском проверены Google consent screen и ограничения доступа; реальный вход на production создаёт обычную сессию с данными Google.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -48,4 +49,6 @@ Review fix7548685 routes successful Google sessions through a one-use 60-second 
 Ревью владельца завершено для23 карточек на базе3302515: проверены реализация, права доступа, границы API/хранилищ и интеграция. Итоговые локальные проверки:106 Go-тестов/подтестов,114 прикладных и29 SSR-тестов,40/40 браузерных сценариев;0 ошибок и0 пропусков, Svelte0 ошибок/предупреждений. Логи tmp/review-complete-go.jsonl, tmp/review-complete-web-build.log, tmp/review-final-browser-acceptance.log. Точные auth/publishing/reading CI smoke пройдены на настоящих PostgreSQL/MinIO/Mailpit. Это локальная приёмка; Review сохранён до удалённого CI, staging и наблюдаемого выпуска того же SHA. Для TASK17 дополнительно нужны утверждение правовых текстов владельцем и действующий ящик поддержки; для TASK26 остаётся предрелизная проверка consent/contact.
 
 Remote10d39b8 CI passed and exactSHA serves staging. Deployed /api/v1/auth/google/status currently reports enabled:false because serverOAuth pair is not yet installed. Localowner Google acceptance remains valid; remoteconfiguration/consent/contact and release acceptance still pending. Keep Review.
+
+Уточнение владельца: «аву сразу с гугла ник с гугла и почту тоже». Заменяет прежнее требование обязательного ручного ввода ника при Google-регистрации. Дополнительное описание: использовать данные Google как начальные данные нового профиля; повторный вход не должен затирать сделанные пользователем изменения профиля.
 <!-- SECTION:NOTES:END -->
