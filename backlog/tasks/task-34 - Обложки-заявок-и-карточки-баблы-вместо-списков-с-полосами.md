@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:02'
-updated_date: '2026-10-19 00:10'
+updated_date: '2026-10-19 00:12'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -50,4 +50,6 @@ ordinal: 8026
 
 <!-- SECTION:NOTES:BEGIN -->
 Первая часть реализована: cover_url добавлен в DTO заявок через существующий LEFT JOIN, карточка заявки — отдельная поверхность с обложкой слева. PostgreSQL и HTTP-пакет, Docker/Svelte/UI-проверки прошли. Общая инвентаризация записана в плане; остальные перечисленные списки и визуальная приёмка заявок ещё в работе, критерии не отмечены.
+
+Отдельные карточные поверхности применены к обращениям MyReports/Reports, аккаунтам AccountManagement/AuditLog, скачанным главам Saved, Moderation/TeamApprovals, участникам Studio/PublicTeam, обновлениям Updates и файлам PublishingStudio. Непрофильные разделители форм/метрик/навигации сохранены. Docker/SSR/прикладные проверки прошли; авторизованные проекты/команды проверены в браузере. Library/LibraryRow ещё будут заменены сеткой TASK-49, визуальная приёмка списка заявок также остаётся; TASK-34 пока In Progress.
 <!-- SECTION:NOTES:END -->

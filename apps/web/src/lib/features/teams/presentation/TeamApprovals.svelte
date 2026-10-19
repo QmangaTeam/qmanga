@@ -24,4 +24,4 @@
  {#if more}<button class="button subtle" disabled={busy} onclick={()=>run(()=>load(true))}>{text($locale,'Тағы өтінімдер','Ещё заявки')}</button>{/if}
  {/if}
 {/if}
-<style>article{max-width:840px;padding:24px 0;border-bottom:1px solid var(--line)}h2{font-size:20px;margin:0}p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}small{color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}form{max-width:640px;margin-top:20px}label{display:grid;gap:8px}</style>
+<style>article{max-width:840px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--panel);margin-block:12px;min-width:0}h2{font-size:20px;margin:0}p{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.6}small{color:var(--muted)}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:16px}form{max-width:640px;margin-top:20px}label{display:grid;gap:8px}</style>

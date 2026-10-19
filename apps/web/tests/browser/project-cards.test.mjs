@@ -23,6 +23,21 @@ test('project cards display scoped server statistics and covers without a duplic
     assert.equal(await page.locator('a.pending').count(),0);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:`${process.env.QMANGA_SCREENSHOT_DIR}/projects-${theme}-${width}.png`});}
    }
+   for(const theme of ['dark','light'])for(const width of [320,360,1280]){
+    await context.addInitScript(value=>localStorage.setItem('qmanga.theme',value),theme);
+    await page.setViewportSize({width,height:900});await page.goto('/studio/teams');
+    await page.locator('section.team').waitFor();
+    const overview=page.locator('.team-overview');
+    assert.equal(await overview.getByRole('heading',{level:1}).count(),1);
+    assert.equal(await overview.getByRole('combobox').count(),1);
+    assert.equal(await overview.getByRole('button').count(),1);
+    await page.locator('details.management>summary').click();
+    assert.ok(await page.locator('.member-row').count()>0);
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+    await page.evaluate(()=>scrollTo(0,0));
+    if(process.env.QMANGA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QMANGA_SCREENSHOT_DIR}/teams-${theme}-${width}.png`});
+   }
+
   }finally{await context.close();}
  }finally{await browser.close();}
 });
