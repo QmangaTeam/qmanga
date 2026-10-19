@@ -35,6 +35,22 @@ test('status updates the title button immediately and ratings save from ten acce
     const size=await choices.first().boundingBox();assert.ok(size.width>=44&&size.height>=44);
     if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:`${process.env.QMANGA_SCREENSHOT_DIR}/rating-${theme}-${width}.png`});}
    }
+   const comments=Array.from({length:20},(_,index)=>({id:'fixture-'+index,user_id:'other',display_name:'Synthetic reader',parent_id:'',root_id:'',body:('Synthetic discussion line '+index+'\n').repeat(6),spoiler:false,hidden:false,created_at:new Date(Date.UTC(2026,0,1,0,index)).toISOString(),replies:0}));
+   await page.route('**/api/v1/community/titles/*?*',route=>route.fulfill({json:{comments,next:'',score:0,ratings:0}}));
+   await page.setViewportSize({width:360,height:850});await page.goto('/titles/'+(fixture.title_slug||fixture.title_id)+'?tab=comments');
+   const root=page.locator('#comment-fixture-0');await root.scrollIntoViewIfNeeded();const before=await page.evaluate(()=>scrollY);const beforeTop=(await root.boundingBox()).y;
+   await root.getByRole('button',{name:'Ответить',exact:true}).click();
+   const reply=root.getByRole('textbox',{name:'Написать ответ',exact:true});await reply.waitFor();
+   const after=await page.evaluate(()=>scrollY);const afterTop=(await root.boundingBox()).y;assert.ok(Math.abs(afterTop-beforeTop)<48,JSON.stringify({before,after,beforeTop,afterTop}));
+   await reply.fill('Draft stays beside this comment');
+   assert.equal(await reply.evaluate(el=>el===document.activeElement),true);
+   await root.getByRole('button',{name:'Отмена',exact:true}).click();assert.equal(await root.locator('textarea').count(),0);
+   comments.push({...comments[0],id:'fixture-reply',parent_id:'fixture-0',root_id:'fixture-0',body:'Synthetic reply'});
+   await page.reload();const nested=page.locator('#comment-fixture-0 .reply');await nested.scrollIntoViewIfNeeded();
+   await nested.getByRole('button',{name:'Ответить',exact:true}).click();await nested.getByRole('textbox',{name:'Написать ответ',exact:true}).fill('Reply to reply remains here');
+   assert.equal(await page.locator('.discussion>form').count(),0);
+   await nested.getByRole('button',{name:'Отмена',exact:true}).click();
+
   }finally{await context.close();}
  }finally{await browser.close();}
 });
