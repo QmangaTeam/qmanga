@@ -63,9 +63,10 @@ test('global search submits to catalogue and preserves locale-specific accessibl
  }
 });
 
-test('header brand shows the Qmanga logo image while the link keeps its text name',async()=>{
+test('header brand shows theme-specific Qmanga logo images while the link keeps its text name',async()=>{
  const html=render(Discovery).body;
- expect((await elements(html,'header a.wordmark img'))[0]).toMatchObject({alt:'',src:'/brand/qmanga.png',width:'288',height:'96'});
+ expect((await elements(html,'header a.wordmark img.dark'))[0]).toMatchObject({alt:'',src:'/brand/qmanga.png',width:'288',height:'96'});
+ expect((await elements(html,'header a.wordmark img.light'))[0]).toMatchObject({alt:'',src:'/brand/qmanga-light.png',width:'288',height:'96'});
  expect((await elements(html,'header a.wordmark'))[0]['aria-label']).toBe('Qmanga');
 });
 

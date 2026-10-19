@@ -11,7 +11,7 @@
 </script>
 <header>
  <div class="header-inner">
-  <a class="wordmark" href="/" aria-label={homeLabel}><img src="/brand/qmanga.png" alt="" width="288" height="96"/></a>
+  <a class="wordmark" href="/" aria-label={homeLabel}><img class="dark" src="/brand/qmanga.png" alt="" width="288" height="96"/><img class="light" src="/brand/qmanga-light.png" alt="" width="288" height="96"/></a>
   <nav class="primary-navigation" aria-label={navigationLabel}>
    <button class="search-trigger" onclick={openSearch}><Icon name="search"/><span>{text($locale,'Іздеу','Поиск')}</span></button>
    <a href="/catalog" aria-current={currentPath==='/catalog'?'page':undefined}><Icon name="catalog"/><span>Каталог</span></a>
@@ -56,6 +56,13 @@
  @media(min-width:768px){
   .header-inner{height:64px;padding:0 24px;display:grid;grid-template-columns:1fr auto 1fr}
   .wordmark{display:inline-flex;align-items:center;justify-self:start}.wordmark img{width:auto;height:30px}
+  .wordmark .dark{display:inline}.wordmark .light{display:none}
+  :global(:root[data-theme='light']) .wordmark .dark{display:none}
+  :global(:root[data-theme='light']) .wordmark .light{display:inline}
+  @media (prefers-color-scheme: light){
+   :global(:root:not([data-theme])) .wordmark .dark{display:none}
+   :global(:root:not([data-theme])) .wordmark .light{display:inline}
+  }
   .primary-navigation{width:auto;gap:20px}.primary-navigation>a{display:inline-flex}.primary-navigation .studio-link{display:none}
   .search-trigger{width:auto;background:var(--panel);border:1px solid var(--line);padding:0 12px}
   .account-navigation>.icon-link{display:inline-flex}.account-navigation{display:flex;justify-content:flex-end;align-items:center;gap:4px}
