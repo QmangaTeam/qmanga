@@ -40,6 +40,15 @@ test('status updates the title button immediately and ratings save from ten acce
     const size=await choices.first().boundingBox();assert.ok(size.height>=44);const row=await dialog.locator('.rating-choices').evaluate(el=>({width:el.clientWidth,scroll:el.scrollWidth}));assert.ok(row.scroll<=row.width,'all ten ratings fit without horizontal scrolling');
     if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:`${process.env.QMANGA_SCREENSHOT_DIR}/rating-${theme}-${width}.png`});}
    }
+
+   const titleURL='/titles/'+(fixture.title_slug||fixture.title_id);
+   const beforeCount=(await (await context.request.get('/api/v1/titles/'+(fixture.title_slug||fixture.title_id))).json()).comment_count;
+   await page.goto(titleURL+'?tab=comments');const draft='Synthetic counter test '+Date.now();
+   const composer=page.locator('.discussion>form');await composer.getByRole('textbox',{name:'Написать комментарий',exact:true}).fill(draft);
+   await composer.getByRole('button',{name:'Отправить',exact:true}).click();
+   await page.waitForFunction(expected=>Number(document.querySelector('.title-tabs a[href*="tab=comments"] .tab-count')?.textContent)===expected,beforeCount+1);
+   const posted=page.locator('.discussion>article').filter({hasText:draft});await posted.getByRole('button',{name:'Удалить',exact:true}).click();
+   await page.waitForFunction(expected=>Number(document.querySelector('.title-tabs a[href*="tab=comments"] .tab-count')?.textContent)===expected,beforeCount);
    const comments=Array.from({length:20},(_,index)=>({id:'fixture-'+index,user_id:'other',display_name:'Synthetic reader',parent_id:'',root_id:'',body:('Synthetic discussion line '+index+'\n').repeat(6),spoiler:false,hidden:false,created_at:new Date(Date.UTC(2026,0,1,0,index)).toISOString(),replies:0}));
    await page.route('**/api/v1/community/titles/*?*',route=>route.fulfill({json:{comments,next:'',score:0,ratings:0}}));
    await page.setViewportSize({width:360,height:850});await page.goto('/titles/'+(fixture.title_slug||fixture.title_id)+'?tab=comments');

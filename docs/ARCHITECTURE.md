@@ -95,6 +95,8 @@ The initial flat scaffold has been replaced by platform adapters, a Gin HTTP tra
 
 ## Catalogue age classification contract
 
+Public title details expose `comment_count`: visible, non-deleted title-discussion messages including replies, excluding release-specific discussions. Hidden/deleted placeholders do not count. `chapter_count` remains the complete visible chapter total, independent of chapter search/paging. Comment creation/removal refreshes the title data so tab badges follow the server result. Studio project cards use a separate additive DTO: their chapter total counts distinct chapters with releases belonging to that project, while score/vote count belongs to the title and excludes blocked raters; membership scope and paging remain server-side.
+
 `age_rating` is an integer: `0` means unclassified, and `12`, `16`, `18` are explicit editorial classifications. Existing titles default to `0`; the migration never assumes `12+`. Public summaries and details return the value. `GET /api/v1/titles?age_rating=18` filters the exact classification; `0` selects unclassified titles, and omission/empty value selects all classifications. Invalid values are rejected.
 
 Only an administrator may change title metadata. On an update, omitted `age_rating` preserves the stored classification for older clients; explicit `0` clears it. This additive field does not introduce a reader access gate, a new genre, or automatic content classification.

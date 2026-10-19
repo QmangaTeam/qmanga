@@ -13,7 +13,7 @@ export interface Summary {
 }
 export interface Project { id: string; titleId: string; teamId: string; titleName: string; titleSlug: string; teamName: string; teamSlug: string; status: string }
 export interface TitleDetail {categories?:Genre[];collections?:Collection[];ageRating?:AgeRating;listed?:boolean; authors?:string[]; featured?:boolean;
- publication?:Publication; chapterCount?:number; readerCount?:number; ratingDistribution?:number[];
+ publication?:Publication; commentCount?:number; chapterCount?:number; readerCount?:number; ratingDistribution?:number[];
  id: string; slug: string; name: string; originalName: string; aliases: string[]; kind: Kind; originalStatus: OriginalStatus; translationStatus: TranslationStatus;
  description: string; direction: 'ltr' | 'rtl'; demo: boolean; coverURL: string; score: number; ratingCount: number; genres: Genre[]; projects: Project[];
 }

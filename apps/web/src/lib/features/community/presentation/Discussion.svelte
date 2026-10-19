@@ -5,6 +5,7 @@
  import type {CommunityGateway,Comment} from '../application/community';
  import {validComment} from '../domain/content';
  import {onMount,tick} from 'svelte';
+ import {invalidateAll} from '$app/navigation';
  import ReportForm from './ReportForm.svelte';
  import CommentBody from './CommentBody.svelte';
  let {titleId,titleSlug='',releaseId='',gateway,showReport=true}:{titleId:string;titleSlug?:string;releaseId?:string;gateway:CommunityGateway;showReport?:boolean}=$props();
@@ -16,8 +17,8 @@
  function replyTo(item:Comment){parent=item.id;editing='';body='';spoiler=false;focusEditor();}
  function editComment(item:Comment){editing=item.id;body=item.body;spoiler=item.spoiler;parent='';focusEditor();}
  function wrapSelection(marker:string){if(body.length+2*marker.length>2000)return;const start=editor?.selectionStart??body.length,end=editor?.selectionEnd??start;const selected=body.slice(start,end);body=body.slice(0,start)+marker+selected+marker+body.slice(end);requestAnimationFrame(()=>{editor?.focus();editor?.setSelectionRange(start+marker.length,end+marker.length);});}
- async function submit(){if(!account||!validComment(body)){message="comment_length";return;}busy=true;try{if(editing)await gateway.edit(account,editing,body,spoiler);else await gateway.comment(account,titleId,releaseId,parent,body,spoiler);body='';parent='';editing='';spoiler=false;await load();}catch(failure){message=failureCode(failure);}finally{busy=false;}}
- async function remove(id:string){if(!account)return;busy=true;try{await gateway.remove(account,id);await load();}catch(failure){message=failureCode(failure);}finally{busy=false;}}
+ async function submit(){if(!account||!validComment(body)){message="comment_length";return;}busy=true;try{if(editing)await gateway.edit(account,editing,body,spoiler);else await gateway.comment(account,titleId,releaseId,parent,body,spoiler);body='';parent='';editing='';spoiler=false;await load();await invalidateAll();}catch(failure){message=failureCode(failure);}finally{busy=false;}}
+ async function remove(id:string){if(!account)return;busy=true;try{await gateway.remove(account,id);await load();await invalidateAll();}catch(failure){message=failureCode(failure);}finally{busy=false;}}
  async function replies(root:Comment){busy=true;try{const existing=comments.filter(item=>item.rootId===root.id),result=await gateway.replies(root.id,existing[existing.length-1]?.id);const ids=new Set(comments.map(item=>item.id));comments=[...comments,...result.comments.filter(item=>!ids.has(item.id))];}catch{message="replies_failed";}finally{busy=false;}}
  const author=(item:Comment)=>item.displayName||copy($locale,"Оқырман · ")+item.userId.slice(-6);
 </script>

@@ -406,6 +406,15 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 			testingTarget.Fatalf("card statistics: %+v", item)
 		}
 	})
+	testingTarget.Run("title comment count excludes hidden deleted and chapter messages", func(testingTarget *testing.T) {
+		for _, query := range []string{`INSERT INTO comments(id,user_id,title_id,body) VALUES('count-root','reader',$1::varchar,'Visible root')`, `INSERT INTO comments(id,user_id,title_id,parent_id,root_id,body) VALUES('count-reply','reader',$1::varchar,'count-root','count-root','Visible reply')`, `INSERT INTO comments(id,user_id,title_id,body,is_hidden) VALUES('count-hidden','reader',$1::varchar,'Hidden',true)`, `INSERT INTO comments(id,user_id,title_id,body,deleted_at) VALUES('count-deleted','reader',$1::varchar,'Deleted',now())`, `INSERT INTO comments(id,user_id,title_id,release_id,body) SELECT 'count-chapter','reader',$1::varchar,release.id,'Chapter message' FROM releases release JOIN chapters chapter ON chapter.id=release.chapter_id WHERE chapter.title_id=$1::varchar LIMIT 1`} {
+			execute(query, title.ID)
+		}
+		detail, failure := service.Detail(ctx, title.Slug)
+		if failure != nil || detail.CommentCount != 2 {
+			testingTarget.Fatalf("visible title comments: %+v %v", detail, failure)
+		}
+	})
 	testingTarget.Run("305 published chapters are searched before pagination and ordered without duplicates", func(testingTarget *testing.T) {
 		execute(`INSERT INTO chapters(id,title_id,label,title_kk,order_num) SELECT 'long-chapter-'||number,$1,'Long '||number,'Ұзақ '||number,1000+number FROM generate_series(1,305) number`, title.ID)
 		execute(`INSERT INTO releases(id,chapter_id,project_id,team_id,status,current_revision_id) SELECT 'long-release-'||number,'long-chapter-'||number,$1,'team','published','long-revision-'||number FROM generate_series(1,305) number`, projectID)

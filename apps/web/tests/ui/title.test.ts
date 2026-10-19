@@ -29,3 +29,15 @@ test('title distinguishes explicit age ratings without classifying unknown title
  expect(adult).toContain('18+');
  expect(await elements(render(Title).body,'.age-rating')).toHaveLength(0);
 });
+
+ test('title tabs show complete chapter and comment counts and chapter search uses icon actions',async()=>{
+  const html=render(Title).body;
+  expect(await elements(html,'.title-tabs .tab-count')).toHaveLength(2);
+  const counts:string[]=[];
+  await new HTMLRewriter().on('.title-tabs .tab-count',{text(chunk){counts.push(chunk.text);}}).transform(new Response(html)).text();
+  expect(counts.join('')).toBe('18512');
+  expect(await elements(html,'.chapter-search select')).toHaveLength(0);
+  expect(await elements(html,'.chapter-search button[name="sort"][value="asc"]')).toHaveLength(1);
+  expect(await elements(html,'.chapter-search button[name="sort"][value="desc"]')).toHaveLength(1);
+  expect(await elements(html,'.search-field svg')).toHaveLength(0);
+ });

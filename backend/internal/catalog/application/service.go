@@ -34,6 +34,7 @@ type Page struct {
 	Next  *Cursor
 }
 type Detail struct {
+	CommentCount       int
 	ChapterCount       int
 	ReaderCount        int
 	RatingDistribution [10]int

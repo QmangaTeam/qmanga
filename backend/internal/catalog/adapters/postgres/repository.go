@@ -228,7 +228,8 @@ func (repository *Repository) detail(ctx context.Context, condition, id string, 
 	projectCondition := `outer_project.title_id=$1`
 	failure = repository.pool.QueryRow(ctx, `SELECT
  (SELECT count(DISTINCT chapter.id)`+publicationJoins+`WHERE chapter.title_id=$1 AND `+publicationVisible+`),
- (SELECT count(*) FROM reading_progress progress JOIN users reader ON reader.id=progress.user_id AND NOT reader.is_blocked WHERE progress.title_id=$1)`, title.ID).Scan(&detail.ChapterCount, &detail.ReaderCount)
+ (SELECT count(*) FROM reading_progress progress JOIN users reader ON reader.id=progress.user_id AND NOT reader.is_blocked WHERE progress.title_id=$1),
+ (SELECT count(*) FROM comments WHERE title_id=$1 AND release_id IS NULL AND NOT is_hidden AND deleted_at IS NULL)`, title.ID).Scan(&detail.ChapterCount, &detail.ReaderCount, &detail.CommentCount)
 	if failure != nil {
 		return detail, failure
 	}
