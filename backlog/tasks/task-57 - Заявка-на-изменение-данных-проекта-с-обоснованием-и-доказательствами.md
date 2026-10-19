@@ -5,7 +5,7 @@ status: In Progress
 assignee:
   - '@codex'
 created_date: '2026-10-19 00:11'
-updated_date: '2026-10-19 00:48'
+updated_date: '2026-10-19 00:55'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -55,4 +55,6 @@ ordinal: 31026
 Дополнительное прямое уточнение владельца: «баннер и обложку через модерацию тоже». Ручная загрузка, замена, удаление и выбор страницы как обложки должны создавать заявку; старые прямые endpoints не должны обходить модерацию. До решения текущие изображения сохраняются.
 
 Начат domain: типизированные предлагаемые сведения без административных переключателей, независимые evidence, keep/replace/remove для изображений, canonical snapshot hash с таксономией/обложкой/баннером. Domain regression сначала red, затем Go catalog/domain green. Workflow/хранение/HTTP/UI ещё не реализованы; старые прямые ручные cover endpoints будут закрыты при переводе UI на заявки до выпуска.
+
+Добавлен application coordinator: ACL/версия/валидность проверяются до обработки байтов, изображения только обработанные WebP с разными пределами cover/banner/evidence, приватная загрузка до создания заявки, очистка отказавших загрузок с проверкой неизвестного commit-результата (не удалять возможно сохранённые изображения). Application tests red→green. ImageMagick ProcessArtwork добавляет banner 1600×800 и evidence 2000×3000/5MiB, сохраняет прежний cover 720×1200/25MiB; реальные PNG→WebP тесты и весь пакет imagemagick green. Схема/репозиторий/HTTP/UI/moderation ещё впереди.
 <!-- SECTION:NOTES:END -->
