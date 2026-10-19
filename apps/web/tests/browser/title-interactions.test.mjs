@@ -62,8 +62,7 @@ test('title rating saves independently and updates its distribution', {timeout:3
   await page.goto('/titles/'+title.slug);
   await page.getByRole('button',{name:'Оценить тайтл'}).click();
   const dialog=page.getByRole('dialog',{name:'Оценить тайтл'});
-  await dialog.getByRole('combobox',{name:'Ваша оценка'}).selectOption('7');
-  await dialog.getByRole('button',{name:'Сохранить'}).click();
+  await dialog.getByRole('button',{name:'7 / 10',exact:true}).click();
   await dialog.waitFor({state:'hidden'});
   await page.getByRole('button',{name:/Статистика/}).click();
   const bar=page.locator('.stats-dialog .rating-bar').filter({has:page.locator('span').filter({hasText:/^7$/})});
