@@ -63,6 +63,12 @@ test('global search submits to catalogue and preserves locale-specific accessibl
  }
 });
 
+test('header brand shows the Qmanga logo image while the link keeps its text name',async()=>{
+ const html=render(Discovery).body;
+ expect((await elements(html,'header a.wordmark img'))[0]).toMatchObject({alt:'',src:'/brand/qmanga.png',width:'288',height:'96'});
+ expect((await elements(html,'header a.wordmark'))[0]['aria-label']).toBe('Qmanga');
+});
+
 test('cover classification keeps native links and never labels unclassified content',async()=>{
  expect(await elements(render(Discovery).body,'.cover-card .age-rating')).toHaveLength(0);
  const html=render(Discovery,{props:{ageRating:18}}).body;
