@@ -1,9 +1,11 @@
 ---
 id: TASK-37
 title: Внешний вид ниже настроек аккаунта
-status: To Do
-assignee: []
+status: Review
+assignee:
+  - '@codex'
 created_date: '2026-10-19 00:02'
+updated_date: '2026-10-19 00:06'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -32,5 +34,17 @@ ordinal: 11026
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Блок языка и темы расположен после настроек аккаунта.
+- [x] #1 Блок языка и темы расположен после настроек аккаунта.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Переставить внешний вид после аккаунта в DOM, сохранив настройки языка и темы. Проверить Svelte и сборку.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Внешний вид перенесён после аккаунта в DOM. Порядок видимых секций подтверждён браузерным тестом на интегрированной Docker-сборке localhost:8080. Svelte 0 ошибок/предупреждений, сборка и 31 SSR-тест прошли. Выпуск и приёмка владельцем ещё не выполнены.
+<!-- SECTION:NOTES:END -->
