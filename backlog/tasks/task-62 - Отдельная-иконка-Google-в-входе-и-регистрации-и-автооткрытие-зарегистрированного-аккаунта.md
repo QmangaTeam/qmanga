@@ -3,11 +3,11 @@ id: TASK-62
 title: >-
   Отдельная иконка Google в входе и регистрации и автооткрытие
   зарегистрированного аккаунта
-status: In Progress
+status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-19 02:11'
-updated_date: '2026-10-19 04:43'
+updated_date: '2026-10-19 04:54'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -52,4 +52,10 @@ Backend реализован по TDD (4075029): RED — два падения (
 Frontend реализован (a4d46cc): официальные четырёхцветные пути Google G (aria-hidden, 18px) в ghost-кнопке входа и регистрации; конфликтное сообщение переписано только для оставшихся случаев («этот Google уже связан с другим аккаунтом», kk/ru). Дополнительная проверка иконки в google-profile.test.mjs (svg path #4285F4). svelte-check 0/0, architecture, contrast, 35 ui-тестов — без ошибок. Полный browser suite и Docker build выполняются перед описанием выпуска.
 
 Независимый review субагентом (b0065a3..a4d46cc, сессия ses_ead8dad87ffeY7j1F2RCaZvxik): критических нет; вердикт «Ready to merge with fixes». Приняты и исправлены: (1) Important — RUNBOOK параграф Google-приёмки и OPERATIONS Guide переписаны под новую модель авто-привязки (заблокированный/уже-привязанный — отказ, один Google на аккаунт); (2) Minor — конфликтный текст стал универсальным («не удалось войти по этой почте, войди по паролю»), чтобы не утверждать ложь для заблокированного случая; (3) Minor — при 23505 в авто-привязке читается занятая identity строка, чтобы параллельные логины того же identity не получали спurious конфликт; (4) Minor — тест дополнил проверкой отказa receipt-импорта для email-совпавшего существующего аккаунта; (5) Minor — заметка в ARCHITECTURE о том, что авто-привязка не создаёт permission на существующий аккаунт. Frontend-чеки и ui-тесты после правок снова чисты.
+
+Follow-up review 2 ( ses_ead86e05cffeNcKmYuPb4XTdiV) подвердил фиксации документации/копирайта, но верно указал: 1) re-lookup после 23505 без savepoint недостижим 25P02 — транзакция в abort; 2) добавленный receipt-тест порог use уже-bound identity и не порог use guard. Исправлено a1d1dc9: вставка identity в savepoint qmanga_identity_insert, ROLLBACK TO и повторный чтение за победившего логина; тест receipt-импорта активно всё-существующую identity, затем новую GoogleAccountForImport и отказ из allowed; добавлен TestGoogleConcurrentEmailMatchLogins — два параллельных GoogleAccount по одному identity возвращают один и тот же аккаунт без ошибки; gofmt домен account_test. Прогон TestGoogле  пакет постгрес — зелёный.
+
+Уточнение к предыдущей заметке (в ней опечатки): follow-up review 2 (ses_ead86e05cffeNcKmYuPb4XTdiV) подтвердил исправление документации и копирайта, но выдал предостережения. (1) Повторное чтение после 23505 в той же транзакции было недостижимо: PostgreSQL посылает транзакцию в состояние aborted (25P02). (2) Тест receipt-пути использовал уже привязанную identity и не покрывал реальную правку. Оба исправлены в a1d1dc9: INSERT external_identities окружён SAVEPOINT qmanga_identity_insert; при 23505лужбе для существующего аккаунта выполняется ROLLBACK TO SAVEPOINT и повторное чтение строки победившего параллельного логина; тест receipt-сперва удаляет привязку, затем GoogleAccountForImport по email-matched аккаунту и проверяет отказ RegistrationImportAllowed; добавлен тест TestGoogleConcurrentEmailMatchLogins — два параллельных GoogleAccount по одному identity возвращают один и тот же аккаунт без ошибок; gofmt исправлен для domain/account_test.go. Прогон TestGoogle в пакете adapters/postgres зелёный; полный набор выполняется.
+
+Итог (19 октября 2026). Реализовано: backend a1d1dc9 (авто-привязка подтверждённой Google-почты к незаблокированному аккаунту в той же транзакции; savepoint qmanga_identity_insert для параллельных логинов; конфликт для второго identity/заблокированного; приём гостевого receipt-импорта не расширен), frontend a4d46cc+979b566 (иконка Google в кнопках входа/регистрации, универсальный kk/ru конфликтный текст), документация 979b566 (RUNBOOK, OPERATIONS, ARCHITECTURE под новую модель). Проверки локально: полный go test ./... на реальном PostgreSQL — без ошибок и пропусков; svelte-check 0/0; architecture/contrast; ui-тесты 35/35; web build; целевая браузерная регрессия 4/4 (иконка, Google-регистрация, привязка из настроек, импорт чтения). Независимый review проведён трижды субагентами; финальный вердикт: Ready to merge, Yes. Осталось перед выпуском: полный локальный browser suite на disposable-затемнении, push (авторизация владельца), CI на том же SHA, staging, наблюдаемый выпуск production и обновление карточки фактами выпуска.
 <!-- SECTION:NOTES:END -->
