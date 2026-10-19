@@ -43,6 +43,7 @@
  function choose(item:Genre){
   if(!selected.includes(item.slug))onchange([...selected,item.slug]);
   query='';
+  open=false;
  }
  function remove(slug:string){
   onchange(selected.filter(item=>item!==slug));
@@ -95,6 +96,7 @@
  .tag-search-field{position:relative;display:flex;align-items:center;min-width:0}
  .tag-search-field input{width:100%;min-width:0;min-height:44px;padding:10px 44px 10px 12px;border:1px solid var(--muted);border-radius:8px;background:var(--panel);color:var(--text);font:inherit;font-size:16px;line-height:1.4}
  .tag-search-field input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+ .tag-search-field input::-webkit-search-cancel-button{-webkit-appearance:none;appearance:none;display:none}
  .tag-search-clear{position:absolute;right:2px;display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:0;border-radius:8px;background:none;color:var(--muted);cursor:pointer}
  .tag-search-clear:hover{color:var(--text)}
  .tag-search-clear:focus-visible{outline:2px solid var(--accent);outline-offset:1px}

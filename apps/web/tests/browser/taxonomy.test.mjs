@@ -47,7 +47,8 @@ test('taxonomy admin CRUD, title assignment and public combined URL filters',{ti
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
     const fields=width<1024?page.getByRole('dialog'):page.locator('aside.catalogue-filters');
     if(width<1024)await page.getByRole('button',{name:locale==='ru'?'Фильтры':'Сүзгілер',exact:true}).click();
-    assert.equal(await fields.locator('select[name="category"]').inputValue(),slug);assert.equal(await fields.locator('select[name="collection"]').inputValue(),slug);assert.equal(await fields.locator('select[name="genre"]').inputValue(),slug);assert.equal(await fields.locator('select[name="age_rating"]').inputValue(),'18');
+    assert.equal(await fields.locator('select[name="category"]').inputValue(),slug);assert.equal(await fields.locator('select[name="collection"]').inputValue(),slug);assert.equal(await fields.locator('input[type="hidden"][name="genre"]').inputValue(),slug);assert.equal(await fields.locator('select[name="age_rating"]').inputValue(),'18');
+    assert.equal((await fields.locator('.tag-search-selected button').first().textContent()).trim(),name);
     await fields.getByRole('button',{name:locale==='ru'?'Применить':'Қолдану',exact:true}).click();
     await page.waitForURL(url=>url.searchParams.get('category')===slug&&url.searchParams.get('collection')===slug);assert.equal(new URL(page.url()).searchParams.get('age_rating'),'18');
    }
