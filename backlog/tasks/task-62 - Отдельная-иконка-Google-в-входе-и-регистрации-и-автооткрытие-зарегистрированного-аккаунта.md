@@ -7,7 +7,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-19 02:11'
-updated_date: '2026-10-19 04:54'
+updated_date: '2026-10-19 05:13'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -58,4 +58,6 @@ Follow-up review 2 ( ses_ead86e05cffeNcKmYuPb4XTdiV) подвердил фикс
 Уточнение к предыдущей заметке (в ней опечатки): follow-up review 2 (ses_ead86e05cffeNcKmYuPb4XTdiV) подтвердил исправление документации и копирайта, но выдал предостережения. (1) Повторное чтение после 23505 в той же транзакции было недостижимо: PostgreSQL посылает транзакцию в состояние aborted (25P02). (2) Тест receipt-пути использовал уже привязанную identity и не покрывал реальную правку. Оба исправлены в a1d1dc9: INSERT external_identities окружён SAVEPOINT qmanga_identity_insert; при 23505лужбе для существующего аккаунта выполняется ROLLBACK TO SAVEPOINT и повторное чтение строки победившего параллельного логина; тест receipt-сперва удаляет привязку, затем GoogleAccountForImport по email-matched аккаунту и проверяет отказ RegistrationImportAllowed; добавлен тест TestGoogleConcurrentEmailMatchLogins — два параллельных GoogleAccount по одному identity возвращают один и тот же аккаунт без ошибок; gofmt исправлен для domain/account_test.go. Прогон TestGoogle в пакете adapters/postgres зелёный; полный набор выполняется.
 
 Итог (19 октября 2026). Реализовано: backend a1d1dc9 (авто-привязка подтверждённой Google-почты к незаблокированному аккаунту в той же транзакции; savepoint qmanga_identity_insert для параллельных логинов; конфликт для второго identity/заблокированного; приём гостевого receipt-импорта не расширен), frontend a4d46cc+979b566 (иконка Google в кнопках входа/регистрации, универсальный kk/ru конфликтный текст), документация 979b566 (RUNBOOK, OPERATIONS, ARCHITECTURE под новую модель). Проверки локально: полный go test ./... на реальном PostgreSQL — без ошибок и пропусков; svelte-check 0/0; architecture/contrast; ui-тесты 35/35; web build; целевая браузерная регрессия 4/4 (иконка, Google-регистрация, привязка из настроек, импорт чтения). Независимый review проведён трижды субагентами; финальный вердикт: Ready to merge, Yes. Осталось перед выпуском: полный локальный browser suite на disposable-затемнении, push (авторизация владельца), CI на том же SHA, staging, наблюдаемый выпуск production и обновление карточки фактами выпуска.
+
+Выпуск того же пакета SHA f4d73ef… (run 39202510720): staging poller, production release.sh на green, внешние проверки health/SHA/логотип 200. Локальная приемка и наблюдаемый выпуск одного SHA выполнены; остаётся подтверждение владельца на production: реальный вход Google существующим email-аккаунтом происходит с авто-связкой. Статус остаётся Review до этого подтверждения.
 <!-- SECTION:NOTES:END -->

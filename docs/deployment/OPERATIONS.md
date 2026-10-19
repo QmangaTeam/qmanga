@@ -6,6 +6,8 @@
 
 2026-10-19: staging и production выпущены на `18eb4fdf02ee050b2cc2915195e03580a4a80594`; внешние HTTPS health/homepage и Google enabled проверены. [Verify Qmanga 39186717189](https://github.com/maqsatto/qmanga/actions/runs/39186717189): acceptance и все три ARM64 images success. Локально 50/50 browser, PostgreSQL/HTTP/codecs, frontend и независимый review. Перед продолжением заново прочитай live state: эта запись историческая.
 
+2026-10-19 (вечер): staging и production выпущены на `f4d73ef9a047810e766f10be930e1089b2e01085` (TASK-62, TASK-63, служебный плагин graphify). [Verify Qmanga 39202510720](https://github.com/maqsatto/qmanga/actions/runs/39202510720): acceptance и все три ARM64 images success; SSH-deploy job штатно skipped. Staging поднят poller-ом, production переведён `release.sh production` на green, предыдущая раскладка (blue) остаётся тёплой для отката. Внешние проверки: health 200, главная отдаёт SHA, `/brand/qmanga.png` и `/brand/qmanga-light.png` 200 на staging и production. Ждёт подтверждения владельца: авто-связка существующих email-аккаунтов при реальном входе Google (TASK-62, статус Review).
+
 ## Адреса и доступ
 
 | Назначение | Адрес / путь |
