@@ -44,6 +44,8 @@ func (p *Provider) Exchange(ctx context.Context, code, nonce, verifier string) (
 	}
 	var claims struct {
 		Email           string `json:"email"`
+		Name            string `json:"name"`
+		Picture         string `json:"picture"`
 		EmailVerified   bool   `json:"email_verified"`
 		AuthorizedParty string `json:"azp"`
 	}
@@ -53,5 +55,5 @@ func (p *Provider) Exchange(ctx context.Context, code, nonce, verifier string) (
 	if claims.AuthorizedParty != "" && claims.AuthorizedParty != p.config.ClientID {
 		return application.GoogleIdentity{}, fmt.Errorf("invalid authorized party")
 	}
-	return application.GoogleIdentity{Issuer: "https://accounts.google.com", Subject: id.Subject, Email: claims.Email, Verified: claims.EmailVerified}, nil
+	return application.GoogleIdentity{Issuer: "https://accounts.google.com", Subject: id.Subject, Email: claims.Email, Verified: claims.EmailVerified, Name: claims.Name, Picture: claims.Picture}, nil
 }

@@ -60,10 +60,14 @@ func TestGooglePersistenceAndAvatarVisibility(t *testing.T) {
 	if err != nil || account.ID != candidate.ID {
 		t.Fatal("new Google account", err)
 	}
+	if err = repo.UpdateProfile(ctx, account.ID, "Edited nickname"); err != nil {
+		t.Fatal(err)
+	}
+	candidate.DisplayName = "Changed Google name"
 	candidate.ID = "other"
 	candidate.Email = "different@test.local"
 	again, err := repo.GoogleAccount(ctx, identity, candidate)
-	if err != nil || again.ID != account.ID {
+	if err != nil || again.ID != account.ID || again.DisplayName != "Edited nickname" || again.Email != account.Email {
 		t.Fatal("stable subject lost", err)
 	}
 	identity.Subject = "attacker"

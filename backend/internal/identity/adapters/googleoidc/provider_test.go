@@ -35,7 +35,7 @@ func TestProviderRejectsInvalidIDTokens(t *testing.T) {
 	nonce := "0123456789012345678901234567890123456789012"
 	for _, scenario := range []string{"valid", "issuer", "audience", "expired", "nonce", "azp", "signature"} {
 		t.Run(scenario, func(t *testing.T) {
-			claims := map[string]any{"iss": "https://accounts.google.com", "aud": "client", "sub": "stable", "exp": time.Now().Add(time.Hour).Unix(), "iat": time.Now().Unix(), "nonce": nonce, "email": "reader@example.com", "email_verified": true}
+			claims := map[string]any{"iss": "https://accounts.google.com", "aud": "client", "sub": "stable", "exp": time.Now().Add(time.Hour).Unix(), "iat": time.Now().Unix(), "nonce": nonce, "email": "reader@example.com", "email_verified": true, "name": "Google Reader", "picture": "https://lh3.googleusercontent.com/a/photo"}
 			switch scenario {
 			case "issuer":
 				claims["iss"] = "https://evil.test"
@@ -70,7 +70,7 @@ func TestProviderRejectsInvalidIDTokens(t *testing.T) {
 			provider.verifier = oidc.NewVerifier("https://accounts.google.com", localKeys{&key.PublicKey}, &oidc.Config{ClientID: "client", SupportedSigningAlgs: []string{"RS256"}})
 			identity, err := provider.Exchange(context.Background(), "code", nonce, "verifier")
 			if scenario == "valid" {
-				if err != nil || identity.Subject != "stable" || !identity.Verified {
+				if err != nil || identity.Subject != "stable" || !identity.Verified || identity.Name != "Google Reader" || identity.Picture != "https://lh3.googleusercontent.com/a/photo" {
 					t.Fatalf("valid token: %+v %v", identity, err)
 				}
 			} else if err == nil {

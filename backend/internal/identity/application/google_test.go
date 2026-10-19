@@ -106,3 +106,74 @@ func TestGoogleReturnPathRejectsBrowserNormalizedRedirects(t *testing.T) {
 		}
 	}
 }
+
+func TestGoogleRegistrationDefaultsNicknameWithoutManualInput(t *testing.T) {
+	repo := &googleRepo{}
+	service := NewGoogle(repo, &googleCredentials{}, googleProvider{identity: GoogleIdentity{Issuer: "https://accounts.google.com", Subject: "stable", Email: "reader@example.com", Verified: true}}, nil)
+	state, _, err := service.Start(context.Background(), "/settings", "")
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, _, err = service.Finish(context.Background(), state, "code")
+	if !errors.Is(err, domain.ErrConflict) || repo.account.DisplayName != "reader" {
+		t.Fatalf("Google nickname default missing: %q %v", repo.account.DisplayName, err)
+	}
+}
+
+type googleLoginRepo struct {
+	googleRepo
+	Repository
+	existing domain.Account
+}
+
+func (r *googleLoginRepo) GoogleAccount(_ context.Context, _ GoogleIdentity, candidate domain.Account) (domain.Account, error) {
+	if r.existing.ID != "" {
+		return r.existing, nil
+	}
+	return candidate, nil
+}
+func (r *googleLoginRepo) SaveSession(context.Context, Session) error { return nil }
+
+type googleAvatarRecorder struct {
+	calls          int
+	owner, picture string
+}
+
+func (a *googleAvatarRecorder) ImportGoogleAvatar(_ context.Context, owner, picture string) error {
+	a.calls++
+	a.owner = owner
+	a.picture = picture
+	return errors.New("picture unavailable")
+}
+func TestGoogleDefaultsOnlyApplyToNewAccount(t *testing.T) {
+	for _, existing := range []domain.Account{{}, {ID: "existing", Email: "edited@example.com", DisplayName: "Edited nickname", Verified: true, Role: "reader"}} {
+		t.Run(existing.ID, func(t *testing.T) {
+			repo := &googleLoginRepo{existing: existing}
+			creds := &googleCredentials{}
+			avatars := &googleAvatarRecorder{}
+			service := NewGoogle(repo, creds, googleProvider{identity: GoogleIdentity{Issuer: "https://accounts.google.com", Subject: "stable", Email: "reader@example.com", Name: "  Әли 😊 O’Connor  ", Picture: "https://lh3.googleusercontent.com/a/photo", Verified: true}}, New(repo, creds, nil, ""), avatars)
+			state, _, err := service.Start(context.Background(), "/catalog", "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, path, err := service.Finish(context.Background(), state, "code")
+			if err != nil || path != "/catalog" || result.SessionToken == "" {
+				t.Fatalf("login failed: %v", err)
+			}
+			if existing.ID == "" {
+				if result.Account.DisplayName != "Әли OConnor" || result.Account.Email != "reader@example.com" || avatars.calls != 1 || avatars.owner != result.Account.ID {
+					t.Fatalf("new defaults absent: %+v %+v", result.Account, avatars)
+				}
+			} else if result.Account != existing || avatars.calls != 0 {
+				t.Fatalf("existing edits overwritten: %+v %+v", result.Account, avatars)
+			}
+		})
+	}
+}
+func TestGoogleNicknameHandlesUnusualNames(t *testing.T) {
+	for _, input := range []struct{ name, email, want string }{{"A", "x@example.com", "Google reader"}, {"😊", "reader@example.com", "reader"}, {strings.Repeat("名", 50), "x@example.com", strings.Repeat("名", 40)}, {"  Name\n Reader ", "x@example.com", "Name Reader"}} {
+		if got := googleDisplayName(input.name, input.email); got != input.want {
+			t.Errorf("nickname=%q want=%q", got, input.want)
+		}
+	}
+}

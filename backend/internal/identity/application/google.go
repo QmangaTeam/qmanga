@@ -14,6 +14,7 @@ var ErrNicknameRequired = errors.New("nickname required")
 
 type GoogleIdentity struct {
 	Issuer, Subject, Email string
+	Name, Picture          string
 	Verified               bool
 }
 type GoogleFlow struct {
@@ -29,7 +30,12 @@ type GoogleProvider interface {
 	AuthorizationURL(string, string, string) string
 	Exchange(context.Context, string, string, string) (GoogleIdentity, error)
 }
+type GoogleAvatarImporter interface {
+	ImportGoogleAvatar(context.Context, string, string) error
+}
+
 type GoogleService struct {
+	avatars     GoogleAvatarImporter
 	repository  GoogleRepository
 	credentials Credentials
 	provider    GoogleProvider
@@ -37,8 +43,12 @@ type GoogleService struct {
 	now         func() time.Time
 }
 
-func NewGoogle(repository GoogleRepository, credentials Credentials, provider GoogleProvider, identity *Service) *GoogleService {
-	return &GoogleService{repository, credentials, provider, identity, time.Now}
+func NewGoogle(repository GoogleRepository, credentials Credentials, provider GoogleProvider, identity *Service, avatars ...GoogleAvatarImporter) *GoogleService {
+	service := &GoogleService{repository: repository, credentials: credentials, provider: provider, identity: identity, now: time.Now}
+	if len(avatars) > 0 {
+		service.avatars = avatars[0]
+	}
+	return service
 }
 func SafeAuthReturn(value string) string {
 	if len(value) > 2048 {
@@ -134,7 +144,7 @@ func (s *GoogleService) finish(ctx context.Context, state, code, receiptHash str
 	if err != nil {
 		return LoginResult{}, flow.ReturnPath, err
 	}
-	candidate := domain.Account{ID: s.credentials.NewID(), Email: email, PasswordHash: hash, Role: "reader", Verified: true, DisplayName: flow.Nickname}
+	candidate := domain.Account{ID: s.credentials.NewID(), Email: email, PasswordHash: hash, Role: "reader", Verified: true, DisplayName: googleDisplayName(identity.Name, email)}
 	var account domain.Account
 	if receiptHash != "" {
 		repository, ok := s.repository.(interface {
@@ -150,6 +160,40 @@ func (s *GoogleService) finish(ctx context.Context, state, code, receiptHash str
 	if err != nil {
 		return LoginResult{}, flow.ReturnPath, err
 	}
+	// Only the freshly inserted candidate receives defaults; stable-sub logins retain edits.
+	if account.ID == candidate.ID && s.avatars != nil && identity.Picture != "" {
+		// An unavailable picture must not prevent an otherwise verified login.
+		_ = s.avatars.ImportGoogleAvatar(ctx, account.ID, identity.Picture)
+	}
 	result, err := s.identity.newSession(ctx, account)
 	return result, flow.ReturnPath, err
+}
+
+func googleDisplayName(name, email string) string {
+	clean := func(value string) string {
+		var result []rune
+		for _, r := range value {
+			if unicode.IsLetter(r) || unicode.IsNumber(r) || strings.ContainsRune(" _.-", r) {
+				result = append(result, r)
+			} else if unicode.IsSpace(r) {
+				result = append(result, ' ')
+			}
+		}
+		result = []rune(strings.Join(strings.Fields(string(result)), " "))
+		if len(result) > 40 {
+			result = result[:40]
+		}
+		normalized, err := domain.NormalizeDisplayName(strings.TrimSpace(string(result)))
+		if err != nil {
+			return ""
+		}
+		return normalized
+	}
+	if value := clean(name); value != "" {
+		return value
+	}
+	if value := clean(strings.SplitN(email, "@", 2)[0]); value != "" {
+		return value
+	}
+	return "Google reader"
 }

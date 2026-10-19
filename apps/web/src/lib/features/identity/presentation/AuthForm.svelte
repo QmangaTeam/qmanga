@@ -1,6 +1,5 @@
 <script lang="ts">
  import {onMount} from 'svelte';
- import {validNickname} from '../domain/account';
  import {page} from '$app/stores';
  import {goto,invalidateAll} from '$app/navigation';
  import {authenticate,type AuthResult,type AuthGateway} from '../application/auth';
@@ -15,7 +14,7 @@
  const {locale}=useLocale();
  let googleEnabled=$state(false);
  onMount(async()=>{googleEnabled=await gateway.googleStatus?.()||false;});
- async function googleLogin(){if(busy||!gateway.googleStart)return;if(mode==='register'&&!validNickname(displayName)){result={ok:false,code:'nickname',message:''};return;}busy=true;try{const response=await gateway.googleStart(safeReturnPath($page.url.searchParams.get('returnTo')),mode==='register'?displayName:'');if(response.url)globalThis.location.assign(response.url);else result={ok:false,code:response.code,message:''};}finally{busy=false;}}
+ async function googleLogin(){if(busy||!gateway.googleStart)return;busy=true;try{const response=await gateway.googleStart(safeReturnPath($page.url.searchParams.get('returnTo')),'');if(response.url)globalThis.location.assign(response.url);else result={ok:false,code:response.code,message:''};}finally{busy=false;}}
  let displayName=$state(''),email=$state(''),password=$state(''),busy=$state(false),result=$state<AuthResult|null>(null);
  const labels=$derived({login:text($locale,'Кіру','Войти'),register:text($locale,'Тіркелу','Регистрация'),'forgot-password':text($locale,'Құпиясөзді қалпына келтіру','Восстановить пароль'),'reset-password':text($locale,'Жаңа құпиясөз','Новый пароль'),'verify-email':text($locale,'Поштаны растау','Подтвердить почту')});
  const success=$derived(mode==='register'||mode==='forgot-password'?text($locale,'Хат жіберілді. Поштаңды тексер.','Письмо отправлено. Проверь почту.'):text($locale,'Дайын. Аккаунтқа кіруге болады.','Готово. Можно войти в аккаунт.'));
@@ -30,7 +29,7 @@
 </script>
 <svelte:head><title>{labels[mode]} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>
 <AuthLayout title={labels[mode]} description={mode==='login'?text($locale,'Кітапханаң мен оқу орныңды сақта.','Твоя библиотека и место чтения.'):mode==='register'?text($locale,'Бір аккаунт — барлық құрылғыда.','Один аккаунт на всех устройствах.'):undefined}>
- {#if $page.url.searchParams.has('google_error')}<StateMessage kind="error" title={$page.url.searchParams.get('google_error')==='conflict'?text($locale,'Бұл поштада аккаунт бар. Пошта мен құпиясөз арқылы кір. Google автоматты байланыстырылмайды.','Аккаунт с этой почтой уже существует. Войди по почте и паролю. Google автоматически не привязывается.'):$page.url.searchParams.get('google_error')==='nickname'?text($locale,'Жаңа аккаунт үшін никнейм енгізіп, Google арқылы жалғастыр.','Для нового аккаунта введи никнейм и продолжи через Google.'):text($locale,'Google арқылы кіру орындалмады. Қайталап көр.','Не удалось войти через Google. Попробуй снова.')}/>{/if}
+ {#if $page.url.searchParams.has('google_error')}<StateMessage kind="error" title={$page.url.searchParams.get('google_error')==='conflict'?text($locale,'Бұл поштада аккаунт бар. Пошта мен құпиясөз арқылы кір. Google автоматты байланыстырылмайды.','Аккаунт с этой почтой уже существует. Войди по почте и паролю. Google автоматически не привязывается.'):text($locale,'Google арқылы кіру орындалмады. Қайталап көр.','Не удалось войти через Google. Попробуй снова.')}/>{/if}
  <form onsubmit={submit}>
  {#if mode==='register'}<Field id="auth-nickname" label={text($locale,'Никнейм','Никнейм')} required hint={text($locale,'2–40 таңба: әріптер, сандар, бос орын, _ . -','2–40 символов: буквы, цифры, пробел, _ . -')}>{#snippet children(control)}<input {...control} bind:value={displayName} autocomplete="nickname" minlength="2" maxlength="40"/>{/snippet}</Field>{/if}
  {#if mode==='login'||mode==='register'||mode==='forgot-password'}<Field id="auth-email" label={text($locale,'Пошта','Почта')} required>{#snippet children(control)}<input {...control} type="email" bind:value={email} autocomplete="email" inputmode="email" maxlength="254" placeholder="name@example.com"/>{/snippet}</Field>{/if}
