@@ -55,7 +55,7 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 	execute("INSERT INTO team_memberships(id,team_id,user_id,role) VALUES('membership','team','reader','editor')")
 	repository := New(database.Pool())
 	service := application.New(repository, uuid.NewString)
-	genre, failure := service.CreateGenre(ctx, "admin", "Шытырман", "adventure")
+	genre, failure := service.CreateGenre(ctx, "admin", "Шытырман", "adventure-tales")
 	if failure != nil {
 		testingTarget.Fatal(failure)
 	}
@@ -172,13 +172,13 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 	if failure != nil || len(page.Items) != 1 || page.Items[0].ChapterCount != 4 {
 		testingTarget.Fatalf("alias/publication filtering failed: %+v %v", page, failure)
 	}
-	for _, filter := range []application.Filter{{Genre: "missing"}, {Kind: "manhwa"}, {OriginalStatus: "completed"}, {TranslationStatus: "stopped"}} {
+	for _, filter := range []application.Filter{{Genres: []string{"missing"}}, {Kind: "manhwa"}, {OriginalStatus: "completed"}, {TranslationStatus: "stopped"}} {
 		filtered, failure := service.List(ctx, filter)
 		if failure != nil || len(filtered.Items) != 0 {
 			testingTarget.Fatalf("filter ignored: %+v %v", filter, failure)
 		}
 	}
-	filtered, failure := service.List(ctx, application.Filter{Genre: "adventure", OriginalStatus: "ongoing", TranslationStatus: "ongoing", Kind: "manga"})
+	filtered, failure := service.List(ctx, application.Filter{Genres: []string{"adventure-tales"}, OriginalStatus: "ongoing", TranslationStatus: "ongoing", Kind: "manga"})
 	if failure != nil || len(filtered.Items) != 1 {
 		testingTarget.Fatal("combined filters failed", failure)
 	}

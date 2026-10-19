@@ -118,7 +118,8 @@ func (handler *CatalogHandler) list(request *gin.Context) {
 	if !valid {
 		return
 	}
-	filter := application.Filter{Query: request.Query("q"), Kind: request.Query("kind"), Genre: request.Query("genre"), Category: request.Query("category"), Collection: request.Query("collection"), OriginalStatus: request.Query("original_status"), TranslationStatus: request.Query("translation_status"), Sort: request.DefaultQuery("sort", "updated"), Featured: request.Query("featured") == "true", HasChapters: request.Query("has_chapters") == "true", Limit: limit}
+	filter := application.Filter{Query: request.Query("q"), Kind: request.Query("kind"), Category: request.Query("category"), Collection: request.Query("collection"), OriginalStatus: request.Query("original_status"), TranslationStatus: request.Query("translation_status"), Sort: request.DefaultQuery("sort", "updated"), Featured: request.Query("featured") == "true", HasChapters: request.Query("has_chapters") == "true", Limit: limit}
+	filter.Genres = request.QueryArray("genre")
 	if raw := request.Query("age_rating"); raw != "" {
 		age, err := strconv.Atoi(raw)
 		if err != nil {
@@ -149,9 +150,13 @@ func (handler *CatalogHandler) list(request *gin.Context) {
 }
 
 type genreDTO struct {
-	ID   string `json:"id"`
-	Name string `json:"name"`
-	Slug string `json:"slug"`
+	ID           string `json:"id"`
+	Name         string `json:"name"`
+	NameRU       string `json:"name_ru"`
+	Slug         string `json:"slug"`
+	CategorySlug string `json:"category_slug"`
+	ParentSlug   string `json:"parent_slug"`
+	Position     int    `json:"position"`
 }
 
 func (handler *CatalogHandler) rankings(request *gin.Context) {
@@ -209,7 +214,7 @@ func studioProjectViews(projects []application.Project) []studioProjectDTO {
 func genreViews(genres []application.Genre) []genreDTO {
 	items := make([]genreDTO, 0, len(genres))
 	for _, item := range genres {
-		items = append(items, genreDTO{item.ID, item.Name, item.Slug})
+		items = append(items, genreDTO{ID: item.ID, Name: item.Name, NameRU: item.NameRU, Slug: item.Slug, CategorySlug: item.CategorySlug, ParentSlug: item.ParentSlug, Position: item.Position})
 	}
 	return items
 }
@@ -407,7 +412,7 @@ func (handler *CatalogHandler) createGenre(request *gin.Context) {
 		catalogError(request, failure)
 		return
 	}
-	request.JSON(201, genreDTO{item.ID, item.Name, item.Slug})
+	request.JSON(201, genreDTO{ID: item.ID, Name: item.Name, Slug: item.Slug})
 }
 func (handler *CatalogHandler) createChapter(request *gin.Context) {
 	var input struct {

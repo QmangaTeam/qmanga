@@ -8,7 +8,11 @@ import (
 	"unicode/utf8"
 )
 
-type Genre struct{ ID, Name, Slug string }
+type Genre struct {
+	ID, Name, NameRU, Slug string
+	CategorySlug, ParentSlug string
+	Position                 int
+}
 type Summary struct {
 	AgeRating                                                        int
 	ID, Slug, Name, Kind, OriginalStatus, TranslationStatus, CoverID string
@@ -25,7 +29,8 @@ type Filter struct {
 	AgeRating                                                                         *int
 	HasChapters                                                                       bool
 	Featured                                                                          bool
-	Query, Kind, Genre, Category, Collection, OriginalStatus, TranslationStatus, Sort string
+	Query, Kind, Category, Collection, OriginalStatus, TranslationStatus, Sort        string
+	Genres                                                                            []string
 	Limit                                                                             int
 	After                                                                             *Cursor
 }
@@ -157,9 +162,25 @@ func (service *Service) List(ctx context.Context, filter Filter) (Page, error) {
 	if filter.TranslationStatus != "" && filter.TranslationStatus != "ongoing" && filter.TranslationStatus != "completed" && filter.TranslationStatus != "paused" && filter.TranslationStatus != "stopped" {
 		return Page{}, domain.ErrInvalid
 	}
-	if len(filter.Category) > 64 || len(filter.Collection) > 64 || len(filter.Genre) > 64 || (filter.After != nil && (filter.After.ID == "" || len(filter.After.ID) > 36 || utf8.RuneCountInString(filter.After.Name) > 200 || filter.After.UpdatedAt.IsZero())) {
+	if len(filter.Category) > 64 || len(filter.Collection) > 64 || (filter.After != nil && (filter.After.ID == "" || len(filter.After.ID) > 36 || utf8.RuneCountInString(filter.After.Name) > 200 || filter.After.UpdatedAt.IsZero())) {
 		return Page{}, domain.ErrInvalid
 	}
+	if len(filter.Genres) > 12 {
+		return Page{}, domain.ErrInvalid
+	}
+	seenGenres := map[string]bool{}
+	selected := make([]string, 0, len(filter.Genres))
+	for _, slug := range filter.Genres {
+		if !domain.ValidSlug(slug) {
+			return Page{}, domain.ErrInvalid
+		}
+		if seenGenres[slug] {
+			continue
+		}
+		seenGenres[slug] = true
+		selected = append(selected, slug)
+	}
+	filter.Genres = selected
 	return service.repository.List(ctx, filter)
 }
 

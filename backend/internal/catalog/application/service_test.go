@@ -54,9 +54,15 @@ func TestCatalogueFilterValidation(testingTarget *testing.T) {
 	if repository.filter.Limit != 24 || repository.filter.Query != "әлем" || repository.filter.Sort != "updated" {
 		testingTarget.Fatalf("incorrect defaults: %+v", repository.filter)
 	}
-	for _, filter := range []Filter{{Query: strings.Repeat("ә", 81)}, {Sort: "raw-sql"}, {Kind: "novel"}, {OriginalStatus: "secret"}, {TranslationStatus: "secret"}} {
+	for _, filter := range []Filter{{Query: strings.Repeat("ә", 81)}, {Sort: "raw-sql"}, {Kind: "novel"}, {OriginalStatus: "secret"}, {TranslationStatus: "secret"}, {Genres: []string{"not a slug"}}, {Genres: make([]string, 13)}} {
 		if _, failure := service.List(context.Background(), filter); !errors.Is(failure, domain.ErrInvalid) {
 			testingTarget.Fatalf("invalid filter accepted: %+v", filter)
 		}
+	}
+	if _, failure := service.List(context.Background(), Filter{Genres: []string{"horror", "horror", "magic"}}); failure != nil {
+		testingTarget.Fatal(failure)
+	}
+	if len(repository.filter.Genres) != 2 || repository.filter.Genres[0] != "horror" || repository.filter.Genres[1] != "magic" {
+		testingTarget.Fatalf("repeated tag not folded: %+v", repository.filter.Genres)
 	}
 }

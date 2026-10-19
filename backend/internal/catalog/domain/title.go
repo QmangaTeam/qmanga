@@ -85,5 +85,8 @@ func ValidateChapter(label string, order int) error {
 	return nil
 }
 func ValidGenre(name, slug string) bool {
-	return utf8.RuneCountInString(strings.TrimSpace(name)) > 0 && utf8.RuneCountInString(name) <= 80 && slugPattern.MatchString(slug) && len(slug) <= 64
+	return utf8.RuneCountInString(strings.TrimSpace(name)) > 0 && utf8.RuneCountInString(name) <= 80 && ValidSlug(slug)
+}
+func ValidSlug(slug string) bool {
+	return slugPattern.MatchString(slug) && len(slug) <= 64
 }

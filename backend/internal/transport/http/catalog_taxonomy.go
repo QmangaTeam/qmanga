@@ -54,7 +54,7 @@ func (handler *CatalogHandler) saveTaxon(kind string) gin.HandlerFunc {
 			catalogError(request, err)
 			return
 		}
-		request.JSON(200, genreDTO{item.ID, item.Name, item.Slug})
+		request.JSON(200, genreDTO{ID: item.ID, Name: item.Name, Slug: item.Slug})
 	}
 }
 func (handler *CatalogHandler) deleteTaxon(kind string) gin.HandlerFunc {

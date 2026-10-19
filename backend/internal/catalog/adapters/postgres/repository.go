@@ -70,15 +70,16 @@ func (repository *Repository) List(ctx context.Context, filter application.Filte
 	}
 	if filter.Query != "" {
 		escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(filter.Query)
-		conditions = append(conditions, "title.search_text LIKE "+bind("%"+escaped+"%"))
+		pattern := "%" + escaped + "%"
+		conditions = append(conditions, "(title.search_text LIKE "+bind(pattern)+" OR EXISTS(SELECT 1 FROM title_genres mapping JOIN genres genre ON genre.id=mapping.genre_id WHERE mapping.title_id=title.id AND (lower(genre.name_kk) LIKE "+bind(pattern)+" OR lower(genre.name_ru) LIKE "+bind(pattern)+")))")
 	}
 	for _, constraint := range []struct{ column, value string }{{"title.type", filter.Kind}, {"title.status_original", filter.OriginalStatus}, {"title.status_translation", filter.TranslationStatus}} {
 		if constraint.value != "" {
 			conditions = append(conditions, constraint.column+"="+bind(constraint.value))
 		}
 	}
-	if filter.Genre != "" {
-		conditions = append(conditions, `EXISTS(SELECT 1 FROM title_genres mapping JOIN genres genre ON genre.id=mapping.genre_id WHERE mapping.title_id=title.id AND genre.slug=`+bind(filter.Genre)+`)`)
+	for _, slug := range filter.Genres {
+		conditions = append(conditions, `EXISTS(SELECT 1 FROM title_genres mapping JOIN genres genre ON genre.id=mapping.genre_id WHERE mapping.title_id=title.id AND genre.slug=`+bind(slug)+`)`)
 	}
 	if filter.Category != "" {
 		conditions = append(conditions, `EXISTS(SELECT 1 FROM title_categories mapping JOIN categories category ON category.id=mapping.category_id WHERE mapping.title_id=title.id AND category.slug=`+bind(filter.Category)+`)`)
@@ -170,13 +171,13 @@ func (repository *Repository) detail(ctx context.Context, condition, id string, 
 	if failure != nil {
 		return detail, failure
 	}
-	rows, failure := repository.pool.Query(ctx, `SELECT genre.id,genre.name_kk,genre.slug FROM genres genre JOIN title_genres mapping ON mapping.genre_id=genre.id WHERE mapping.title_id=$1 ORDER BY genre.name_kk`, title.ID)
+	rows, failure := repository.pool.Query(ctx, `SELECT genre.id,genre.name_kk,genre.name_ru,genre.slug,COALESCE(category.slug,''),genre.parent_slug,genre.position FROM genres genre LEFT JOIN categories category ON category.id=genre.category_id JOIN title_genres mapping ON mapping.genre_id=genre.id WHERE mapping.title_id=$1 ORDER BY genre.name_kk`, title.ID)
 	if failure != nil {
 		return detail, failure
 	}
 	for rows.Next() {
 		var genre application.Genre
-		if failure = rows.Scan(&genre.ID, &genre.Name, &genre.Slug); failure != nil {
+		if failure = rows.Scan(&genre.ID, &genre.Name, &genre.NameRU, &genre.Slug, &genre.CategorySlug, &genre.ParentSlug, &genre.Position); failure != nil {
 			rows.Close()
 			return detail, failure
 		}
@@ -345,7 +346,7 @@ func (repository *Repository) Chapters(ctx context.Context, slug string, filter 
 }
 
 func (repository *Repository) Genres(ctx context.Context) ([]application.Genre, error) {
-	rows, failure := repository.pool.Query(ctx, "SELECT id,name_kk,slug FROM genres ORDER BY name_kk")
+	rows, failure := repository.pool.Query(ctx, "SELECT genre.id,genre.name_kk,genre.name_ru,genre.slug,COALESCE(category.slug,''),genre.parent_slug,genre.position FROM genres genre LEFT JOIN categories category ON category.id=genre.category_id ORDER BY COALESCE(category.name_kk,''),genre.position,genre.name_kk")
 	if failure != nil {
 		return nil, failure
 	}
@@ -353,7 +354,7 @@ func (repository *Repository) Genres(ctx context.Context) ([]application.Genre, 
 	items := []application.Genre{}
 	for rows.Next() {
 		var item application.Genre
-		if failure = rows.Scan(&item.ID, &item.Name, &item.Slug); failure != nil {
+		if failure = rows.Scan(&item.ID, &item.Name, &item.NameRU, &item.Slug, &item.CategorySlug, &item.ParentSlug, &item.Position); failure != nil {
 			return nil, failure
 		}
 		items = append(items, item)

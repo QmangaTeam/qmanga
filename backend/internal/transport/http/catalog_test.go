@@ -77,3 +77,26 @@ func TestCatalogueAgeQueryIncludesUnknownAndPublicDTO(t *testing.T) {
 		}
 	}
 }
+
+func TestCatalogueAcceptsSeveralTagsAndRejectsBrokenOnes(t *testing.T) {
+	repo := &catalogueRepository{}
+	router := NewRouter(nil)
+	NewCatalogHandler(application.New(repo, func() string { return "id" })).Register(router.Group("/api/v1"), NewIdentityHandler(nil, "http://localhost:8080", false))
+	response := httptest.NewRecorder()
+	router.ServeHTTP(response, httptest.NewRequest("GET", "/api/v1/titles?genre=horror&genre=magic", nil))
+	if response.Code != 200 || len(repo.filter.Genres) != 2 || repo.filter.Genres[0] != "horror" || repo.filter.Genres[1] != "magic" {
+		t.Fatalf("several tags lost: %d %+v", response.Code, repo.filter.Genres)
+	}
+	repeated := httptest.NewRecorder()
+	router.ServeHTTP(repeated, httptest.NewRequest("GET", "/api/v1/titles?genre=horror&genre=horror", nil))
+	if repeated.Code != 200 || len(repo.filter.Genres) != 1 || repo.filter.Genres[0] != "horror" {
+		t.Fatalf("repeated tag not folded: %d %+v", repeated.Code, repo.filter.Genres)
+	}
+	for _, path := range []string{"titles?genre=not%20a%20slug", "titles?genre=horror&genre=bad%2Fslug"} {
+		broken := httptest.NewRecorder()
+		router.ServeHTTP(broken, httptest.NewRequest("GET", "/api/v1/"+path, nil))
+		if broken.Code != 400 && broken.Code != 422 {
+			t.Fatalf("broken tag accepted: %s %d", path, broken.Code)
+		}
+	}
+}

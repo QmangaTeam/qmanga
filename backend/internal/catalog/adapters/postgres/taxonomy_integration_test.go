@@ -52,7 +52,7 @@ func TestTaxonomyPersistenceAuthorizationAndFilters(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	genre, err := service.SaveTaxon(ctx, "admin", "genres", "", "Adventure", "adventure")
+	genre, err := service.SaveTaxon(ctx, "admin", "genres", "", "Adventure", "adventure-tales")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -95,11 +95,11 @@ func TestTaxonomyPersistenceAuthorizationAndFilters(t *testing.T) {
 	if err != nil || len(adminTaxonomy.Collections[0].TitleIDs) != 3 {
 		t.Fatal("admin lost hidden member", err)
 	}
-	page, err := service.List(ctx, application.Filter{Category: category.Slug, Collection: collection.Slug, Genre: genre.Slug, AgeRating: &adult, Sort: "name", Limit: 1})
+	page, err := service.List(ctx, application.Filter{Category: category.Slug, Collection: collection.Slug, Genres: []string{genre.Slug}, AgeRating: &adult, Sort: "name", Limit: 1})
 	if err != nil || len(page.Items) != 1 || page.Items[0].ID != first.ID || page.Next == nil {
 		t.Fatal("combined filters/pagination failed", err, page)
 	}
-	page, err = service.List(ctx, application.Filter{Category: category.Slug, Collection: collection.Slug, Genre: genre.Slug, AgeRating: &adult, Sort: "name", Limit: 1, After: page.Next})
+	page, err = service.List(ctx, application.Filter{Category: category.Slug, Collection: collection.Slug, Genres: []string{genre.Slug}, AgeRating: &adult, Sort: "name", Limit: 1, After: page.Next})
 	if err != nil || len(page.Items) != 1 || page.Items[0].ID != second.ID || page.Next != nil {
 		t.Fatal("next filter page failed", err, page)
 	}

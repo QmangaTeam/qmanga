@@ -15,13 +15,13 @@ func (repository *Repository) Taxonomy(ctx context.Context, admin bool) (applica
 	if err != nil {
 		return result, err
 	}
-	rows, err := repository.pool.Query(ctx, "SELECT id,name_kk,slug FROM categories ORDER BY name_kk,id")
+	rows, err := repository.pool.Query(ctx, "SELECT id,name_kk,name_ru,slug FROM categories ORDER BY name_kk,id")
 	if err != nil {
 		return result, err
 	}
 	for rows.Next() {
 		var item application.Genre
-		if err = rows.Scan(&item.ID, &item.Name, &item.Slug); err != nil {
+		if err = rows.Scan(&item.ID, &item.Name, &item.NameRU, &item.Slug); err != nil {
 			rows.Close()
 			return result, err
 		}
