@@ -20,10 +20,11 @@ function New-TestClient {
     $clients.Add($client)
     return $client
 }
-function Send-Api($Client, [string]$Method, [string]$Path, $Body = $null, [string]$Csrf = '', [int]$Expected = 200) {
+function Send-Api($Client, [string]$Method, [string]$Path, $Body = $null, [string]$Csrf = '', [int]$Expected = 200, [string]$Account = '') {
     $request = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::new($Method), "$AppUrl/api/v1/$Path")
     $request.Headers.Add('Origin', ([uri]$AppUrl).GetLeftPart([System.UriPartial]::Authority))
     if ($Csrf) { $request.Headers.Add('X-CSRF-Token', $Csrf) }
+    if ($Account) { $request.Headers.Add('X-Qmanga-Account', $Account) }
     if ($null -ne $Body) { $request.Content = [System.Net.Http.StringContent]::new(($Body | ConvertTo-Json -Depth 12 -Compress), [Text.Encoding]::UTF8, 'application/json') }
     try {
         $response = $Client.SendAsync($request).GetAwaiter().GetResult()
@@ -58,11 +59,11 @@ try {
     $ownerPassword = [guid]::NewGuid().ToString('N') + '-Bb2'
     $adminPassword | docker @compose exec -T -e "ADMIN_EMAIL=$adminEmail" api qmanga-admin | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Bootstrap administrator failed.' }
-    $null = Send-Api $admin POST 'auth/login' @{email=$adminEmail; password=$adminPassword}
+    $adminId = (Send-Api $admin POST 'auth/login' @{email=$adminEmail; password=$adminPassword}).user.id
     $adminCsrf = (Send-Api $admin GET 'auth/csrf').csrf_token
     $null = Send-Api $owner POST 'auth/register' @{email=$ownerEmail; password=$ownerPassword; display_name='Reader Owner'} -Expected 202
     $null = Send-Api $owner POST 'auth/verify-email' @{token=(Verification-Token $ownerEmail)}
-    $null = Send-Api $owner POST 'auth/login' @{email=$ownerEmail; password=$ownerPassword}
+    $ownerId = (Send-Api $owner POST 'auth/login' @{email=$ownerEmail; password=$ownerPassword}).user.id
     $ownerCsrf = (Send-Api $owner GET 'auth/csrf').csrf_token
     $team = Send-Api $owner POST 'studio/teams' @{slug="test-$($suffix.Substring(0,12))";name='Жергілікті сынақ тобы';description='Local development test'} $ownerCsrf 201
     $null = Send-Api $admin POST "admin/teams/$($team.id)/approve" @{} $adminCsrf 204
@@ -70,23 +71,33 @@ try {
     $title = Send-Api $admin POST 'admin/titles' @{slug=$slug;name='Жергілікті оқу сынағы';original_name='';aliases=@();kind='manga';original_status='ongoing';translation_status='ongoing';description='Пайдаланушы берген файлдармен жергілікті сынақ. Бұл файлдар GitHub-қа жіберілмейді.';direction='rtl';genre_ids=@();demo=$true} $adminCsrf 201
     $chapter = Send-Api $admin POST "admin/titles/$($title.id)/chapters" @{label='1';order=1;volume='1';name='Сынақ тарауы'} $adminCsrf 201
     $project = Send-Api $admin POST "admin/titles/$($title.id)/projects" @{team_id=$team.id} $adminCsrf 201
-    $coverRequest = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Put, "$AppUrl/api/v1/studio/projects/$($project.id)/cover-file")
+    $changeContext = Send-Api $owner GET "studio/projects/$($project.id)/title-change-context" -Account $ownerId
+    $proposal = @{base_version=$changeContext.base_version;data=$changeContext.snapshot.data;reason=$SourceNote;links=@('https://example.org/qmanga-synthetic-fixture');cover_action='replace';banner_action='keep';cover_page_id=''}
+    $coverRequest = [System.Net.Http.HttpRequestMessage]::new([System.Net.Http.HttpMethod]::Post, "$AppUrl/api/v1/studio/projects/$($project.id)/title-changes")
     $coverRequest.Headers.Add('Origin', ([uri]$AppUrl).GetLeftPart([System.UriPartial]::Authority))
     $coverRequest.Headers.Add('X-CSRF-Token', $ownerCsrf)
+    $coverRequest.Headers.Add('X-Qmanga-Account', $ownerId)
     $coverStream = [IO.File]::OpenRead($files[0].FullName)
-    $coverRequest.Content = [System.Net.Http.StreamContent]::new($coverStream)
-    $coverRequest.Content.Headers.ContentType = [System.Net.Http.Headers.MediaTypeHeaderValue]::new('application/octet-stream')
+    $multipart = [System.Net.Http.MultipartFormDataContent]::new()
+    $multipart.Add([System.Net.Http.StringContent]::new(($proposal | ConvertTo-Json -Depth 12 -Compress), [Text.Encoding]::UTF8), 'proposal')
+    $multipart.Add([System.Net.Http.StreamContent]::new($coverStream), 'cover', $files[0].Name)
+    $coverRequest.Content = $multipart
     try {
         $coverResponse = $owner.SendAsync($coverRequest).GetAwaiter().GetResult()
         try {
-            $coverResult = $coverResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult() | ConvertFrom-Json
-            if ([int]$coverResponse.StatusCode -ne 201 -or -not $coverResult.cover_id) { throw "Independent cover upload failed: $([int]$coverResponse.StatusCode)" }
+            $changeResult = $coverResponse.Content.ReadAsStringAsync().GetAwaiter().GetResult() | ConvertFrom-Json
+            if ([int]$coverResponse.StatusCode -ne 201 -or -not $changeResult.cover_asset_id) { throw "Cover proposal failed: $([int]$coverResponse.StatusCode)" }
         } finally { $coverResponse.Dispose() }
     } finally { $coverRequest.Dispose(); $coverStream.Dispose() }
+    $coverResult = @{cover_id=$changeResult.cover_asset_id;url="/api/v1/media/$($changeResult.cover_asset_id)"}
+    $pendingMedia = $anonymous.GetAsync("$AppUrl$($coverResult.url)").GetAwaiter().GetResult()
+    try { if ([int]$pendingMedia.StatusCode -ne 404) { throw 'Pending cover leaked before moderation.' } }
+    finally { $pendingMedia.Dispose() }
+    $null = Send-Api $admin POST "moderation/title-changes/$($changeResult.id)/review" @{decision='approve';reason='Permitted local synthetic fixture'} $adminCsrf 204 -Account $adminId
     $studioProject = Send-Api $owner GET "studio/projects/$($project.id)"
-    if ($studioProject.cover_id -ne $coverResult.cover_id) { throw 'Independent cover did not appear in studio project.' }
+    if ($studioProject.cover_id -ne $coverResult.cover_id) { throw 'Approved cover did not appear in studio project.' }
     $coverMedia = $anonymous.GetAsync("$AppUrl$($coverResult.url)").GetAwaiter().GetResult()
-    try { if ([int]$coverMedia.StatusCode -ne 200 -or $coverMedia.Content.Headers.ContentType.MediaType -ne 'image/webp') { throw 'Independent cover is not public WebP media.' } }
+    try { if ([int]$coverMedia.StatusCode -ne 200 -or $coverMedia.Content.Headers.ContentType.MediaType -ne 'image/webp') { throw 'Approved cover is not public WebP media.' } }
     finally { $coverMedia.Dispose() }
     $draft = Send-Api $owner POST "studio/projects/$($project.id)/revisions" @{chapter_id=$chapter.id} $ownerCsrf 201
     $null = Send-Api $anonymous GET "titles/$slug" -Expected 404

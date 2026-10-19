@@ -295,6 +295,17 @@ func (r *Repository) ReviewChange(ctx context.Context, actor, id, decision, reas
 		if err != nil {
 			return err
 		}
+		// Keep approved cover metadata readable by the previous API during an application rollback.
+		// Pending artwork and evidence are never copied into this legacy public-cover read model.
+		if item.CoverAction == "replace" {
+			result, failure := tx.Exec(ctx, `INSERT INTO title_cover_assets(id,title_id,object_key,mime,checksum,width,height,byte_size,selected_by) SELECT id,$2,object_key,mime,checksum,width,height,byte_size,$3 FROM title_change_assets WHERE id=$1 AND request_id=$4 AND purpose='cover'`, item.CoverAssetID, item.TitleID, actor, item.ID)
+			if failure != nil {
+				return translate(failure)
+			}
+			if result.RowsAffected() != 1 {
+				return domain.ErrInvalid
+			}
+		}
 		cover, banner := snapshot.CoverID, snapshot.BannerID
 		if item.CoverAction == "replace" {
 			cover = item.CoverAssetID

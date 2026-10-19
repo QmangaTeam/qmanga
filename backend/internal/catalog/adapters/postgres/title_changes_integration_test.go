@@ -57,6 +57,8 @@ func TestTitleChangeApprovalAndConflict(testingTarget *testing.T) {
 	execute("INSERT INTO team_memberships(id,team_id,user_id,role) VALUES('membership','team','editor','editor')")
 	execute("INSERT INTO titles(id,slug,name_kk,type,direction) VALUES('title','title','Original','manga','ltr')")
 	execute("INSERT INTO projects(id,title_id,team_id) VALUES('project','title','team')")
+	execute("INSERT INTO genres(id,name_kk,slug) VALUES('genre','Genre','genre')")
+	execute("INSERT INTO categories(id,name_kk,slug) VALUES('initial-category','Initial category','initial-category')")
 	repo := New(database.Pool())
 	current, err := repo.ChangeContext(ctx, "editor", "project")
 	if err != nil {
@@ -67,6 +69,8 @@ func TestTitleChangeApprovalAndConflict(testingTarget *testing.T) {
 	}
 	data := current.Snapshot.Data
 	data.Name = "Changed"
+	data.GenreIDs = []string{"genre"}
+	data.CategoryIDs = []string{"initial-category"}
 	input := domain.TitleChangeInput{BaseVersion: current.Snapshot.Version(), Data: data, Reason: "Official source", Links: []string{"https://example.org/source"}, CoverAction: "keep", BannerAction: "keep"}
 	input.CoverAction = "replace"
 	input.BannerAction = "replace"
@@ -91,6 +95,11 @@ func TestTitleChangeApprovalAndConflict(testingTarget *testing.T) {
 	if request.Status != "pending" {
 		testingTarget.Fatal(request.Status)
 	}
+	var legacy int
+	database.Pool().QueryRow(ctx, "SELECT count(*) FROM title_cover_assets WHERE id='cover-asset'").Scan(&legacy)
+	if legacy != 0 {
+		testingTarget.Fatal("pending artwork entered legacy public cover table")
+	}
 	var name string
 	database.Pool().QueryRow(ctx, "SELECT name_kk FROM titles WHERE id='title'").Scan(&name)
 	if name != "Original" {
@@ -105,6 +114,13 @@ func TestTitleChangeApprovalAndConflict(testingTarget *testing.T) {
 	database.Pool().QueryRow(ctx, "SELECT name_kk FROM titles WHERE id='title'").Scan(&name)
 	if name != "Changed" {
 		testingTarget.Fatal("not applied", name)
+	}
+	if err = database.Pool().QueryRow(ctx, "SELECT count(*) FROM title_cover_assets WHERE id='cover-asset' AND title_id='title' AND object_key='title-changes/request/cover.webp'").Scan(&legacy); err != nil || legacy != 1 {
+		testingTarget.Fatal("approved cover unavailable to previous API during rollback", legacy, err)
+	}
+	var genres, categories int
+	if err = database.Pool().QueryRow(ctx, "SELECT (SELECT count(*) FROM title_genres WHERE title_id='title' AND genre_id='genre'),(SELECT count(*) FROM title_categories WHERE title_id='title' AND category_id='initial-category')").Scan(&genres, &categories); err != nil || genres != 1 || categories != 1 {
+		testingTarget.Fatal("approved taxonomy not applied", genres, categories, err)
 	}
 	if asset, err := mediaRepo.Asset(ctx, "", "cover-asset"); err != nil || !asset.Public {
 		testingTarget.Fatal("approved cover not public", err)
