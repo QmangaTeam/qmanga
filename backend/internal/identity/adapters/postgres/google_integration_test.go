@@ -125,6 +125,80 @@ func TestGooglePersistenceAndAvatarVisibility(t *testing.T) {
 	if allowed, failure := repo.RegistrationImportAllowed(ctx, googleCandidate.ID, receipt, now.Add(2*time.Hour)); failure != nil || allowed {
 		t.Fatal("expired receipt accepted", allowed, failure)
 	}
+
+	// Explicit linking preserves an ordinary account and its origin avatar; email alone still refuses access.
+	owner := domain.Account{ID: "link-owner", Email: "owner@example.test", PasswordHash: "hash", Role: "admin", Verified: true, DisplayName: "My edited profile"}
+	foreign := domain.Account{ID: "link-foreign", Email: "foreign@example.test", PasswordHash: "hash", Role: "reader", Verified: true, DisplayName: "Foreign reader"}
+	for _, actor := range []domain.Account{owner, foreign} {
+		if err = repo.CreateAccount(ctx, actor); err != nil {
+			t.Fatal(err)
+		}
+		if err = repo.SaveSession(ctx, application.Session{Hash: actor.ID + "-session", UserID: actor.ID, CSRFHash: "csrf", ExpiresAt: now.Add(time.Hour)}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	linkedIdentity := application.GoogleIdentity{Issuer: "https://accounts.google.com", Subject: "explicit-link", Email: owner.Email, Verified: true, Name: "Google changed name"}
+	if _, err = repo.GoogleAccount(ctx, linkedIdentity, domain.Account{ID: "must-not-create", Email: owner.Email, DisplayName: "Google name"}); !errors.Is(err, domain.ErrConflict) {
+		t.Fatal("same-email identity auto-linked", err)
+	}
+	customAvatar := application.Avatar{Kind: "user", OwnerID: owner.ID, Key: "avatars/custom-link-owner", Bytes: 100, UpdatedAt: now}
+	if err = repo.SaveAvatar(ctx, customAvatar); err != nil {
+		t.Fatal(err)
+	}
+	if linked, err := repo.GoogleLinked(ctx, owner.ID); err != nil || linked {
+		t.Fatal("unlinked status", err)
+	}
+	if err = repo.LinkGoogleIdentity(ctx, owner.ID, owner.ID+"-session", linkedIdentity, now); err != nil {
+		t.Fatal("explicit link failed", err)
+	}
+	if linked, err := repo.GoogleLinked(ctx, owner.ID); err != nil || !linked {
+		t.Fatal("linked status", err)
+	}
+	if actual, err := repo.GoogleAccount(ctx, linkedIdentity, domain.Account{ID: "new-candidate", Email: "changed@example.test", DisplayName: "New name"}); err != nil || actual != owner {
+		t.Fatalf("linked login changed account: %+v %v", actual, err)
+	}
+	if actual, err := repo.Avatar(ctx, "user", owner.ID); err != nil || actual.Key != customAvatar.Key {
+		t.Fatal("link replaced avatar", err)
+	}
+	if err = repo.LinkGoogleIdentity(ctx, foreign.ID, foreign.ID+"-session", linkedIdentity, now); !errors.Is(err, domain.ErrConflict) {
+		t.Fatal("foreign identity transferred", err)
+	}
+	if err = repo.LinkGoogleIdentity(ctx, owner.ID, owner.ID+"-session", application.GoogleIdentity{Issuer: linkedIdentity.Issuer, Subject: "replacement-google", Email: owner.Email, Verified: true}, now); !errors.Is(err, domain.ErrConflict) {
+		t.Fatal("existing Google replaced", err)
+	}
+	for _, condition := range []string{"wrong-session", "expired", "revoked", "unverified", "blocked"} {
+		t.Run(condition, func(t *testing.T) {
+			sessionHash := foreign.ID + "-session"
+			if err = repo.SaveSession(ctx, application.Session{Hash: "temporary-link-session", UserID: foreign.ID, CSRFHash: "csrf", ExpiresAt: now.Add(time.Hour)}); err != nil {
+				t.Fatal(err)
+			}
+			sessionHash = "temporary-link-session"
+			switch condition {
+			case "wrong-session":
+				sessionHash = owner.ID + "-session"
+			case "expired":
+				_, err = db.Pool().Exec(ctx, "UPDATE sessions SET expires_at=$1 WHERE id=$2", now.Add(-time.Second), sessionHash)
+			case "revoked":
+				err = repo.DeleteSession(ctx, sessionHash)
+			case "unverified":
+				_, err = db.Pool().Exec(ctx, "UPDATE users SET is_verified=false WHERE id=$1", foreign.ID)
+			case "blocked":
+				_, err = db.Pool().Exec(ctx, "UPDATE users SET is_blocked=true WHERE id=$1", foreign.ID)
+			}
+			if err != nil {
+				t.Fatal(err)
+			}
+			if failure := repo.LinkGoogleIdentity(ctx, foreign.ID, sessionHash, application.GoogleIdentity{Issuer: linkedIdentity.Issuer, Subject: "invalid-link-" + condition, Email: foreign.Email, Verified: true}, now); !errors.Is(failure, domain.ErrForbidden) {
+				t.Fatal("invalid session accepted", failure)
+			}
+			if _, err = db.Pool().Exec(ctx, "UPDATE users SET is_verified=true,is_blocked=false WHERE id=$1", foreign.ID); err != nil {
+				t.Fatal(err)
+			}
+			if err = repo.DeleteSession(ctx, "temporary-link-session"); err != nil {
+				t.Fatal(err)
+			}
+		})
+	}
 	avatar := application.Avatar{Kind: "user", OwnerID: account.ID, Key: "avatars/immutable", Bytes: 100, UpdatedAt: time.Now()}
 	if err = repo.SaveAvatar(ctx, avatar); err != nil {
 		t.Fatal(err)

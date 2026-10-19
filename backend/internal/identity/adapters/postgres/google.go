@@ -14,12 +14,12 @@ func (r *Repository) SaveGoogleFlow(ctx context.Context, f application.GoogleFlo
 	if err != nil {
 		return err
 	}
-	_, err = r.pool.Exec(ctx, `INSERT INTO google_auth_flows(state_hash,nonce,verifier,return_path,nickname,expires_at) VALUES($1,$2,$3,$4,$5,$6)`, f.Hash, f.Nonce, f.Verifier, f.ReturnPath, f.Nickname, f.ExpiresAt)
+	_, err = r.pool.Exec(ctx, `INSERT INTO google_auth_flows(state_hash,nonce,verifier,return_path,nickname,expires_at,link_user_id,link_session_hash) VALUES($1,$2,$3,$4,$5,$6,NULLIF($7,''),NULLIF($8,''))`, f.Hash, f.Nonce, f.Verifier, f.ReturnPath, f.Nickname, f.ExpiresAt, f.LinkUserID, f.LinkSessionHash)
 	return err
 }
 func (r *Repository) ConsumeGoogleFlow(ctx context.Context, hash string, now time.Time) (application.GoogleFlow, error) {
 	var f application.GoogleFlow
-	err := r.pool.QueryRow(ctx, `DELETE FROM google_auth_flows WHERE state_hash=$1 AND expires_at>$2 RETURNING nonce,verifier,return_path,nickname,expires_at`, hash, now).Scan(&f.Nonce, &f.Verifier, &f.ReturnPath, &f.Nickname, &f.ExpiresAt)
+	err := r.pool.QueryRow(ctx, `DELETE FROM google_auth_flows WHERE state_hash=$1 AND expires_at>$2 RETURNING nonce,verifier,return_path,nickname,expires_at,COALESCE(link_user_id,''),COALESCE(link_session_hash,'')`, hash, now).Scan(&f.Nonce, &f.Verifier, &f.ReturnPath, &f.Nickname, &f.ExpiresAt, &f.LinkUserID, &f.LinkSessionHash)
 	return f, translate(err)
 }
 func (r *Repository) GoogleAccount(ctx context.Context, identity application.GoogleIdentity, candidate domain.Account) (domain.Account, error) {

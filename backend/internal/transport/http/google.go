@@ -35,9 +35,11 @@ func (h *GoogleHandler) Register(api *gin.RouterGroup) {
 		c.Header("Cache-Control", "no-store")
 		c.JSON(200, gin.H{"enabled": h.service != nil})
 	})
+	api.GET("/auth/google/link", h.identity.RequireUser(), expectedAccount(), h.linkStatus)
 	if h.service == nil {
 		return
 	}
+	api.POST("/auth/google/link/start", h.identity.RequireUser(), expectedAccount(), h.identity.limit(), h.linkStart)
 	api.POST("/auth/google/start", h.identity.CheckOrigin(), h.identity.limit(), h.start)
 	api.GET("/auth/google/callback", h.identity.limit(), h.callback)
 }
@@ -54,6 +56,7 @@ func (h *GoogleHandler) start(c *gin.Context) {
 		h.identity.respondError(c, err)
 		return
 	}
+	h.identity.cookie(c, "qmanga_google_link", "", time.Now())
 	h.identity.cookie(c, "qmanga_google_state", state, time.Now().Add(10*time.Minute))
 	c.Header("Cache-Control", "no-store")
 	c.JSON(200, gin.H{"url": destination})
@@ -62,10 +65,16 @@ func (h *GoogleHandler) callback(c *gin.Context) {
 	c.Header("Cache-Control", "no-store")
 	c.Header("Referrer-Policy", "no-referrer")
 	state := c.Query("state")
+	linkMarker, _ := c.Cookie("qmanga_google_link")
+	h.identity.cookie(c, "qmanga_google_link", "", time.Now())
 	bound, err := c.Cookie("qmanga_google_state")
 	h.identity.cookie(c, "qmanga_google_state", "", time.Now())
 	if err != nil || len(state) != 43 || subtle.ConstantTimeCompare([]byte(state), []byte(bound)) != 1 {
 		Error(c, 400, "validation", "Кіруді қайта бастаңыз")
+		return
+	}
+	if linkMarkerMatches(linkMarker, state) {
+		h.linkCallback(c, state, c.Query("code"))
 		return
 	}
 	ctx, cancel := context.WithTimeout(c.Request.Context(), 20*time.Second)

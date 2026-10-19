@@ -1,4 +1,6 @@
 <script lang="ts">
+ import GoogleLink from '$lib/features/identity/presentation/GoogleLink.svelte';
+ import type {GoogleLinkGateway} from '$lib/features/identity/application/google-link';
  import AvatarEditor from '$lib/features/identity/presentation/AvatarEditor.svelte';
  import type {AvatarGateway} from '$lib/features/identity/application/avatars';
  import {onMount} from 'svelte';
@@ -15,7 +17,7 @@
  import Button from '$lib/shared/presentation/ui/Button.svelte';
  import ActionLink from '$lib/shared/presentation/ui/ActionLink.svelte';
  import StateMessage from '$lib/shared/presentation/ui/StateMessage.svelte';
- let {user,auth,preferences,avatars}:{user:Account|null;auth:AuthGateway;preferences:ThemeStore;avatars?:AvatarGateway}=$props();
+ let {user,auth,preferences,avatars,googleLink}:{user:Account|null;auth:AuthGateway;preferences:ThemeStore;avatars?:AvatarGateway;googleLink?:GoogleLinkGateway}=$props();
  const {locale,change}=useLocale();
  let theme=$state<Theme>('system'),busy=$state(false),result=$state<AuthResult|null>(null);
  let displayName=$state(''),profileResult=$state<AuthResult|null>(null);
@@ -31,6 +33,7 @@
  {#if avatars}{#key user.id}<AvatarEditor gateway={avatars} kind="user" actorId={user.id} ownerId={user.id} name={user.displayName||'Q'}/>{/key}{/if}
  <form class="profile-form" onsubmit={event=>{event.preventDefault();void saveProfile();}}><label for="profile-name">{text($locale,'Көрінетін атың','Публичное имя')}</label><input id="profile-name" bind:value={displayName} maxlength="40" autocomplete="nickname" aria-describedby="profile-hint"/><p id="profile-hint" class="muted">{text($locale,'Пікірлерде және команда құрамында көрінеді. Поштаңды жазба.','Видно в комментариях и составе команды. Не указывай почту.')}</p><Button type="submit" {busy}>{text($locale,'Профильді сақтау','Сохранить профиль')}</Button></form>
  {#if profileResult}<StateMessage kind={profileResult.ok?'success':'error'} title={profileResult.ok?text($locale,'Профиль сақталды','Профиль сохранён'):errorText($locale,profileResult.code)}/>{/if}
+ {#if googleLink}{#key user.id}<GoogleLink gateway={googleLink} accountId={user.id} verified={user.verified}/>{/key}{/if}
  <div class="settings-links"><ActionLink href="/reports">{text($locale,'Менің өтініштерім','Мои обращения')}</ActionLink>{#if !user.verified}<Button {busy} onclick={resend}>{text($locale,'Растау хатын жіберу','Отправить подтверждение')}</Button>{/if}<ActionLink href="/studio">{text($locale,'Аудармашы кабинеті','Кабинет переводчика')}</ActionLink>{#if user.role==='admin'}<ActionLink href="/admin">{text($locale,'Әкімші панелі','Администрирование')}</ActionLink>{/if}{#if user.role==='admin'||user.role==='moderator'}<ActionLink href="/moderation">{text($locale,'Модерация','Модерация')}</ActionLink>{/if}<Button onclick={logout} {busy} variant="ghost">{text($locale,'Шығу','Выйти')}</Button></div>
  {:else}<p class="muted">{text($locale,'Кітапхана мен оқу орнын басқа құрылғыларда да сақтау үшін кір.','Войди, чтобы сохранить библиотеку и место чтения на других устройствах.')}</p><div class="settings-links"><ActionLink href="/login" variant="primary">{text($locale,'Кіру','Войти')}</ActionLink><ActionLink href="/register">{text($locale,'Тіркелу','Регистрация')}</ActionLink></div>{/if}
  {#if result}<StateMessage kind={result.ok?'success':'error'} title={result.ok?text($locale,'Дайын. Поштаңды тексер.','Готово. Проверь почту.'):errorText($locale,result.code)}/>{/if}</section>

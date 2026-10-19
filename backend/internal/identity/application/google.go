@@ -18,6 +18,7 @@ type GoogleIdentity struct {
 	Verified               bool
 }
 type GoogleFlow struct {
+	LinkUserID, LinkSessionHash                 string
 	Hash, Nonce, Verifier, ReturnPath, Nickname string
 	ExpiresAt                                   time.Time
 }
@@ -81,6 +82,9 @@ func SafeAuthReturn(value string) string {
 	return value
 }
 func (s *GoogleService) Start(ctx context.Context, returnPath, nickname string) (string, string, error) {
+	return s.start(ctx, returnPath, nickname, "", "")
+}
+func (s *GoogleService) start(ctx context.Context, returnPath, nickname, linkUser, linkSession string) (string, string, error) {
 	if s.provider == nil {
 		return "", "", domain.ErrNotFound
 	}
@@ -101,7 +105,7 @@ func (s *GoogleService) Start(ctx context.Context, returnPath, nickname string) 
 	if err != nil {
 		return "", "", err
 	}
-	flow := GoogleFlow{Hash: s.credentials.Digest(state), Nonce: nonce, Verifier: verifier, ReturnPath: SafeAuthReturn(returnPath), Nickname: nickname, ExpiresAt: s.now().Add(10 * time.Minute)}
+	flow := GoogleFlow{LinkUserID: linkUser, LinkSessionHash: linkSession, Hash: s.credentials.Digest(state), Nonce: nonce, Verifier: verifier, ReturnPath: SafeAuthReturn(returnPath), Nickname: nickname, ExpiresAt: s.now().Add(10 * time.Minute)}
 	if err = s.repository.SaveGoogleFlow(ctx, flow); err != nil {
 		return "", "", err
 	}
@@ -123,6 +127,9 @@ func (s *GoogleService) finish(ctx context.Context, state, code, receiptHash str
 	flow, err := s.repository.ConsumeGoogleFlow(ctx, s.credentials.Digest(state), s.now())
 	if err != nil {
 		return LoginResult{}, "/", err
+	}
+	if flow.LinkUserID != "" || flow.LinkSessionHash != "" {
+		return LoginResult{}, "/settings", domain.ErrForbidden
 	}
 	if code == "" {
 		return LoginResult{}, flow.ReturnPath, domain.ErrCredentials

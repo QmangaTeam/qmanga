@@ -47,6 +47,8 @@ import {HttpMetricsGateway} from '$lib/features/metrics/infrastructure/http-metr
 export function createMetrics(){return new HttpMetricsGateway(new ApiClient(globalThis.fetch.bind(globalThis)));}
 import {HttpAvatarGateway} from '$lib/features/identity/infrastructure/http-avatar-gateway';
 export function createAvatars(){return new HttpAvatarGateway(globalThis.fetch.bind(globalThis));}
+import {HttpGoogleLinkGateway} from '$lib/features/identity/infrastructure/http-google-link';
+export function createGoogleLink(){return new HttpGoogleLinkGateway(new ApiClient(globalThis.fetch.bind(globalThis)));}
 
 import {HttpRegistrationPermit} from '$lib/features/reading/infrastructure/http-registration-permit';
 export function createRegistrationImport(){const {api,scope}=scopedApi();return {readingGateway:new HttpReadingGateway(api,scope),progressStorage:new BrowserProgressStorage(),readingChanges,registrationPermit:new HttpRegistrationPermit(api)};}
