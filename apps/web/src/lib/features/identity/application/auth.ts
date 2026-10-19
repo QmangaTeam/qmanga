@@ -17,6 +17,6 @@ export interface AuthGateway {
 }
 export async function authenticate(gateway: AuthGateway, mode: 'login' | 'register', input: Credentials): Promise<AuthResult> {
  const invalid = credentialError(input, mode === 'register');
- if (invalid) return { ok: false, code: invalid, message: invalid === 'email' ? 'Пошта мекенжайын тексеріңіз' : 'Құпиясөзді тексеріңіз. 10–128 таңба қолданыңыз.' };
+ if (invalid) return { ok: false, code: invalid, message: invalid === 'email' ? 'Пошта мекенжайын тексеріңіз' : 'Құпиясөзді тексеріңіз. 8–128 таңба қолданыңыз.' };
  return gateway[mode]({ email: input.email.trim().toLowerCase(), password: input.password, displayName:input.displayName });
 }

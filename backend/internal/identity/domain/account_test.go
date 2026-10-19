@@ -2,6 +2,13 @@ package domain
 
 import "testing"
 
+func TestPasswordMinimumEightCharacters(t *testing.T) {
+ for _, password := range []string{"12345678", "123456789", "құпиясөз"} {
+  if ValidatePassword(password) != nil { t.Errorf("eight or more characters rejected") }
+ }
+ if ValidatePassword("1234567") == nil { t.Fatal("seven characters accepted") }
+}
+
 func TestAccountAndPasswordRules(testingTarget *testing.T) {
 	account, accountError := NewAccount("account", "Reader@Example.com", "encoded-hash")
 	if accountError != nil || account.Email != "reader@example.com" || account.Role != "reader" || account.Verified {

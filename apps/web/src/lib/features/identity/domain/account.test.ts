@@ -1,5 +1,9 @@
 import {test,expect} from 'bun:test';
 import {validNickname,credentialError} from './account';
+test('registration password minimum is eight Unicode characters',()=>{
+ for(const password of ['12345678','123456789','құпиясөз'])expect(credentialError({email:'a@example.com',password,displayName:'Reader'},true)).toBe(null);
+ expect(credentialError({email:'a@example.com',password:'1234567',displayName:'Reader'},true)).toBe('password');
+});
 test('registration requires a safe nickname while legacy login remains available',()=>{
  for(const name of ['Оқырман','Қазақ оқырманы','Reader_42'])expect(validNickname(name)).toBe(true);
  for(const name of ['','x',' leading','two  spaces','reader@example.com','emoji😀'])expect(validNickname(name)).toBe(false);

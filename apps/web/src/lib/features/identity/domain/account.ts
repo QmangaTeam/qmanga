@@ -4,7 +4,7 @@ export function credentialError(input: Credentials, registration: boolean): 'ema
  if (!/^[^@\s]+@[^@\s]+$/.test(input.email.trim()) || input.email.length > 254) return 'email';
  if (registration && !validNickname(input.displayName || '')) return 'nickname';
  const length = [...input.password].length;
- if (!length || input.password.length > 512 || registration && (length < 10 || length > 128)) return 'password';
+ if (!length || input.password.length > 512 || registration && (length < 8 || length > 128)) return 'password';
  return null;
 }
 

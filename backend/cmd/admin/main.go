@@ -32,7 +32,7 @@ func main() {
 		log.Fatal("Set ADMIN_EMAIL")
 	}
 	if password == "" {
-		fmt.Fprintln(os.Stderr, "Enter password through stdin (10–128 characters):")
+		fmt.Fprintln(os.Stderr, "Enter password through stdin (8–128 characters):")
 		password, failure = bufio.NewReader(os.Stdin).ReadString('\n')
 		if failure != nil && password == "" {
 			log.Fatal("Password input failed")

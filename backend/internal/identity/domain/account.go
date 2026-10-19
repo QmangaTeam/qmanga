@@ -42,7 +42,7 @@ func NewAccount(id, email, passwordHash string) (Account, error) {
 }
 func ValidatePassword(password string) error {
 	length := utf8.RuneCountInString(password)
-	if length < 10 || length > 128 || len(password) > 512 {
+	if length < 8 || length > 128 || len(password) > 512 {
 		return ErrInvalid
 	}
 	return nil

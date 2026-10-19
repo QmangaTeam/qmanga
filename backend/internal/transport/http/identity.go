@@ -250,7 +250,7 @@ func (handler *IdentityHandler) resetPassword(request *gin.Context) {
 func (handler *IdentityHandler) respondError(request *gin.Context, failure error) {
 	switch {
 	case errors.Is(failure, domain.ErrInvalid):
-		Error(request, 422, "validation", "Пошта мен құпиясөзді тексеріңіз. Құпиясөз 10–128 таңба болуы керек.")
+		Error(request, 422, "validation", "Пошта мен құпиясөзді тексеріңіз. Құпиясөз 8–128 таңба болуы керек.")
 	case errors.Is(failure, domain.ErrCredentials):
 		Error(request, 401, "credentials", "Пошта немесе құпиясөз дұрыс емес")
 	case errors.Is(failure, domain.ErrExpired):
