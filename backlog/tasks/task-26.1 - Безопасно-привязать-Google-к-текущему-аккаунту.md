@@ -1,11 +1,11 @@
 ---
 id: TASK-26.1
 title: Безопасно привязать Google к текущему аккаунту
-status: Review
+status: Done
 assignee:
   - '@codex-google'
 created_date: '2026-10-19 01:31'
-updated_date: '2026-10-19 02:00'
+updated_date: '2026-10-19 02:16'
 labels: []
 dependencies: []
 parent_task_id: TASK-26
@@ -46,4 +46,6 @@ Implementation SHA: a9617ee. Parent owns shared browser/staging/release acceptan
 Родитель: полный итоговый browser прогон 50/50, без ошибок/пропусков (tmp/google-link-final-browser.log); UI linking account/CSRF, обе локали, темы,320/360/1280 прошли. Full Go ./... и повтор locked-session PostgreSQL/HTTP успешны; итоговая api/web сборка здорова. Независимый final_owner_review проверил весь addition и финальную SQL-проверку срока сессии: замечаний нет. Настоящая привязка Google существующего владельца и production release остаются отдельной приёмкой после CI/staging.
 
 Production18eb4fd выпущен, Googleenabled=true; CI39186717189 полныйsuccess. Реальная привязка Google владельца не выполнялась: владелец сменилпочту, требуется еёподтверждение и явное действие внастройках. Backend/PG/HTTP/browser50 и независимыйreviewпройдены; сохранитьReviewдо этойприёмки.
+
+Приёмка владельца 19 октября 2026 (дословно): «TASK-26 — AC3: реальный вход Google на production; TASK-26.1 — реальная привязка Google текущим владельцем после подтверждения почты. они завершены, и доделай Task 62». Реальная привязка Google текущим владельцем после подтверждения новой почты подтверждена владельцем; backend/PG/HTTP/browser 50 и независимый review были пройдены ранее (см. обычные заметки). Реализация TASK-62 изменит прежнее правило «совпадение email не связывает»: фиксация нового решения — в TASK-62.
 <!-- SECTION:NOTES:END -->

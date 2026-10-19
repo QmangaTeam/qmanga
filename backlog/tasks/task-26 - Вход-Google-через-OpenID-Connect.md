@@ -1,11 +1,11 @@
 ---
 id: TASK-26
 title: Вход Google через OpenID Connect
-status: Review
+status: Done
 assignee:
   - '@codex-identity'
 created_date: '2026-10-18 21:20'
-updated_date: '2026-10-19 01:18'
+updated_date: '2026-10-19 02:16'
 labels:
   - stage-7
 dependencies:
@@ -26,7 +26,7 @@ ordinal: 26
 <!-- AC:BEGIN -->
 - [x] #1 Использовать OpenID Connect для **входа**, минимальные `openid email profile`; не запрашивать Gmail/Drive или другие данные «на всякий случай». Сервер проверяет `state`, ID token, issuer, audience, expiry, `email_verified` и устойчивый `sub`; создаёт обычную Qmanga-сессию. Связывание с существующим email требует безопасного подтверждения, без захвата аккаунта одним совпадением email.
 - [x] #2 При первом входе через Google почта, ник и аватар берутся из профиля Google; отдельный ручной ввод ника не требуется. Отмена сохраняет исходную страницу, обычный вход по почте остаётся доступен.
-- [ ] #3 Перед выпуском проверены Google consent screen и ограничения доступа; реальный вход на production создаёт обычную сессию с данными Google.
+- [x] #3 Перед выпуском проверены Google consent screen и ограничения доступа; реальный вход на production создаёт обычную сессию с данными Google.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -57,4 +57,6 @@ Remote10d39b8 CI passed and exactSHA serves staging. Deployed /api/v1/auth/googl
 Google profile defaults implemented in 78323df: verified signed name/picture claims initialize new users; safe nickname derived from Google name (email local-part/fixed fallback when unsuitable), verified email retained. No manual Google nickname required; repeat issuer/sub login never changes edited name/email/avatar. New AvatarImporter permits only HTTPS lh3–lh6.googleusercontent.com, denies redirects and non-public resolved addresses, pins checked DNS addresses, bounds response to 5 MiB/8 seconds, then calls existing sanitized origin-avatar Upload pipeline. Picture unavailable/invalid leaves normal fallback without blocking login; no hotlink or new scope. No migration required. Verified: initial nickname regression failed before implementation; SSRF CGN/0-range regression failed then passed. Full go test ./... passed on actual PostgreSQL; after final IP hardening identity/... and transport/http/... passed again. bun run web:check: 0 errors/warnings; git diff --check clean. Parent owns bootstrap wiring (construct avatarService before NewGoogle and pass googleoidc.NewAvatarImporter(avatarService)), new google-profile browser regression run, independent review, production OAuth configuration and release acceptance. No production action, push, service restart or shared browser fixture performed by identity agent. AC2 browser integration remains pending parent verification; AC3 production acceptance remains pending.
 
 Родитель подключил avatarImporter в bootstrap; browser regression Google registration starts without manual nickname/email/password прошёл на итоговой сборке. Полный Go ./... проверен отдельно. Локальные требования defaults выполнены; production consent/callback/выпуск ещё проверяются перед закрытием AC3.
+
+Приёмка владельца 19 октября 2026 (дословно): «TASK-26 — AC3: реальный вход Google на production; TASK-26.1 — реальная привязка Google текущим владельцем после подтверждения почты. они завершены, и доделай Task 62». Реальный вход Google на production подтверждён владельцем; внешний /api/v1/auth/google/status на https://qmanga.maqsatto.dev ранее проверен enabled=true в точке передачи 18eb4df. Внимание реализации TASK-62: владелец далее поручил авто-вход существующего аккаунта по Google (частично заменяет прежнее правило «совпадение email не связывает»), это изменение фиксируется отдельно в карточке TASK-62.
 <!-- SECTION:NOTES:END -->
