@@ -286,6 +286,12 @@ func TestGoogleEmailMatchLinksRegisteredAccount(t *testing.T) {
 	if err = db.Pool().QueryRow(ctx, "SELECT count(*) FROM users WHERE lower(email)=$1", password.Email).Scan(&users); err != nil || users != 1 {
 		t.Fatalf("users for email: %d %v", users, err)
 	}
+	if _, err = repo.GoogleAccountForImport(ctx, identity, domain.Account{ID: "unused", Email: password.Email, PasswordHash: "opaque", DisplayName: "import attempt", Role: "reader", Verified: true}, strings.Repeat("c", 64), time.Now().Add(time.Hour)); err != nil {
+		t.Fatal(err)
+	}
+	if allowed, failure := repo.RegistrationImportAllowed(ctx, password.ID, strings.Repeat("c", 64), time.Now()); failure != nil || allowed {
+		t.Fatal("linked login granted reading import", allowed, failure)
+	}
 	if _, err = repo.GoogleAccount(ctx, application.GoogleIdentity{Issuer: identity.Issuer, Subject: "another-sub", Email: password.Email, Verified: true}, domain.Account{ID: "unused", Email: password.Email, DisplayName: "y"}); !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("second subject accepted: %v", err)
 	}
@@ -296,4 +302,3 @@ func TestGoogleEmailMatchLinksRegisteredAccount(t *testing.T) {
 		t.Fatalf("blocked email match accepted: %v", err)
 	}
 }
-

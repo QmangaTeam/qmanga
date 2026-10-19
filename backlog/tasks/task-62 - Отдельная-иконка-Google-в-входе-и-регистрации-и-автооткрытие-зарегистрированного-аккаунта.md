@@ -3,11 +3,11 @@ id: TASK-62
 title: >-
   Отдельная иконка Google в входе и регистрации и автооткрытие
   зарегистрированного аккаунта
-status: To Do
+status: In Progress
 assignee:
-  - codex
+  - '@codex'
 created_date: '2026-10-19 02:11'
-updated_date: '2026-10-19 02:11'
+updated_date: '2026-10-19 04:43'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -31,3 +31,25 @@ ordinal: 37026
 
 Границы: сейчас задача только зафиксирована по просьбе владельца. Не менять смысл исходной цитаты; предположения и открытые вопросы не считать утверждёнными решениями. Реализация только после явного поручения владельца в согласованном порядке очереди.
 <!-- SECTION:DESCRIPTION:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Решение (поручение владельца 19 октября 2026): аккаунт, зарегистрированный по почте+паролю без Google, при входе через Google автоматически привязывает подтверждённую Google-почту (issuer/sub) и сразу входит — профиль/ID не меняются. Новый «с нуля» Google-юзер создаётся как сейчас. Заблокированный аккаунт и Google, уже привязанный к другому аккаунту, по-прежнему получают конфликт. Поведение «email match никогда не связывает» из TASK-26 OWNER заменяет этим решением.
+
+2. Backend TDD: правки google_integration_test.go (auto-link отдаёт аккаунт по email, заблокированный — конфликт) → реализация в identity/adapters/postgres/google.go: поиск пользователя по lower(email), вставка external_identities внутри транзакции, сохранение профиля.
+
+3. Frontend: иконка Google (IconName google + AuthForm), обновление копирайта конфликтного сообщения (kk/ru), сборка/check/тесты.
+
+4. Полный прогон: go test ./... (реальный PostgreSQL), bun run --cwd apps/web check + тесты, Docker build; браузерная регрессия входа; независимый review; отказ от выпуска без поручения владельца.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Backend реализован по TDD (4075029): RED — два падения (существующий сценарий и новый TestGoogleEmailMatchLinksRegisteredAccount), затем GREEN в identity/adapters/postgres/google.go: поиск по lower(email) FOR UPDATE, авто-вставка external_identities внутри транзакции, профиль/роль/ID не меняются; заблокированный аккаунт и второй Google-субъект у одного пользователя — ErrConflict; новый «с нуля» путь и registration-import чек-рид повторяют прежний контракт. Полный go test ./... на реальном PostgreSQL (docker tools) прошёл полностью, без пропусков.
+
+Frontend реализован (a4d46cc): официальные четырёхцветные пути Google G (aria-hidden, 18px) в ghost-кнопке входа и регистрации; конфликтное сообщение переписано только для оставшихся случаев («этот Google уже связан с другим аккаунтом», kk/ru). Дополнительная проверка иконки в google-profile.test.mjs (svg path #4285F4). svelte-check 0/0, architecture, contrast, 35 ui-тестов — без ошибок. Полный browser suite и Docker build выполняются перед описанием выпуска.
+
+Независимый review субагентом (b0065a3..a4d46cc, сессия ses_ead8dad87ffeY7j1F2RCaZvxik): критических нет; вердикт «Ready to merge with fixes». Приняты и исправлены: (1) Important — RUNBOOK параграф Google-приёмки и OPERATIONS Guide переписаны под новую модель авто-привязки (заблокированный/уже-привязанный — отказ, один Google на аккаунт); (2) Minor — конфликтный текст стал универсальным («не удалось войти по этой почте, войди по паролю»), чтобы не утверждать ложь для заблокированного случая; (3) Minor — при 23505 в авто-привязке читается занятая identity строка, чтобы параллельные логины того же identity не получали спurious конфликт; (4) Minor — тест дополнил проверкой отказa receipt-импорта для email-совпавшего существующего аккаунта; (5) Minor — заметка в ARCHITECTURE о том, что авто-привязка не создаёт permission на существующий аккаунт. Frontend-чеки и ui-тесты после правок снова чисты.
+<!-- SECTION:NOTES:END -->

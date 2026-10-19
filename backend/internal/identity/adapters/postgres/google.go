@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"qmanga/internal/identity/application"
 	"qmanga/internal/identity/domain"
 	"time"
@@ -64,7 +65,14 @@ func (r *Repository) googleAccount(ctx context.Context, identity application.Goo
 		user = candidate
 	}
 	if _, err = tx.Exec(ctx, `INSERT INTO external_identities(issuer,subject,user_id) VALUES($1,$2,$3)`, identity.Issuer, identity.Subject, user.ID); err != nil {
-		return a, translate(err)
+		var unique *pgconn.PgError
+		if errors.As(err, &unique) && unique.Code == "23505" && user.ID == member.ID {
+			// A concurrent login may have linked or signed this identity in; read the bound row.
+			if bound := tx.QueryRow(ctx, `SELECT u.id,u.email,u.password_hash,u.role,u.is_verified,u.display_name FROM external_identities i JOIN users u ON u.id=i.user_id WHERE i.issuer=$1 AND i.subject=$2 AND NOT u.is_blocked`, identity.Issuer, identity.Subject).Scan(&a.ID, &a.Email, &a.PasswordHash, &a.Role, &a.Verified, &a.DisplayName); bound == nil {
+				return a, tx.Commit(ctx)
+			}
+		}
+		return user, translate(err)
 	}
 	if user.ID == candidate.ID && receiptHash != "" {
 		if _, err = tx.Exec(ctx, `DELETE FROM registration_reading_imports WHERE expires_at<now()`); err != nil {
