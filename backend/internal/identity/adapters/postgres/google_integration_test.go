@@ -286,6 +286,10 @@ func TestGoogleEmailMatchLinksRegisteredAccount(t *testing.T) {
 	if err = db.Pool().QueryRow(ctx, "SELECT count(*) FROM users WHERE lower(email)=$1", password.Email).Scan(&users); err != nil || users != 1 {
 		t.Fatalf("users for email: %d %v", users, err)
 	}
+	if _, err = db.Pool().Exec(ctx, "DELETE FROM external_identities WHERE user_id=$1", password.ID); err != nil {
+		t.Fatal(err)
+	}
+	// A Google login of the email-matched existing account must not receive a guest reading import.
 	if _, err = repo.GoogleAccountForImport(ctx, identity, domain.Account{ID: "unused", Email: password.Email, PasswordHash: "opaque", DisplayName: "import attempt", Role: "reader", Verified: true}, strings.Repeat("c", 64), time.Now().Add(time.Hour)); err != nil {
 		t.Fatal(err)
 	}
@@ -300,5 +304,62 @@ func TestGoogleEmailMatchLinksRegisteredAccount(t *testing.T) {
 	}
 	if _, err = repo.GoogleAccount(ctx, identity, domain.Account{ID: "unused", Email: password.Email, DisplayName: "z"}); !errors.Is(err, domain.ErrConflict) {
 		t.Fatalf("blocked email match accepted: %v", err)
+	}
+}
+
+func TestGoogleConcurrentEmailMatchLogins(t *testing.T) {
+	connection := os.Getenv("TEST_DATABASE_URL")
+	if connection == "" {
+		t.Skip("TEST_DATABASE_URL required")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	base, err := databaseAdapter.New(ctx, connection)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer base.Close()
+	schema := "google_" + strings.ReplaceAll(uuid.NewString(), "-", "")
+	if _, err = base.Pool().Exec(ctx, "CREATE SCHEMA "+schema); err != nil {
+		t.Fatal(err)
+	}
+	defer base.Pool().Exec(context.Background(), "DROP SCHEMA "+schema+" CASCADE")
+	parsedURL, _ := url.Parse(connection)
+	query := parsedURL.Query()
+	query.Set("search_path", schema)
+	parsedURL.RawQuery = query.Encode()
+	db, err := databaseAdapter.New(ctx, parsedURL.String())
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer db.Close()
+	if err = db.Migrate(ctx); err != nil {
+		t.Fatal(err)
+	}
+	repo := New(db.Pool())
+	fresh := domain.Account{ID: "race-user", Email: "race@example.test", PasswordHash: "hash", Role: "reader", Verified: true, DisplayName: "Race reader"}
+	if err = repo.CreateAccount(ctx, fresh); err != nil {
+		t.Fatal(err)
+	}
+	identity := application.GoogleIdentity{Issuer: "https://accounts.google.com", Subject: "race-sub", Email: fresh.Email, Verified: true}
+	candidate := domain.Account{ID: "race-candidate", Email: fresh.Email, PasswordHash: "opaque", DisplayName: "Google override", Role: "reader", Verified: true}
+	results := make(chan struct {
+		account domain.Account
+		err     error
+	}, 2)
+	for attempt := 0; attempt < 2; attempt++ {
+		go func() {
+			account, finishErr := repo.GoogleAccount(ctx, identity, candidate)
+			results <- struct {
+				account domain.Account
+				err     error
+			}{account, finishErr}
+		}()
+	}
+	for attempt := 0; attempt < 2; attempt++ {
+		result := <-results
+		if result.err != nil || result.account != fresh {
+			t.Fatalf("concurrent same-identity login failed: %+v", result)
+		}
 	}
 }

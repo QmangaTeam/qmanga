@@ -64,10 +64,19 @@ func (r *Repository) googleAccount(ctx context.Context, identity application.Goo
 	if member.ID == "" {
 		user = candidate
 	}
+	const savepoint = "qmanga_identity_insert"
+	if _, err = tx.Exec(ctx, "SAVEPOINT "+savepoint); err != nil {
+		return a, err
+	}
 	if _, err = tx.Exec(ctx, `INSERT INTO external_identities(issuer,subject,user_id) VALUES($1,$2,$3)`, identity.Issuer, identity.Subject, user.ID); err != nil {
 		var unique *pgconn.PgError
 		if errors.As(err, &unique) && unique.Code == "23505" && user.ID == member.ID {
-			// A concurrent login may have linked or signed this identity in; read the bound row.
+			// PostgreSQL aborts the whole transaction after a failed statement;
+			// release the failed insert and re-read inside the still-running transaction.
+			if _, rollbackErr := tx.Exec(ctx, "ROLLBACK TO SAVEPOINT "+savepoint); rollbackErr != nil {
+				return a, rollbackErr
+			}
+			// A concurrent login may have linked or signed this identity in; read the winner.
 			if bound := tx.QueryRow(ctx, `SELECT u.id,u.email,u.password_hash,u.role,u.is_verified,u.display_name FROM external_identities i JOIN users u ON u.id=i.user_id WHERE i.issuer=$1 AND i.subject=$2 AND NOT u.is_blocked`, identity.Issuer, identity.Subject).Scan(&a.ID, &a.Email, &a.PasswordHash, &a.Role, &a.Verified, &a.DisplayName); bound == nil {
 				return a, tx.Commit(ctx)
 			}
