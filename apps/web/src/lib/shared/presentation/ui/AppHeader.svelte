@@ -55,7 +55,7 @@
  .catalogue-link{margin-top:12px;font-weight:400}
  @media(min-width:768px){
   .header-inner{height:64px;padding:0 24px;display:grid;grid-template-columns:1fr auto 1fr}
-  .wordmark{display:inline-flex;align-items:center;justify-self:start}.wordmark img{width:auto;height:30px}
+  .wordmark{display:inline-flex;align-items:center;justify-self:start}.wordmark img{width:auto;height:40px}
   .wordmark .dark{display:inline}.wordmark .light{display:none}
   :global(:root[data-theme='light']) .wordmark .dark{display:none}
   :global(:root[data-theme='light']) .wordmark .light{display:inline}
