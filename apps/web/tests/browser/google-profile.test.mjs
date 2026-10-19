@@ -13,7 +13,9 @@ test('Google registration starts without manual nickname, email or password',{ti
  let input;
  await context.route('**/api/v1/auth/google/start',async route=>{input=route.request().postDataJSON();await route.fulfill({status:422,json:{error:{code:'validation'}}});});
  const page=await context.newPage();await page.goto('/register?returnTo=%2Fcatalog');
- await page.getByRole('button',{name:'Продолжить с Google'}).click();
+ const googleButton=page.getByRole('button',{name:'Продолжить с Google'});
+ assert.equal(await googleButton.locator('svg[aria-hidden="true"] path[fill="#4285F4"]').count(),1);
+ await googleButton.click();
  await page.getByRole('alert').waitFor();
  assert.deepEqual(input,{return_path:'/catalog',nickname:''});
  assert.equal(await page.locator('#auth-nickname').inputValue(),'');
