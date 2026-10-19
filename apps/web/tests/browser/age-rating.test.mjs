@@ -59,12 +59,13 @@ test('age ratings persist through admin, public cards and exact URL filters with
   assert.equal((await (await context.request.get('/api/v1/titles/'+adult.slug)).json()).age_rating,16);
   await page.goto('/catalog?'+new URLSearchParams({q:prefix,age_rating:'18'}));
   await page.getByRole('button',{name:'Фильтры',exact:true}).click();
-  const filtersDialog=page.getByRole('dialog',{name:'Фильтры каталога',exact:true});
-  assert.equal(await filtersDialog.getByRole('combobox',{name:'Возрастная маркировка',exact:true}).inputValue(),'18');
+  const filtersDialog=page.getByRole('dialog',{name:'Фильтры',exact:true});
+  assert.equal(await filtersDialog.locator('input[type="checkbox"][value="18"]').isChecked(),true);
   assert.equal(await page.locator('.cover-grid .cover-card').count(),1);
   assert.equal(await page.locator('.cover-card .age-rating.adult').count(),1);
-  await filtersDialog.getByRole('combobox',{name:'Возрастная маркировка',exact:true}).selectOption('12');
-  await filtersDialog.getByRole('button',{name:'Применить',exact:true}).click();
+  await filtersDialog.locator('input[type="checkbox"][value="18"]').uncheck();
+  await page.waitForURL(url=>url.pathname==='/catalog'&&!url.searchParams.has('age_rating'));
+  await filtersDialog.locator('input[type="checkbox"][value="12"]').check();
   await page.waitForURL(url=>url.pathname==='/catalog'&&url.searchParams.get('age_rating')==='12');
   assert.equal(new URL(page.url()).searchParams.get('q'),prefix);assert.equal(new URL(page.url()).searchParams.has('cursor'),false);
   await page.locator('.cover-card .age-rating').filter({hasText:'12+'}).waitFor();

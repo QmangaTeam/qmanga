@@ -45,12 +45,27 @@ test('taxonomy admin CRUD, title assignment and public combined URL filters',{ti
     await page.goto('/catalog?'+new URLSearchParams({category:slug,collection:slug,genre:slug,age_rating:'18'}));
     await page.locator('.cover-grid .cover-card').waitFor();assert.equal(await page.locator('.cover-grid .cover-card').count(),1);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
-    const fields=width<1024?page.getByRole('dialog'):page.locator('aside.catalogue-filters');
-    if(width<1024)await page.getByRole('button',{name:locale==='ru'?'Фильтры':'Сүзгілер',exact:true}).click();
-    assert.equal(await fields.locator('select[name="category"]').inputValue(),slug);assert.equal(await fields.locator('select[name="collection"]').inputValue(),slug);assert.equal(await fields.locator('input[type="hidden"][name="genre"]').inputValue(),slug);assert.equal(await fields.locator('select[name="age_rating"]').inputValue(),'18');
-    assert.equal((await fields.locator('.tag-search-selected button').first().textContent()).trim(),name);
-    await fields.getByRole('button',{name:locale==='ru'?'Применить':'Қолдану',exact:true}).click();
-    await page.waitForURL(url=>url.searchParams.get('category')===slug&&url.searchParams.get('collection')===slug);assert.equal(new URL(page.url()).searchParams.get('age_rating'),'18');
+    const triggerName=locale==='ru'?'Фильтры':'Сүзгілер';
+    const mobile=width<1024;
+    if(mobile)await page.getByRole('button',{name:triggerName,exact:true}).click();
+    const fields=mobile?page.getByRole('dialog',{name:triggerName,exact:true}):page.locator('aside.catalogue-filters');
+    assert.equal(await fields.locator('input[type="checkbox"][value="18"]').isChecked(),true);
+    const collectionSection=fields.locator('section.filter-section').filter({hasText:locale==='ru'?'Редакционная подборка':'Редакциялық жинақ'});
+    const collectionBox=collectionSection.locator(`input[type="checkbox"][value="${slug}"]`);
+    assert.equal(await collectionBox.isChecked(),true);
+    await fields.getByRole('searchbox',{name:locale==='ru'?'Поиск тегов':'Тег іздеу',exact:true}).fill(name);
+    const tag=fields.locator('.tag-browser').getByRole('checkbox',{name,exact:true});
+    await tag.waitFor();
+    assert.equal(await tag.isChecked(),true);
+    assert.equal(await fields.getByRole('button',{name:locale==='ru'?'Применить':'Қолдану',exact:true}).count(),0);
+    assert.ok((await page.locator('.active-filters').innerText()).includes(name+' revised'),'the category chip uses the renamed taxonomy');
+    await collectionBox.uncheck();
+    await page.waitForURL(url=>!url.searchParams.has('collection'));
+    assert.equal(await tag.isChecked(),true,'removing one filter keeps the selected tag');
+    assert.equal(new URL(page.url()).searchParams.get('genre'),slug);
+    assert.equal(new URL(page.url()).searchParams.get('category'),slug);
+    assert.equal(new URL(page.url()).searchParams.get('age_rating'),'18');
+    if(mobile){await page.keyboard.press('Escape');await fields.waitFor({state:'hidden'});}
    }
   }
   await page.goto('/titles/'+slug);await page.locator('.title-genres a[href="/catalog?category='+slug+'"]').waitFor();await page.locator('.title-genres a[href="/catalog?collection='+slug+'"]').waitFor();
