@@ -1,11 +1,11 @@
 ---
 id: TASK-86
 title: Редактирование аккаунта рядом с выбранной строкой
-status: Review
+status: Done
 assignee:
   - '@admin_acceptance_remaining'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 19:02'
+updated_date: '2026-10-20 19:16'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -29,8 +29,8 @@ ordinal: 44018
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 После выбора видны имя/роль целевого аккаунта, редактируемая форма получает фокус в понятном месте.
-- [ ] #2 Отмена возвращает к строке; подтверждение, причины, запрет саморедактирования и серверные права сохранены.
+- [x] #1 После выбора видны имя/роль целевого аккаунта, редактируемая форма получает фокус в понятном месте.
+- [x] #2 Отмена возвращает к строке; подтверждение, причины, запрет саморедактирования и серверные права сохранены.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -49,4 +49,12 @@ ordinal: 44018
 Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
 
 21 октября, admin_acceptance_remaining: повторная приёмка выявила невыполненный фокус в AC1/AC2. Browser regression RED: после Enter фокус оставался на «Изменить». Исправлено: после Svelte tick фокус переходит в первый доступный контрол inline формы; отмена возвращает его на кнопку исходной строки. GREEN: account-search 2/2, общий административный browser набор 15/15; 158 module,46 UI PASS; Svelte0 errors/0 warnings; architecture PASS; Docker web build/health PASS. Новая правка ожидает независимого review, push и наблюдаемого production SHA; Done не подтверждён.
+
+Final release acceptance 2026-10-21: production and staging observed blue797c810725aa6e880cabd477a8a2a2570e4b49a0; public HTTPS/browser footer confirms exactSHA, health200 with PostgreSQL/S3ok. Verify39480229990 and FastRelease39480229999 SUCCESS;89browsercases43+46 with0failures,158module/46UI, Go/PostgreSQL/codecs and independent review. Temporary synthetic staging fixtures only; personal production accounts/data not used. Existing focused UI/domain/Go/browser evidence in this card verified. TASK86 missing focus behavior fixed ina153498, red→green regression and independent review; actual staging edit→focus→cancel→origin-focus passed. This release contains the reviewed administrative UI package. PhysicalAndroid separatelyTASK97; no production fixtures or owner-login approval required.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Administrative UX criteria verified by focused checks and full CI; reviewed package released to production797c810. TASK86 focus/cancel additionally passed actual staging browser.
+<!-- SECTION:FINAL_SUMMARY:END -->

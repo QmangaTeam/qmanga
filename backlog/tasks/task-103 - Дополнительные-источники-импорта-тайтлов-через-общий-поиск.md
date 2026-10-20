@@ -1,11 +1,11 @@
 ---
 id: TASK-103
 title: Дополнительные источники импорта тайтлов через общий поиск
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-20 16:49'
-updated_date: '2026-10-20 18:43'
+updated_date: '2026-10-20 19:16'
 labels:
   - web
   - publishing
@@ -49,10 +49,12 @@ Final integration 2026-10-20 at833f606: Docker API/web/gateway rebuilt and healt
 Remote release readiness 2026-10-20: tested product SHA842a23f2c9bd55da1ad9447def70f428bda0b3b1. Verify Qmanga https://github.com/maqsatto/qmanga/actions/runs/39470308246 SUCCESS: both acceptance shards,88 browser scenarios (42+46),0 failures, full Go/PostgreSQL/codecs, frontend and all3 ARM64 images. Fast Release https://github.com/maqsatto/qmanga/actions/runs/39470308114 SUCCESS; refs/deploy-ready confirmed842a23f. Prior39468803806 failure was a real pre-hydration sidebar lost-Enter race, reproduced and fixed with native disabled-until-mounted control plus cold-JS regression; independent review passed, local workspace3/3/UI46/Svelte0/0 and repeated full CI green. Live Shikimori/AniList DTO→mapper→merge→metadataError/validPublication also validated (no titles created/changed). Public production still reports36b3a5f455eb37830408af44c2e2f00b48eabd51, health200; strict SSH with existing key and trusted known_hosts still times out before authentication. Rollout/production acceptance remains unconfirmed; keep Review. Next step: restore authorized SSH network access and inspect existing poller journal/state, preserve locks/backup/restore gates and release the ready immutable SHA through the single standard path.
 
 Observed production release 2026-10-20: e2c9c8910d6dedbe74eddbafa028b8bb67180340 via existing poller staging18:37UTC → production18:42UTC. Verify39474894775 and FastRelease39474894489 SUCCESS,88 browser scenarios42+46 and full checks; independent CI review passed after canonical tag publication fix. Both environments green sameSHA; migration backup and verified off-host production copy20261020T184220Z, restore/lock/hold gates preserved. Public HTTPS health/homepage/genres/PDF assets200; private metadata import route401 without login, exactSHA visible in browser. Local/CI real import acceptance already passed; no production fixtures or owner data modified for tests. Keep Review pending private production import acceptance under an authorized owner account; physical Android remains TASK97 not_run. Deployment itself is confirmed.
+
+Final release acceptance 2026-10-21: production and staging observed blue797c810725aa6e880cabd477a8a2a2570e4b49a0; public HTTPS/browser footer confirms exactSHA, health200 with PostgreSQL/S3ok. Verify39480229990 and FastRelease39480229999 SUCCESS;89browsercases43+46 with0failures,158module/46UI, Go/PostgreSQL/codecs and independent review. Temporary synthetic staging fixtures only; personal production accounts/data not used. Actual staging built UI: CBZ and PDF each ordered preview→cancel→zeroPUT and zero persistedpages; real Shikimori search→select→formmetadata/provenance; real AniList search→select→canonicaltags/receipt→processedWebP; guest401, reader403, invalidsource422. No title saved by metadata check. Temporary staging accounts/sessions/receipts and synthetic preview team/title/project/revision removed; remainingcounts0 and temporarycredentialsdeleted. Earlier full upload/error/retry/persistence cases passed local and CI. Independent final staging-proof reviewPASS. Owner personal production login is not an additional AC; physicalAndroid remains TASK97.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
-AniList extends the same source picker, metadata form and tag mapping contract alongside verified Shikimori .io. Live search/details/covers and source-isolated fixtures passed; missing unsupported values stay unknown. Ready locally for release acceptance.
+Implemented, checked locally and in full CI, accepted on actual staging, and observed in production797c810. Independent review passed. Physical Android separately TASK97; no additional owner-login gate.
 <!-- SECTION:FINAL_SUMMARY:END -->

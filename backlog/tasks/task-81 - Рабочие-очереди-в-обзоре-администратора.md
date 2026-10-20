@@ -1,11 +1,11 @@
 ---
 id: TASK-81
 title: Рабочие очереди в обзоре администратора
-status: Review
+status: Done
 assignee:
   - '@admin-agent'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 19:03'
+updated_date: '2026-10-20 19:16'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -29,8 +29,8 @@ ordinal: 44013
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Из обзора видны доступные ожидающие решения очереди и переходы к ним.
-- [ ] #2 Счётчики, если добавлены, подтверждены авторизованным read model; ошибка не подменяется нулём, метрики сохраняют прежний смысл.
+- [x] #1 Из обзора видны доступные ожидающие решения очереди и переходы к ним.
+- [x] #2 Счётчики, если добавлены, подтверждены авторизованным read model; ошибка не подменяется нулём, метрики сохраняют прежний смысл.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -47,4 +47,12 @@ ordinal: 44013
 Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
 
 21 октября, admin_acceptance_remaining: повторно подтверждён AdminQueues:5 штатных переходов к решениям без выдуманных счётчиков; UI regression admin-queues PASS в текущем наборе46/46. Общие158 module PASS. Дополнительной реализации по карточке не требуется; приватный production walkthrough этим локальным SSR-тестом не подтверждён.
+
+Final release acceptance 2026-10-21: production and staging observed blue797c810725aa6e880cabd477a8a2a2570e4b49a0; public HTTPS/browser footer confirms exactSHA, health200 with PostgreSQL/S3ok. Verify39480229990 and FastRelease39480229999 SUCCESS;89browsercases43+46 with0failures,158module/46UI, Go/PostgreSQL/codecs and independent review. Temporary synthetic staging fixtures only; personal production accounts/data not used. Existing focused UI/domain/Go/browser evidence in this card verified. TASK86 missing focus behavior fixed ina153498, red→green regression and independent review; actual staging edit→focus→cancel→origin-focus passed. This release contains the reviewed administrative UI package. PhysicalAndroid separatelyTASK97; no production fixtures or owner-login approval required.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Administrative UX criteria verified by focused checks and full CI; reviewed package released to production797c810. TASK86 focus/cancel additionally passed actual staging browser.
+<!-- SECTION:FINAL_SUMMARY:END -->

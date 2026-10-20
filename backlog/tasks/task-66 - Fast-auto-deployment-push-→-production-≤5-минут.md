@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 01:19'
-updated_date: '2026-10-20 18:43'
+updated_date: '2026-10-20 19:17'
 labels:
   - CI
   - deployment
@@ -51,4 +51,6 @@ Oracle Console read-only diagnosis: owner signed in through the visible browser.
 Canonical publisher fix ready: both workflows publish missing last-input-change aliases; full history in Verify; shared per-component publication concurrency and strict HEAD existence preflight preserve existing HEAD/alias tags, auth/network failures fail closed. Regression covers distinct component history, missing/existing aliases, HEAD existing/missing, auth/network rejection and shared serialization. Root reran shell tests, bash -n, internal-staging/offsite regressions, diff check; Backlog doctor clean. Independent release_independent review found two races, both corrected and final re-review PASS. PyYAML unavailable, workflow syntax/real execution remains remote CI evidence. No VM selector/hold/lock/permissions changed. Next: push and observe full Verify, readyref, staging and production same SHA.
 
 Observed release e2c9c8910d6dedbe74eddbafa028b8bb67180340: Verify39474894775 and FastRelease39474894489 SUCCESS;88 browsercases42+46, fullGo/PostgreSQL/codecs/frontend, all3ARM64published with canonicalaliases. Existing poller staging18:37:09UTC and production18:42:57UTC green sameSHA; running component image IDs verified, oldblue retained. Mandatory migration backups created: staging20261020T183640Z, production20261020T184220Z; production off-host upload/download/checksum verified before switch, restoregatepreserved. Externalhealth/homepage/genres/PDFlicense/font200, metadata unauth401, browserfooter exactSHA. StrictSSH restored. RemainsReview: old5mintimer, sudo password required toinstall20secunits; <=300s not proven (push18:27→prod18:42). No hold removal, paralleldeploy or security expansion beyond owner-approved single/32 replacement.
+
+Next verified automatic release: staging797c81019:09:57UTC → production797c81019:15:41UTC, exactpublicSHA/health confirmed. Verify39480229990/FastRelease39480229999SUCCESS,89browsercases0failures. Actualstageimport/source/role/focusjourneys accepted; temporaryfixtures fullyremoved. Existing5mintimer persists; no sudo/passwordless administrative installation available, so<=300s remainsunproven. Documented owneraction: install existing service/timer +daemon-reload/restart, thenmeasurethree releases. No permission changes/hold removal/alternate deployment path used.
 <!-- SECTION:NOTES:END -->
