@@ -76,7 +76,7 @@ image_present() { # component sha
 # not exist: fall back to the previous working component instead.
 image_available() { # component sha
   image_present "$1" "$2" ||
-    docker manifest inspect "$IMAGE_PREFIX-$1:$2" >/dev/null 2>&1
+    timeout 10 docker manifest inspect "$IMAGE_PREFIX-$1:$2" >/dev/null 2>&1
 }
 
 app_compose() {

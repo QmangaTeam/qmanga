@@ -70,9 +70,10 @@ run_release() { # target
 
 if test "$staging_done" = false; then
   run_release staging || exit 1
-  # release.sh checks out the released commit, which may be a newer poller.
-  # Re-exec so the remaining phase always runs the code from that release.
-  exec bash "$QMANGA_REPO_ROOT/deploy/poll-staging.sh"
+  # Exit instead of re-exec: the next timer tick starts this script from disk,
+  # so code from the new checkout applies without an unbounded exec chain
+  # (which could busy-loop on a busy lock or hit TimeoutStartSec mid-release).
+  exit 0
 fi
 
 # Staging smoke passed in the same release run: production is promoted
@@ -80,5 +81,5 @@ fi
 # staging state, restore gate, backup freshness and health with auto-rollback.
 if test "$production_done" = false; then
   run_release production || exit 1
-  exec bash "$QMANGA_REPO_ROOT/deploy/poll-staging.sh"
+  exit 0
 fi

@@ -53,17 +53,18 @@ if test "$DEPLOY_TARGET" = production; then
 fi
 
 # ---- selective component images -------------------------------------------
-# Staging derives the composition from changed sources since its active
-# release. Production promotes the exact staging manifest, so the public
-# composition is always the one that passed staging smoke.
-old_available=true
-if test -n "$old_sha" && ! git -C "$QMANGA_REPO_ROOT" cat-file -e "$old_sha^{commit}" 2>/dev/null; then
-  old_available=false
+# The tag of each component is the newest commit at or before $desired that
+# changed that component's build inputs. That is exactly the content CI built
+# for the image, even when an earlier release failed and staging.active still
+# points at an older SHA (deploy-ready may run ahead of staging).
+old_available=false
+if test -n "$old_sha" && git -C "$QMANGA_REPO_ROOT" cat-file -e "$old_sha^{commit}" 2>/dev/null; then
+  old_available=true
 fi
 changed_paths=()
 changed_text=''
 migrations_changed=true
-if test "$old_available" = true && test -n "$old_sha"; then
+if test "$old_available" = true; then
   mapfile -t changed_paths < <(git -C "$QMANGA_REPO_ROOT" diff --name-only "$old_sha" "$desired")
   changed_text=$(printf '%s\n' "${changed_paths[@]}")
   if grep -q '^backend/migrations/' <<<"$changed_text"; then
@@ -72,27 +73,30 @@ if test "$old_available" = true && test -n "$old_sha"; then
     migrations_changed=false
   fi
 fi
-path_changed() { # regex
-  test -n "$changed_text" && grep -qE "$1" <<<"$changed_text"
+component_tag() { # component paths...
+  local component=$1 sha
+  shift
+  sha=$(git -C "$QMANGA_REPO_ROOT" log -1 --format=%H "$desired" -- "$@")
+  test -n "$sha" || sha=$desired
+  if ! image_available "$component" "$sha"; then
+    echo "Component $component: image $component:$sha (last change) is not published; refusing to deploy stale content" >&2
+    return 1
+  fi
+  echo "Component $component: tag $sha (last change at or before $desired)" >&2
+  printf '%s\n' "$sha"
 }
 if test "$DEPLOY_TARGET" = production; then
   read -r tag_gateway tag_api tag_web < <(read_manifest_for staging "$desired")
 else
-  if test "$old_available" = true && test -n "$old_sha"; then
-    read -r old_gateway old_api old_web < <(read_manifest "$old_sha")
+  if test -n "$old_sha"; then
+    tag_gateway=$(component_tag gateway infra/nginx.conf infra/gateway.Dockerfile)
+    tag_api=$(component_tag api backend infra/api.Dockerfile infra/imagemagick-policy.xml)
+    tag_web=$(component_tag web apps/web infra/web.Dockerfile)
   else
-    old_gateway=$desired old_api=$desired old_web=$desired
+    # No previous release to compare with: the first release is verified and
+    # publishes all three immutable images for this SHA.
+    tag_gateway=$desired tag_api=$desired tag_web=$desired
   fi
-  select_tag() { # component previous-tag regex
-    if path_changed "$3" && image_available "$1" "$desired"; then
-      printf '%s\n' "$desired"
-    else
-      printf '%s\n' "$2"
-    fi
-  }
-  tag_gateway=$(select_tag gateway "$old_gateway" '^infra/(nginx\.conf|gateway\.Dockerfile)$|^deploy/Caddyfile$')
-  tag_api=$(select_tag api "$old_api" '^backend/|^infra/(api\.Dockerfile|imagemagick-policy\.xml)$')
-  tag_web=$(select_tag web "$old_web" '^apps/web/|^infra/web\.Dockerfile$')
 fi
 valid_sha "$tag_gateway" && valid_sha "$tag_api" && valid_sha "$tag_web" || {
   echo 'Release component manifest is invalid' >&2; exit 2;
@@ -114,6 +118,21 @@ old_worker_stopped=false
 release_tags() {
   IMAGE_TAG_GATEWAY=$tag_gateway IMAGE_TAG_API=$tag_api IMAGE_TAG_WEB=$tag_web \
     app_compose "$new_color" "$desired" "$@"
+}
+# The homepage footer renders BUILD_VERSION (runtime env), so it cannot prove
+# which web/tag is actually running. Compare the running containers with the
+# immutable tags chosen above instead.
+verify_running_image() { # service component tag [compose options...]
+  local service=$1 component=$2 tag=$3 cid expected actual
+  shift 3
+  cid=$(release_tags "$@" ps -q "$service")
+  test -n "$cid" || { echo "No running $service container for $new_color" >&2; return 1; }
+  expected=$(docker image inspect "$IMAGE_PREFIX-$component:$tag" --format '{{.Id}}')
+  actual=$(docker inspect --format '{{.Image}}' "$cid")
+  test "$expected" = "$actual" || {
+    echo "Running $service container does not use $component:$tag" >&2; return 1;
+  }
+  echo "Verified $service runs $component:$tag" >&2
 }
 restore_previous() {
   local result=$?
@@ -152,6 +171,9 @@ if test ${#pull_components[@]} -gt 0; then
   release_tags pull "${pull_components[@]}"
 fi
 release_tags up -d --wait --wait-timeout 180 gateway api web
+verify_running_image gateway gateway "$tag_gateway"
+verify_running_image api api "$tag_api"
+verify_running_image web web "$tag_web"
 local_health "$new_port"
 
 "$QMANGA_REPO_ROOT/deploy/route.sh" "$DEPLOY_TARGET" "$new_color" normal
@@ -169,6 +191,7 @@ if test -n "$old_sha"; then
 fi
 release_tags --profile worker up -d --no-deps worker --wait
 new_worker=true
+verify_running_image worker api "$tag_api" --profile worker
 target_health "$new_port"
 
 # Confirm the public page renders this deployment, not a cached predecessor.
