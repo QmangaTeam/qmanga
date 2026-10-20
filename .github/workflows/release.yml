@@ -83,6 +83,10 @@ jobs:
           echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
 
   build:
+    # Serialize HEAD-tag and alias writers across both publishing workflows.
+    concurrency:
+      group: component-image-${{ github.repository }}-${{ matrix.component }}
+      cancel-in-progress: false
     needs: classify
     if: needs.classify.outputs.matrix != '[]' && !cancelled()
     runs-on: ubuntu-24.04-arm
@@ -105,7 +109,13 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Check immutable HEAD image
+        id: head-image
+        run: |
+          status=$(bash scripts/publish-component-alias.sh --head-status "ghcr.io/${{ github.repository }}-${{ matrix.component }}" "${{ github.sha }}")
+          echo "status=$status" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
+        if: steps.head-image.outputs.status == 'missing'
         with:
           context: .
           file: infra/${{ matrix.component }}.Dockerfile
@@ -114,6 +124,8 @@ jobs:
           tags: ghcr.io/${{ github.repository }}-${{ matrix.component }}:${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+      - name: Publish immutable component input alias
+        run: bash scripts/publish-component-alias.sh "${{ matrix.component }}" "ghcr.io/${{ github.repository }}-${{ matrix.component }}" "${{ github.sha }}"
 
   verify-gate:
     needs: classify

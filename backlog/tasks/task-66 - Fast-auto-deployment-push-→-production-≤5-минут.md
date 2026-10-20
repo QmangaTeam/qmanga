@@ -1,11 +1,11 @@
 ---
 id: TASK-66
 title: 'Fast auto deployment: push → production ≤5 минут'
-status: In Progress
+status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 01:19'
-updated_date: '2026-10-20 18:24'
+updated_date: '2026-10-20 18:26'
 labels:
   - CI
   - deployment
@@ -29,6 +29,12 @@ ordinal: 41026
 - [x] #5 owners review: независимый субагент
 <!-- AC:END -->
 
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Current release recovery: publish missing canonical component-input aliases from verified workflow images; preserve existing HEAD/alias tags with fail-closed registry checks and shared per-component publisher serialization. Keep VM selector/hold/locks/gates unchanged. Regression + independent review, push, observe full Verify then poller staging/production and external SHA.
+<!-- SECTION:PLAN:END -->
+
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
@@ -41,4 +47,6 @@ Remote release readiness 2026-10-20: tested product SHA842a23f2c9bd55da1ad9447de
 Oracle Console read-only diagnosis: owner signed in through the visible browser. VM qmanga is Running, expected public address and subnet, no VNIC NSGs. Associated security list permits TCP22 from exactly one previous operator /32; verified current external operator IPv4 does not match that allowlist. HTTP80/HTTPS443 are public as expected; no OCI rules have been saved or changed. Prepared a single-/32 replacement in the existing SSH ingress form and requested explicit owner approval before Save; host firewall and poller state are still uninspected. No personal source IPs or account credentials recorded here. Bounded public observation after ready842a23f did not observe rollout; public API import route remains404 and productionSHA36b3a5f. Next: owner decision on the proposed restricted SSH source replacement, then SSH read-only poller/backup/hold diagnosis before normal gated promotion.
 
 2026-10-20: owner explicitly approved replacing the single stale OCI SSH source with current operator /32, retaining TCP22 only. Saved and verified visible state; strict existing-key/known-host SSH now succeeds. Both active environments remain36b3a5f. Existing enabled5min poller is held on842a23f because component selection expects api:6be46e4 (last backend input change), while successful CI publishes release-head tags. Hold preserved. Plan: reproduce tag-contract mismatch, fix safe immutable content-equivalent selection with regression, independent review, checks/push, observe existing poller gates and actual production SHA. No credentials or personal source addresses stored.
+
+Canonical publisher fix ready: both workflows publish missing last-input-change aliases; full history in Verify; shared per-component publication concurrency and strict HEAD existence preflight preserve existing HEAD/alias tags, auth/network failures fail closed. Regression covers distinct component history, missing/existing aliases, HEAD existing/missing, auth/network rejection and shared serialization. Root reran shell tests, bash -n, internal-staging/offsite regressions, diff check; Backlog doctor clean. Independent release_independent review found two races, both corrected and final re-review PASS. PyYAML unavailable, workflow syntax/real execution remains remote CI evidence. No VM selector/hold/lock/permissions changed. Next: push and observe full Verify, readyref, staging and production same SHA.
 <!-- SECTION:NOTES:END -->
