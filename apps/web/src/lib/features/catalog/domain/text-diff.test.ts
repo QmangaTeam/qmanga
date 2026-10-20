@@ -1,0 +1,4 @@
+import {test,expect} from 'bun:test';
+import {textDiff} from './text-diff';
+test('keeps exact text while isolating changed fragments',()=>{const result=textDiff('Старая длинная строка','Новая длинная строка');expect(result.before.map(x=>x.text).join('')).toBe('Старая длинная строка');expect(result.after.map(x=>x.text).join('')).toBe('Новая длинная строка');expect(result.before.filter(x=>x.changed).map(x=>x.text).join('')).toBe('Старая');expect(result.after.filter(x=>x.changed).map(x=>x.text).join('')).toBe('Новая');});
+test('handles insertion deletion empty and HTML as literal data',()=>{expect(textDiff('','<script>')).toEqual({before:[],after:[{text:'<script>',changed:true}]});expect(textDiff('same','same').after).toEqual([{text:'same',changed:false}]);expect(textDiff('abc','ac').before.filter(x=>x.changed)).toEqual([{text:'abc',changed:true}]);});
