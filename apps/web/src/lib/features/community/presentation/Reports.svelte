@@ -24,7 +24,8 @@
  {#if item.titleSlug}<a class="auth-link" href={'/titles/'+encodeURIComponent(item.titleSlug)}>{text($locale,'Тайтл','Тайтл')}</a>{/if}
  {#if item.teamSlug}<a class="auth-link" href={'/teams/'+encodeURIComponent(item.teamSlug)}>{item.teamName}</a>{/if}
  {#if item.releaseId}<a class="auth-link" href={'/read/'+encodeURIComponent(item.releaseId)+(item.revisionId?'?preview='+encodeURIComponent(item.revisionId)+'&page='+encodeURIComponent(item.targetType==='page'?item.targetId:item.pageId):'')}>{text($locale,'Тарау','Глава')} {item.chapterLabel}{#if item.pagePosition} · {text($locale,'Бет','Страница')} {item.pagePosition}{/if}</a>{/if}
- {#if item.targetType==='comment'&&item.titleSlug&&!item.releaseId}<a class="auth-link" href={'/titles/'+encodeURIComponent(item.titleSlug)+'?tab=comments'}>{text($locale,'Талқылау','Обсуждение')}</a>{/if}
+ {#if item.targetType==='comment'&&item.releaseId}<a class="auth-link" href={'/read/'+encodeURIComponent(item.releaseId)+'?comment='+encodeURIComponent(item.targetId)}>{text($locale,'Пікір','Комментарий')}</a>{/if}
+ {#if item.targetType==='comment'&&item.titleSlug&&!item.releaseId}<a class="auth-link" href={'/titles/'+encodeURIComponent(item.titleSlug)+'?tab=comments&comment='+encodeURIComponent(item.targetId)}>{text($locale,'Талқылау','Обсуждение')}</a>{/if}
  </nav>
  {#if item.targetType==='comment'}<blockquote><strong>{item.commentAuthor||text($locale,'Оқырман','Читатель')}</strong><p>{item.commentDeleted?text($locale,'Пікір өшірілген','Комментарий удалён'):item.commentBody||text($locale,'Мәтін қолжетімсіз','Текст недоступен')}</p>{#if item.commentHidden}<small>{text($locale,'Жасырылған','Скрыт')}</small>{/if}</blockquote>{/if}
  <p>{item.reason}</p>{#if item.contactEmail}<p>{text($locale,'Байланыс поштасы (расталмаған)','Почта для связи (не подтверждена)')}: {item.contactEmail}</p>{/if}

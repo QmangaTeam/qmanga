@@ -82,6 +82,14 @@ INSERT INTO titles(id,slug,name_kk,is_listed) VALUES('title','title','Title',tru
 	if rootCount != 2 {
 		t.Fatalf("flat thread count: %d", rootCount)
 	}
+	focused, err := repository.Discussion(ctx, "title", "", "", nested)
+	if err != nil || len(focused.Comments) != 3 {
+		t.Fatalf("focused nested context: %#v %v", focused, err)
+	}
+	wrong, err := repository.Discussion(ctx, "other", "", "", nested)
+	if err != nil || len(wrong.Comments) != 0 {
+		t.Fatalf("cross-title focus leaked: %#v %v", wrong, err)
+	}
 	page, err := repository.Replies(ctx, root, "")
 	if err != nil || len(page.Comments) != 2 {
 		t.Fatalf("reply page: %#v %v", page, err)

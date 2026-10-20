@@ -40,7 +40,7 @@ type Repository interface {
 	RightsStatus(context.Context, string, string) (Report, error)
 	MyReports(context.Context, string, string) ([]Report, error)
 	Replies(context.Context, string, string) (Discussion, error)
-	Discussion(context.Context, string, string, string) (Discussion, error)
+	Discussion(context.Context, string, string, string, ...string) (Discussion, error)
 	Comment(context.Context, string, domain.Comment) (string, error)
 	Edit(context.Context, string, string, string, bool) error
 	Delete(context.Context, string, string) error
@@ -61,8 +61,8 @@ func (service *Service) Replies(ctx context.Context, parent, after string) (Disc
 }
 
 func New(repository Repository, newID func() string) *Service { return &Service{repository, newID} }
-func (service *Service) Discussion(ctx context.Context, title, release, after string) (Discussion, error) {
-	return service.repository.Discussion(ctx, title, release, after)
+func (service *Service) Discussion(ctx context.Context, title, release, after string, focus ...string) (Discussion, error) {
+	return service.repository.Discussion(ctx, title, release, after, focus...)
 }
 func (service *Service) Comment(ctx context.Context, actor string, input domain.Comment) (string, error) {
 	if !domain.ValidBody(input.Body) || input.TitleID == "" {

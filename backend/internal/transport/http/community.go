@@ -32,7 +32,7 @@ func (handler *CommunityHandler) Register(api *gin.RouterGroup, identity *Identi
 	moderator.PUT("/comments/:id/visibility", handler.visibility)
 }
 func (handler *CommunityHandler) discussion(request *gin.Context) {
-	result, failure := handler.service.Discussion(request.Request.Context(), request.Param("id"), request.Query("release"), request.Query("after"))
+	result, failure := handler.service.Discussion(request.Request.Context(), request.Param("id"), request.Query("release"), request.Query("after"), request.Query("comment"))
 	if failure != nil {
 		communityError(request, failure)
 		return

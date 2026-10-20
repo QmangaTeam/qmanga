@@ -54,8 +54,12 @@ func (repository *Repository) write(ctx context.Context, user string, moderator 
 	}
 	return transaction.Commit(ctx)
 }
-func (repository *Repository) Discussion(ctx context.Context, title, release, after string) (application.Discussion, error) {
+func (repository *Repository) Discussion(ctx context.Context, title, release, after string, focuses ...string) (application.Discussion, error) {
 	result := application.Discussion{Comments: []application.Comment{}}
+	focus := ""
+	if len(focuses) > 0 {
+		focus = focuses[0]
+	}
 	var valid bool
 	if failure := repository.pool.QueryRow(ctx, `SELECT `+visibleTitle, title).Scan(&valid); failure != nil {
 		return result, failure
@@ -68,17 +72,18 @@ func (repository *Repository) Discussion(ctx context.Context, title, release, af
 	}
 	rows, failure := repository.pool.Query(ctx, `WITH roots AS(
 	 SELECT id,created_at FROM comments WHERE title_id=$1 AND COALESCE(release_id,'')=$2 AND parent_id IS NULL
+ AND ($4='' OR id=(SELECT COALESCE(root_id,parent_id,id) FROM comments WHERE id=$4 AND title_id=$1 AND COALESCE(release_id,'')=$2))
 	 AND ($3::varchar='' OR (created_at,id)<(SELECT created_at,id FROM comments WHERE id=$3::varchar AND title_id=$1 AND COALESCE(release_id,'')=$2))
 	 ORDER BY created_at DESC,id DESC LIMIT 20
 	), selected AS(
-	 SELECT id FROM roots UNION ALL SELECT reply.id FROM roots CROSS JOIN LATERAL(
+	 SELECT id FROM roots UNION SELECT id FROM comments WHERE id IN($4,(SELECT parent_id FROM comments WHERE id=$4)) AND title_id=$1 AND COALESCE(release_id,'')=$2 UNION ALL SELECT reply.id FROM roots CROSS JOIN LATERAL(
 	 SELECT id FROM comments WHERE (root_id=roots.id OR (root_id IS NULL AND parent_id=roots.id)) ORDER BY created_at,id LIMIT 10)reply
 	)
 	 SELECT comment.id,comment.user_id,comment.title_id,COALESCE(comment.release_id,''),COALESCE(comment.parent_id,''),COALESCE(comment.root_id,comment.parent_id,''),
 	CASE WHEN comment.is_hidden OR comment.deleted_at IS NOT NULL THEN '' ELSE comment.body END,
 	comment.is_spoiler,comment.is_hidden OR comment.deleted_at IS NOT NULL,comment.created_at,
 	(SELECT count(*) FROM comments reply WHERE reply.root_id=comment.id OR (reply.root_id IS NULL AND reply.parent_id=comment.id)),(SELECT display_name FROM users WHERE id=comment.user_id)
-	FROM comments comment WHERE comment.id IN(SELECT id FROM selected) ORDER BY comment.created_at,comment.id`, title, release, after)
+	FROM comments comment WHERE comment.id IN(SELECT id FROM selected) ORDER BY comment.created_at,comment.id`, title, release, after, focus)
 	if failure != nil {
 		return result, failure
 	}

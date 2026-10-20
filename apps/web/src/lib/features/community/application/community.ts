@@ -7,7 +7,7 @@ export interface ModerationReport extends Report {titleName:string;titleSlug:str
 export interface CommunityGateway {
  myReports(accountId:string,after?:string):Promise<{items:PersonalReport[];hasMore:boolean}>;
  account():Promise<string|null>;
- discussion(titleId:string,releaseId:string,after?:string):Promise<Discussion>;
+ discussion(titleId:string,releaseId:string,after?:string,focus?:string):Promise<Discussion>;
  replies(parentId:string,after?:string):Promise<{comments:Comment[];next:string}>;
  comment(accountId:string,titleId:string,releaseId:string,parentId:string,body:string,spoiler:boolean):Promise<void>;
  edit(accountId:string,id:string,body:string,spoiler:boolean):Promise<void>;
