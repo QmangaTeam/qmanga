@@ -14,6 +14,7 @@
  let {gateway,projectId,coverPageId='',imports}:{imports?:MetadataImportsGateway;gateway:TitleChangesGateway;projectId:string;coverPageId?:string}=$props();
  const {locale}=useLocale();const names=$derived(catalogNames($locale));
  const taxonomyFields=['genre_ids','category_ids'] as const;
+ let importBusy=$state(false);
  let actor=$state(''),context=$state<TitleChangeContext|null>(null),proposal=$state<TitleChangeProposal|null>(null),taxonomy=$state<Taxonomy>({genres:[],categories:[],collections:[]}),history=$state<TitleChange[]>([]),hasMore=$state(false),loading=$state(true),busy=$state(false),error=$state(''),saved=$state(false),dirty=$state(false),links=$state(''),files=$state<ChangeFiles>({evidence:[]});
  let generation=0;
  const status=$derived({pending:text($locale,'Қаралуда','На рассмотрении'),approved:text($locale,'Мақұлданды','Одобрено'),rejected:text($locale,'Қайтарылды','Возвращено')});
@@ -36,9 +37,9 @@
 {#if proposal&&context}
  <h2>{context.title_name}</h2>
  {#if history.some(x=>x.status==='pending')}<p class="notice">{text($locale,'Осы жобаның өтінімі қаралуда. Шешімді күтіңіз.','Заявка этого проекта уже рассматривается. Дождитесь решения.')}</p>{:else}
- {#if imports}<MetadataImport gateway={imports} {actor} project={projectId} hasValues={!!proposal.data.name||dirty} onimport={importTitle}/>{/if}
+ {#if imports}<MetadataImport gateway={imports} {actor} disabled={busy} onbusy={value=>importBusy=value} project={projectId} hasValues={!!proposal.data.name||dirty} onimport={importTitle}/>{/if}
  <form use:fieldValidation={{locale:$locale}} onsubmit={submit} oninput={()=>dirty=true}>
- <fieldset disabled={busy}>
+ <fieldset disabled={busy||importBusy}>
  <section class="panel fields"><h2>{text($locale,'Тайтл туралы','Сведения о тайтле')}</h2>
  <label>{text($locale,'Атауы','Название')}<input bind:value={proposal.data.name} maxlength="200" required/></label>
  <label>{text($locale,'Түпнұсқа атауы','Оригинальное название')}<input bind:value={proposal.data.original_name} maxlength="200"/></label>

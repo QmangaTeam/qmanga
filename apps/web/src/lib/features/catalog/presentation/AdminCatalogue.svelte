@@ -19,6 +19,7 @@
  import {emptyPublication} from '../domain/publication';
  const kindNames=$derived(catalogNames($locale).kind),originalStatusNames=$derived(catalogNames($locale).original),translationStatusNames=$derived(catalogNames($locale).translation);
  let { user, gateway, initialTitleId = '', imports }: { imports?:MetadataImportsGateway; user: Account | null; gateway: CatalogManagementGateway; initialTitleId?: string } = $props();
+ let importBusy=$state(false);
  let categories=$state<Genre[]>([]), categoryIds=$state<string[]>([]);
  let titles = $state<Summary[]>([]), genres = $state<Genre[]>([]), teams = $state<{id: string; name: string}[]>([]);
  let titleQuery=$state(''),appliedTitleQuery=$state('');
@@ -51,10 +52,11 @@
 {#if failure}<p class="form-message" role="alert">{noticeText($locale,failure)}</p>{/if}{#if notice}<p class="form-message success" role="status">{noticeText($locale,notice)}</p>{/if}
 <div class="workspace-grid"><section class="panel"><h2>{copy($locale,"Тайтл")}</h2>
 <form use:fieldValidation={{locale:$locale}} onsubmit={event=>{event.preventDefault();void searchTitles();}}><label>{text($locale,'Тайтл іздеу','Поиск тайтла')}<input type="search" bind:value={titleQuery} maxlength="160"/></label><button class="button subtle" disabled={busy}>{text($locale,'Іздеу','Найти')}</button></form>
-<label>{copy($locale,"Таңдау")}<select value={selected} disabled={busy} onchange={event => { const picker = event.currentTarget; if(!guard.confirmDiscard()){picker.value=selected;return;} void operation(() => choose(picker.value)).finally(() => { picker.value = selected; }); }}><option value="">{copy($locale,"Жаңа тайтл")}</option>{#each titles as title}<option value={title.id}>{title.name}</option>{/each}</select></label>
+<label>{copy($locale,"Таңдау")}<select value={selected} disabled={busy||importBusy} onchange={event => { const picker = event.currentTarget; if(!guard.confirmDiscard()){picker.value=selected;return;} void operation(() => choose(picker.value)).finally(() => { picker.value = selected; }); }}><option value="">{copy($locale,"Жаңа тайтл")}</option>{#each titles as title}<option value={title.id}>{title.name}</option>{/each}</select></label>
 {#if moreTitles}<button class="button subtle" disabled={busy} onclick={()=>operation(loadMoreTitles)}>{text($locale,'Тағы тайтлдар','Ещё тайтлы')}</button>{/if}
-{#if imports}<MetadataImport gateway={imports} actor={user.id} hasValues={!!input.name||dirty} onimport={importTitle}/>{/if}
+{#if imports}<MetadataImport gateway={imports} actor={user.id} contextKey={selected} disabled={busy} onbusy={value=>importBusy=value} hasValues={!!input.name||dirty} onimport={importTitle}/>{/if}
 <form use:fieldValidation={{locale:$locale}} onsubmit={save} oninput={() => { notice = ''; }}>
+ <fieldset class="metadata-fields" disabled={busy||importBusy}>
  <label>{copy($locale,"Қазақша атауы")}<input bind:value={input.name} required maxlength="200"/></label>
  <label>{copy($locale,"Сілтемедегі атауы")}<input bind:value={input.slug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="128" placeholder="dala-sapary"/></label>
  <label>{copy($locale,"Түпнұсқа атауы")}<input bind:value={input.originalName} maxlength="200"/></label>
@@ -73,7 +75,7 @@
  <fieldset><legend>{text($locale,"Мазмұн санаттары","Категории содержания")}</legend>{#each categories as category}<label class="check"><input type="checkbox" bind:group={categoryIds} value={category.id}/>{category.name}</label>{/each}</fieldset>
  <label class="check"><input type="checkbox" bind:checked={input.demo}/>{copy($locale,"Үлгі туынды")}</label>
  <button class="button primary" disabled={busy} type="submit">{copy($locale,"Тайтлды сақтау")}</button>
-</form></section>
+ </fieldset></form></section>
 <section class="panel"><h2>{copy($locale,"Тараулар мен жобалар")}</h2>
 {#if selected}<form use:fieldValidation={{locale:$locale}} onsubmit={event => { event.preventDefault(); operation(async () => { await gateway.createChapter(selected,chapterLabel,chapterOrder,volume,chapterName); chapterLabel = '';chapterName='';volume=''; }, 'saved'); }}><label>{copy($locale,"Тарау белгісі")}<input bind:value={chapterLabel} required maxlength="64" placeholder={copy($locale,"1.1 немесе Арнайы")}/></label><label>{copy($locale,"Реттік саны")}<input type="number" bind:value={chapterOrder} min="1" max="1000000" required/></label><label>{copy($locale,"Том")}<input bind:value={volume} maxlength="32"/></label><label>{copy($locale,"Тарау атауы")}<input bind:value={chapterName} maxlength="200"/></label><button class="button primary" disabled={busy}>{copy($locale,"Тарау қосу")}</button></form>
 <h3>{copy($locale,"Командаға жоба беру")}</h3><form use:fieldValidation={{locale:$locale}} onsubmit={event => { event.preventDefault(); operation(async () => { await gateway.createProject(selected,teamId);teamId='';const refreshed=await gateway.detail(selected);if(detail)detail={...detail,projects:refreshed.projects}; }, 'saved'); }}><label>{copy($locale,"Мақұлданған команда")}<select bind:value={teamId} required><option value="">{copy($locale,"Команданы таңдаңыз")}</option>{#each teams as team}<option value={team.id}>{team.name}</option>{/each}</select></label>{#if moreTeams}<button type="button" class="button subtle" disabled={busy} onclick={()=>operation(loadMoreTeams)}>{text($locale,'Тағы командалар','Ещё команды')}</button>{/if}<button class="button primary" disabled={busy || !teamId}>{copy($locale,"Жоба құру")}</button></form>
@@ -81,4 +83,4 @@
 {:else}<p class="muted">{copy($locale,"Алдымен тайтлды сақтаңыз немесе таңдаңыз.")}</p>{/if}
 <p><a class="auth-link" href="/admin/taxonomy">{text($locale,"Жанрлар, санаттар және жинақтар","Жанры, категории и подборки")}</a></p><h3>{copy($locale,"Жаңа жанр")}</h3><form use:fieldValidation={{locale:$locale}} onsubmit={event => { event.preventDefault(); operation(async () => { await gateway.createGenre(genreName,genreSlug); genres = await gateway.genres(); genreName = ''; genreSlug = ''; }, 'saved'); }}><label>{copy($locale,"Жанр атауы")}<input bind:value={genreName} required maxlength="80"/></label><label>{copy($locale,"Сілтемесі")}<input bind:value={genreSlug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="64"/></label><button class="button subtle" disabled={busy}>{copy($locale,"Жанр қосу")}</button></form>
 </section></div>{/if}
-<style>.auth-link { margin-right:18px; } .panel form { margin-top:18px; } .check { display:flex; align-items:center; min-height:44px; gap:10px; } .check input { width:20px; height:20px; min-height:20px; flex-shrink:0; } fieldset { border:1px solid var(--line); padding:12px; }</style>
+<style>.metadata-fields{border:0;padding:0;min-width:0;display:grid;gap:12px}.auth-link { margin-right:18px; } .panel form { margin-top:18px; } .check { display:flex; align-items:center; min-height:44px; gap:10px; } .check input { width:20px; height:20px; min-height:20px; flex-shrink:0; } fieldset { border:1px solid var(--line); padding:12px; }</style>
