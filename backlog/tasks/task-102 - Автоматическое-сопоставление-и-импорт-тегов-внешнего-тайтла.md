@@ -1,9 +1,11 @@
 ---
 id: TASK-102
 title: Автоматическое сопоставление и импорт тегов внешнего тайтла
-status: To Do
-assignee: []
+status: Review
+assignee:
+  - '@codex'
 created_date: '2026-10-20 16:49'
+updated_date: '2026-10-20 17:43'
 labels:
   - web
   - publishing
@@ -23,7 +25,27 @@ ordinal: 45004
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Теги/жанры выбранного тайтла автоматически сопоставляются с существующими taxonomy ID по внешнему стабильному ID и поддерживаемым алиасам; повторный импорт не создаёт дубликаты и не меняет смысл фильтров.
-- [ ] #2 Однозначные соответствия сразу заполняют выбор тегов в форме. Ненайденные теги автоматически сохраняются как кандидаты с источником для предусмотренного согласования/создания, не теряются молча; неоднозначные совпадения явно различимы и не выбираются наугад.
-- [ ] #3 Жанры, категории и группы сохраняют принятую модель; импорт не переводит автоматически собственные названия манги, не перезаписывает ручные правки без согласия и не обходит права/модерацию. Проверены разные языки, повтор, частичные данные и отказ источника.
+- [x] #1 Теги/жанры выбранного тайтла автоматически сопоставляются с существующими taxonomy ID по внешнему стабильному ID и поддерживаемым алиасам; повторный импорт не создаёт дубликаты и не меняет смысл фильтров.
+- [x] #2 Однозначные соответствия сразу заполняют выбор тегов в форме. Ненайденные теги автоматически сохраняются как кандидаты с источником для предусмотренного согласования/создания, не теряются молча; неоднозначные совпадения явно различимы и не выбираются наугад.
+- [x] #3 Жанры, категории и группы сохраняют принятую модель; импорт не переводит автоматически собственные названия манги, не перезаписывает ручные правки без согласия и не обходит права/модерацию. Проверены разные языки, повтор, частичные данные и отказ источника.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Map stable external IDs and normalized taxonomy aliases without arbitrary ambiguous matches. 2. Persist unmatched/ambiguous source candidates for administrative review; retain canonical taxonomy IDs. 3. Verify repeats, language aliases and partial imports.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Canonical matching uses stable source IDs, normalized exact taxonomy Kazakh/Russian names and slugs (English slug aliases), explicit admin-reviewed mappings and deduplication. Unknown and ambiguous tags are persisted in metadata_tag_mappings; ambiguity never picks an arbitrary canonical ID. Admin taxonomy page offers one active candidate editor with explicit canonical genre/category selection, preserving taxonomy groups and existing IDs. Browser account/context changes invalidate pending results. Genre/category caps preserve existing selected tags and display omitted imported-tag counts instead of claiming a complete import. Added real PostgreSQL regression for repeated imports, changed source labels, unmapped/ambiguous candidates, permissions, explicit review and selection provenance; coordinator reports full PostgreSQL suite passed. Merge unit cases cover missing fields, repeats, caps and retained manual source links. Final browser candidate keyboard/save test awaits rebuilt bundle; independent review and production release remain with coordinator.
+
+Final local acceptance: coordinator real-PostgreSQL suite passed the canonical mapping/candidate/review/provenance regression; source fixtures and 3 merge-policy tests pass. Rebuilt browser verifies canonical tags persisted through the actual admin save API and 100 candidates render no eager taxonomy selects, keyboard opens exactly one editor (<800 options), explicit canonical mapping is sent and the candidate leaves the queue. Actual Shikimori selection matched 4 canonical genres; actual AniList selection matched 62 and persisted 24 unresolved candidates. The existing 12-genre/24-category form limits remain authoritative: existing choices are retained and omitted imported-tag counts are visible. No duplicate taxonomy rows are auto-created. Independent review has no blocking findings. Code SHAs through 6be46e4; production acceptance remains pending coordinator release.
+<!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+External tags map by stable source IDs and exact normalized aliases to existing canonical IDs. Ambiguous/unmatched candidates persist for explicit admin agreement; one candidate editor and account/context guards keep the workflow bounded and safe. Local unit, PostgreSQL and browser checks pass; awaiting release acceptance.
+<!-- SECTION:FINAL_SUMMARY:END -->
