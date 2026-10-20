@@ -10,7 +10,7 @@
 	import StateMessage from '$lib/shared/presentation/ui/StateMessage.svelte';
 	import ActionLink from '$lib/shared/presentation/ui/ActionLink.svelte';
 	import Pager from '$lib/shared/presentation/ui/Pager.svelte';
-	let { view, statuses = {} }: { statuses?: Record<string, string>; view: { available: boolean; message: string; filter: CatalogFilter; genres: Genre[]; categories?: Genre[]; collections?: Collection[]; page: ResultPage<Summary>; nextURL: string | null } } = $props();
+	let { view, statuses = {} }: { statuses?: Record<string, string>; view: { retryURL?:string; available: boolean; message: string; filter: CatalogFilter; genres: Genre[]; categories?: Genre[]; collections?: Collection[]; page: ResultPage<Summary>; nextURL: string | null } } = $props();
 	const { locale } = useLocale();
 	const names = $derived(catalogNames($locale));
 	function span(min: number | undefined, max: number | undefined, label: string): string {
@@ -48,7 +48,7 @@
 {#if active.length}<div class="active-filters" aria-label={text($locale, 'Қолданылған сүзгілер', 'Применённые фильтры')}>{#each active as label}<span>{label}</span>{/each}<ActionLink href="/catalog">{text($locale, 'Барлығын тазарту', 'Сбросить всё')}</ActionLink></div>{:else}<span class="toolbar-spacer"></span>{/if}
 <label class="sort-control"><span>{text($locale, 'Реттеу', 'Сортировка')}</span><select value={view.filter.sort || 'updated'} onchange={(event) => changeSort(event.currentTarget.value)}><option value="updated">{text($locale, 'Соңғы жаңартулар', 'Недавно обновлённые')}</option><option value="new">{text($locale, 'Жаңа тайтлдар', 'Новые тайтлы')}</option><option value="name">{text($locale, 'Атауы бойынша', 'По названию')}</option></select></label>
 </div>
-{#if !view.available}<StateMessage kind="error" title={text($locale, 'Каталог жүктелмеді', 'Каталог не загрузился')}>{#snippet actions()}<ActionLink href="/catalog">{text($locale, 'Қайталау', 'Повторить')}</ActionLink>{/snippet}</StateMessage>
+{#if !view.available}<StateMessage kind="error" title={text($locale, 'Каталог жүктелмеді', 'Каталог не загрузился')}>{#snippet actions()}<ActionLink href={view.retryURL || '/catalog?'+catalogParams(view.filter)}>{text($locale, 'Қайталау', 'Повторить')}</ActionLink>{/snippet}</StateMessage>
 {:else if !view.page.items.length}<StateMessage kind="empty" title={text($locale, 'Тайтл табылмады', 'Тайтлы не найдены')} description={text($locale, 'Басқа атаумен ізде немесе сүзгілерді тазарт.','Попробуй другое название или сбрось фильтры.')}/>
 {:else}<div class="cover-grid">{#each view.page.items as title,index}<CoverCard readingStatus={statuses[title.id]} ageRating={title.ageRating} href={'/titles/'+encodeURIComponent(title.slug)} name={title.name} coverURL={title.coverURL} metadata={names.kind[title.kind]} tag={title.demo?text($locale,'Үлгі','Пример'):''} score={title.score} ratingCount={title.ratingCount} fallback={text($locale,'Мұқаба жоқ','Нет обложки')} priority={index<2}/>{/each}</div>{/if}
 {#if view.nextURL}<Pager label={text($locale,'Каталог беттері','Страницы каталога')} next={{label:text($locale,'Келесі бет','Следующая страница'),href:view.nextURL}}/>{/if}

@@ -34,5 +34,5 @@ export const load: PageServerLoad = async ({ fetch, url, setHeaders }) => {
 	const result = await loadCatalogue(createPublicCatalogue(fetch), filter, query.get('cursor') || undefined);
 	const next = new URLSearchParams(url.searchParams);
 	if (result.page.nextCursor) next.set('cursor', result.page.nextCursor);
-	return { ...result, filter, nextURL: result.page.nextCursor ? '/catalog?' + next : null };
+	return { ...result, filter, retryURL: url.pathname + url.search, nextURL: result.page.nextCursor ? '/catalog?' + next : null };
 };

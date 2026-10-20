@@ -7,3 +7,8 @@ test('mixed library shows compact real status outside the unchanged options dial
  expect(html).toContain('Прочитано');
  expect(await elements(html,'button[aria-haspopup="dialog"]')).toHaveLength(1);
 });
+
+test('unavailable catalogue retries the exact request including cursor',async()=>{
+ const html=render(Fixture,{props:{screen:'catalogue'}}).body;
+ expect((await elements(html,'a')).some(link=>link.href?.replaceAll('&amp;','&')==='/catalog?q=query&genre=action&sort=name&cursor=cursor')).toBe(true);
+});
