@@ -5,8 +5,8 @@
  import {publicationStates,preparationLabel} from './messages';
  const stateNames=$derived(publicationStates($locale));
  const pageStates=$derived<Record<string,string>>({...stateNames,ready:text($locale,'Дайын','Готово')});
- import { onMount, tick } from 'svelte';
- import {beforeNavigate} from '$app/navigation';
+ import { onMount, tick, untrack } from 'svelte';
+ import {beforeNavigate,replaceState} from '$app/navigation';
  import {page as routePage} from '$app/stores';
  import {workspaceLocation,workspaceSteps,projectListReturn} from '../domain/workspace-context';
  import type {UploadSource} from '../application/publishing';
@@ -17,7 +17,15 @@
  import { canEdit, canSubmit } from '../domain/revision';
  let { user, projectId, gateway }: { user: Account | null; projectId: string; gateway: PublishingGateway } = $props();
  function previewHref(){if(!active)return '#';const returnTo=workspaceLocation(projectId,active.id,activeStep,previewPosition,$routePage.url.searchParams.get('projectsReturn'));return '/read/'+encodeURIComponent(active.releaseId)+'?preview='+encodeURIComponent(active.id)+'&returnTo='+encodeURIComponent(returnTo);}
- let previewPosition=$state(0);
+ let previewPosition=$state(0),workspaceReady=$state(false);
+ let workspaceOwner='';
+ function syncWorkspaceURL(){
+  if(!workspaceReady||!active||user?.id!==workspaceOwner||window.location.pathname!=='/studio/projects/'+encodeURIComponent(projectId))return;
+  const current=new URL(window.location.href);
+  const next=workspaceLocation(projectId,active.id,activeStep,window.scrollY,current.searchParams.get('projectsReturn'));
+  if(current.pathname+current.search!==next)replaceState(next,$routePage.state);
+ }
+ $effect(()=>{active?.id;activeStep;if(workspaceReady)untrack(syncWorkspaceURL);});
  let discardDialog:HTMLDialogElement|undefined;
  let activeStep=$state('draft-pages');
  let choosingChapter=$state(true);
@@ -97,14 +105,14 @@
   active=next;const current=active;revisions=revisions.map(revision=>revision.id===current.id?current:revision);if(active.state==='ready'&&notice==='upload_received')notice='';
  } }
  onMount(() => {
+  workspaceOwner=user?.id||'';
   if (user) void run(async()=>{
+   const requested=$routePage.url.searchParams.get('revision'),step=$routePage.url.searchParams.get('step'),position=Number($routePage.url.searchParams.get('position'));
    await reload();
-   const requested=$routePage.url.searchParams.get('revision');
    if(requested){try{await openRevision(requested);}catch{notice='';error='revision_unavailable';}}
-   const step=$routePage.url.searchParams.get('step');
    if(step&&workspaceSteps.includes(step as typeof workspaceSteps[number]))activeStep=step;
-   const position=Number($routePage.url.searchParams.get('position'));
    if(Number.isFinite(position)&&position>0&&position<=1000000){await tick();window.scrollTo({top:position,behavior:'instant'});}
+   workspaceReady=true;
   });
   const warn=(event:BeforeUnloadEvent)=>{if(unsaved){event.preventDefault();event.returnValue='';}};
   window.addEventListener('beforeunload',warn);
