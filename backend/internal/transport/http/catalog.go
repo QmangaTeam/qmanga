@@ -237,6 +237,8 @@ func projectViews(projects []application.Project) []projectDTO {
 }
 
 type studioProjectDTO struct {
+	NextRevisionID    string `json:"next_revision_id,omitempty"`
+	NextRevisionState string `json:"next_revision_state,omitempty"`
 	projectDTO
 	CoverURL     string  `json:"cover_url"`
 	ChapterCount int     `json:"chapter_count"`
@@ -248,7 +250,7 @@ func studioProjectViews(projects []application.Project) []studioProjectDTO {
 	base := projectViews(projects)
 	items := make([]studioProjectDTO, 0, len(projects))
 	for i, item := range projects {
-		items = append(items, studioProjectDTO{base[i], coverURL(item.CoverID), item.ChapterCount, item.RatingCount, item.Score})
+		items = append(items, studioProjectDTO{NextRevisionID: item.NextRevisionID, NextRevisionState: item.NextRevisionState, projectDTO: base[i], CoverURL: coverURL(item.CoverID), ChapterCount: item.ChapterCount, RatingCount: item.RatingCount, Score: item.Score})
 	}
 	return items
 }

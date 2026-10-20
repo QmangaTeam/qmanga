@@ -425,6 +425,23 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 			testingTarget.Fatalf("card statistics: %+v", item)
 		}
 	})
+	testingTarget.Run("project next work comes from scoped revisions and preserves unknown as absent", func(testingTarget *testing.T) {
+		execute(`INSERT INTO revisions(id,release_id,status) VALUES('card-ready','card-release','ready'),('card-changes','card-release','changes_requested')`)
+		page, failure := service.StudioProjectPage(ctx, "reader", application.ProjectFilter{TeamID: "page-team"})
+		if failure != nil || len(page.Items) != 1 || page.Items[0].NextRevisionID != "card-changes" || page.Items[0].NextRevisionState != "changes_requested" {
+			testingTarget.Fatalf("next work: %+v %v", page, failure)
+		}
+		hidden, failure := service.StudioProjectPage(ctx, "foreign", application.ProjectFilter{TeamID: "page-team"})
+		if failure != nil || len(hidden.Items) != 0 {
+			testingTarget.Fatalf("foreign work leaked: %+v %v", hidden, failure)
+		}
+		execute(`UPDATE revisions SET status='published' WHERE id IN ('card-ready','card-changes')`)
+		page, failure = service.StudioProjectPage(ctx, "reader", application.ProjectFilter{TeamID: "page-team"})
+		if failure != nil || len(page.Items) != 1 || page.Items[0].NextRevisionID != "" || page.Items[0].NextRevisionState != "" {
+			testingTarget.Fatalf("no pending work: %+v %v", page, failure)
+		}
+	})
+
 	testingTarget.Run("title comment count excludes hidden deleted and chapter messages", func(testingTarget *testing.T) {
 		for _, query := range []string{`INSERT INTO comments(id,user_id,title_id,body) VALUES('count-root','reader',$1::varchar,'Visible root')`, `INSERT INTO comments(id,user_id,title_id,parent_id,root_id,body) VALUES('count-reply','reader',$1::varchar,'count-root','count-root','Visible reply')`, `INSERT INTO comments(id,user_id,title_id,body,is_hidden) VALUES('count-hidden','reader',$1::varchar,'Hidden',true)`, `INSERT INTO comments(id,user_id,title_id,body,deleted_at) VALUES('count-deleted','reader',$1::varchar,'Deleted',now())`, `INSERT INTO comments(id,user_id,title_id,release_id,body) SELECT 'count-chapter','reader',$1::varchar,release.id,'Chapter message' FROM releases release JOIN chapters chapter ON chapter.id=release.chapter_id WHERE chapter.title_id=$1::varchar LIMIT 1`} {
 			execute(query, title.ID)

@@ -55,6 +55,7 @@ type Detail struct {
 	Projects           []Project
 }
 type Project struct {
+	NextRevisionID, NextRevisionState                                              string
 	ID, TitleID, TeamID, TitleName, TitleSlug, TeamName, TeamSlug, Status, CoverID string
 	ChapterCount, RatingCount                                                      int
 	Score                                                                          float64

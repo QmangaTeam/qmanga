@@ -10,3 +10,8 @@ test('missing card data and unrated titles do not invent zero votes or covers',a
  const html=render(Card,{props:{item:{id:'project',titleName:'Тайтл',teamName:'Команда',ratingCount:0,score:0}}}).body;
  expect(await elements(html,'img')).toHaveLength(0);expect(html).not.toContain('0.00');expect(html).toContain('—');
 });
+test('project action names the real revision and deep-links to it without guessing from counts',async()=>{
+ const html=render(Card,{props:{item:{id:'project',titleName:'Тайтл',teamName:'Команда',nextRevisionId:'draft-id',nextRevisionState:'processing'}}}).body;
+ expect((await elements(html,'a.manage'))[0].href).toBe('/studio/projects/project?revision=draft-id');
+ expect(html).toContain('Өңделуде');
+});

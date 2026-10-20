@@ -17,7 +17,7 @@ test('project cards display scoped server statistics and covers without a duplic
    const page=await context.newPage();
    for(const theme of ['dark','light'])for(const width of [320,360,1280]){
     await context.addInitScript(value=>localStorage.setItem('qmanga.theme',value),theme);await page.setViewportSize({width,height:900});await page.goto('/studio/projects');
-    const card=page.locator('.project-card').filter({has:page.locator(`a.manage[href="/studio/projects/${fixture.project_id}"]`)});await card.waitFor();
+    const card=page.locator('.project-card').filter({has:page.locator(`a.manage[href^="/studio/projects/${fixture.project_id}"]`)});await card.waitFor();
     assert.deepEqual(await card.locator('dd').allTextContents(),[String(item.chapter_count),item.rating_count?item.score.toFixed(2):'—']);
     if(item.cover_url)assert.equal(await card.locator('img').getAttribute('src'),item.cover_url);
     assert.equal(await page.locator('a.pending').count(),0);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
