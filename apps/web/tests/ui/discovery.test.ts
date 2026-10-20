@@ -63,10 +63,11 @@ test('global search submits to catalogue and preserves locale-specific accessibl
  }
 });
 
-test('header brand shows theme-specific Qmanga logo images while the link keeps its text name',async()=>{
+test('header wordmark uses one Q symbol followed by manga in every theme',async()=>{
  const html=render(Discovery).body;
- expect((await elements(html,'header a.wordmark img.dark'))[0]).toMatchObject({alt:'',src:'/brand/qmanga.png',width:'288',height:'96'});
- expect((await elements(html,'header a.wordmark img.light'))[0]).toMatchObject({alt:'',src:'/brand/qmanga-light.png',width:'288',height:'96'});
+ expect((await elements(html,'header a.wordmark img'))).toHaveLength(1);
+ expect((await elements(html,'header a.wordmark img'))[0]).toMatchObject({alt:'',src:'/favicon.png',width:'40',height:'40'});
+ expect(html).toContain('manga');
  expect((await elements(html,'header a.wordmark'))[0]['aria-label']).toBe('Qmanga');
 });
 

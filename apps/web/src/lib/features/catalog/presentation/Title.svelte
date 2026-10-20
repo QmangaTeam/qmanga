@@ -35,6 +35,11 @@
 <a class="back" href="/catalog"><Icon name="left" size={16}/>{text($locale,'Каталог','Каталог')}</a>
 <TitleBanner bannerURL={title.bannerURL||''} coverURL={title.coverURL}/>
 <div class="title-layout" class:with-banner={!!(title.bannerURL||title.coverURL)}>
+ <header class="title-heading">
+  <div class="name-line"><div><h1>{title.name}</h1><p class="subtitle"><AgeRating value={title.ageRating}/>{#if title.publication?.year}<span>{title.publication.year}</span>{/if}<a href={'/catalog?kind='+title.kind}>{names.kind[title.kind]}</a>{#if title.demo}<span class="demo">{text($locale,'Үлгі','Пример')}</span>{/if}</p></div>{#if rating}{@render rating()}{/if}</div>
+  {#if title.genres.length||title.categories?.length||title.collections?.length}<div class="title-genres">{#each title.categories||[] as category}<a href={"/catalog?category="+encodeURIComponent(category.slug)}>{$locale==='ru'&&category.nameRu?category.nameRu:category.name}</a>{/each}{#each title.collections||[] as collection}<a href={"/catalog?collection="+encodeURIComponent(collection.slug)}>{collection.name}</a>{/each}{#each title.genres as genre}<a href={'/catalog?genre='+encodeURIComponent(genre.slug)}>{$locale==='ru'&&genre.nameRu?genre.nameRu:genre.name}</a>{/each}</div>{/if}
+  {#if title.description}<p class="synopsis">{title.description}</p>{/if}
+ </header>
  <aside class="title-aside">
   <div class="cover-wrap">{#if title.coverURL}<img class="title-cover" src={title.coverURL} alt={title.name} width="280" height="400" fetchpriority="high"/>{:else}<div class="cover-empty"><Icon name="file" size={48}/><span>{text($locale,'Мұқаба жоқ','Нет обложки')}</span></div>{/if}</div>
   <div class="title-actions">
@@ -46,11 +51,7 @@
   </div>
   <div class="sidebar-metadata"><TitleMetadata {title}/></div>
  </aside>
- <header class="title-heading">
-  <div class="name-line"><div><h1>{title.name}</h1><p class="subtitle"><AgeRating value={title.ageRating}/>{#if title.publication?.year}<span>{title.publication.year}</span>{/if}<a href={'/catalog?kind='+title.kind}>{names.kind[title.kind]}</a>{#if title.demo}<span class="demo">{text($locale,'Үлгі','Пример')}</span>{/if}</p></div>{#if rating}{@render rating()}{/if}</div>
-  {#if title.genres.length||title.categories?.length||title.collections?.length}<div class="title-genres">{#each title.categories||[] as category}<a href={"/catalog?category="+encodeURIComponent(category.slug)}>{$locale==='ru'&&category.nameRu?category.nameRu:category.name}</a>{/each}{#each title.collections||[] as collection}<a href={"/catalog?collection="+encodeURIComponent(collection.slug)}>{collection.name}</a>{/each}{#each title.genres as genre}<a href={'/catalog?genre='+encodeURIComponent(genre.slug)}>{$locale==='ru'&&genre.nameRu?genre.nameRu:genre.name}</a>{/each}</div>{/if}
-  {#if title.description}<p class="synopsis">{title.description}</p>{/if}
- </header>
+
  <div class="title-main">
   <!-- svelte-ignore a11y_no_noninteractive_tabindex (Keyboard focus enables native horizontal scrolling of this definition list.) -->
   <dl class="title-facts" tabindex="0" aria-label={text($locale,'Тайтл туралы қысқаша','Краткие сведения о тайтле')}>
@@ -84,4 +85,24 @@
  .name-line{flex-wrap:wrap}.name-line>div{min-width:0}.name-line :global(.rating-trigger){flex-direction:column;align-items:flex-start;gap:0;max-width:100%;min-width:0}.name-line :global(.rate-label){margin-top:4px}@media(min-width:600px){.name-line{flex-wrap:nowrap}.name-line :global(.rating-trigger){align-items:center}}.title-facts{gap:24px;padding:10px 12px}.title-facts>div{gap:6px}.status-link{gap:6px}.status-dot{width:7px;height:7px;flex:none;border-radius:50%;background:var(--muted)}.status-dot.ongoing{background:#3ac66d}.status-dot.completed{background:#4894ee}.status-dot.hiatus{background:#e3a52d}.status-dot.cancelled{background:#e55b60}.stats-trigger{border:0;background:none;color:var(--text);font:inherit;font-weight:600;min-height:44px;padding:0;cursor:pointer;text-align:left}.stats-trigger:hover{text-decoration:underline}.stats-trigger:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.stats-dialog{width:min(420px,calc(100vw - 24px));max-height:min(650px,calc(100dvh - 24px));overflow:auto;padding:20px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);box-shadow:0 24px 72px #0008}.stats-dialog::backdrop{background:#0009}.stats-dialog-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}.stats-dialog h2{font-size:19px;margin:0}.stats-dialog h3{font-size:15px;margin:20px 0 10px}.stats-dialog-heading button{min-width:44px;font-size:23px}.stats-summary{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:16px 0}.stats-summary div{border:1px solid var(--line);border-radius:8px;padding:10px}.stats-summary dt{font-size:11px;color:var(--muted)}.stats-summary dd{font-size:20px;font-weight:700;margin:4px 0 0}.rating-bars{display:grid;gap:7px}.rating-bar{display:grid;grid-template-columns:20px minmax(0,1fr) 36px;gap:8px;align-items:center;font-size:12px}.rating-bar>span:last-child{text-align:right;color:var(--muted)}.rating-bar-track{display:block;height:9px;border-radius:9px;background:var(--raised);overflow:hidden}.rating-bar-track>span{display:block;height:100%;border-radius:inherit;background:var(--accent)}.stats-explainer{font-size:12px;line-height:1.5;margin-bottom:0}
 .library-trigger{width:100%;display:flex;align-items:center;justify-content:center;gap:8px}.action-dialog{width:min(520px,calc(100vw - 24px));max-height:calc(100dvh - 24px);overflow:auto;padding:20px;border:1px solid var(--line);border-radius:12px;background:var(--panel);color:var(--text);box-shadow:0 24px 72px #0008}.action-dialog::backdrop{background:#0009}.dialog-heading{display:flex;justify-content:space-between;align-items:center;gap:12px}.dialog-heading h2{font-size:19px;margin:0}.dialog-heading button{min-width:44px;font-size:23px}
 @media(min-width:960px){.title-layout.with-banner{position:relative;margin-top:-70px}.with-banner .title-heading{padding-top:88px}.with-banner .cover-wrap{border:4px solid var(--bg);border-radius:12px;overflow:hidden}.with-banner .title-aside{padding-left:12px}}
+
+ @media(max-width:767px){
+  .title-layout{grid-template-columns:minmax(0,1fr);gap:18px}
+  .title-heading{grid-column:1;grid-row:1;text-align:center}
+  .name-line{flex-direction:column;align-items:center;gap:12px}
+  h1{font-size:24px;line-height:1.3}.subtitle,.title-genres{justify-content:center}
+  .name-line :global(.rating-trigger){flex-direction:row;align-items:center;justify-content:center;flex-wrap:wrap;gap:8px}
+  .name-line :global(.rate-label){margin-top:0}
+  .cover-wrap{grid-column:1;grid-row:2;width:min(60vw,220px);justify-self:center}
+  .title-actions{grid-column:1;grid-row:3;gap:8px}
+  .title-actions>.read-button,.title-actions>.library-trigger,.title-actions>button:disabled{grid-column:1/-1}
+  .quiet-action{padding:8px;line-height:1.4;overflow-wrap:anywhere}
+  .title-main{grid-column:1;grid-row:4}
+  .title-facts{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px 12px;padding:16px;overflow:visible;scroll-snap-type:none}
+  .title-facts>div{min-width:0;white-space:normal;align-items:flex-start}.title-facts>div>div{min-width:0}
+  .title-facts>div:last-child{grid-column:1/-1}.title-facts a{margin-block:0}
+  .title-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;gap:2px}
+  .title-tabs a{min-width:0;justify-content:center;flex-wrap:wrap;gap:4px;padding:8px 4px;font-size:12px;overflow-wrap:anywhere}
+  .title-tabs :global(svg){display:none}
+ }
 </style>
