@@ -1,0 +1,1 @@
+export function searchTaxonomy<T extends {name:string;nameRu?:string;slug:string}>(items:readonly T[],query:string):T[]{const needle=query.trim().toLocaleLowerCase();return items.filter(item=>[item.name,item.nameRu||'',item.slug].some(value=>value.toLocaleLowerCase().includes(needle)));}
