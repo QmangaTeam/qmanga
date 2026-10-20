@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 15:21'
+updated_date: '2026-10-20 15:26'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -46,4 +46,6 @@ ordinal: 44002
 
 <!-- SECTION:NOTES:BEGIN -->
 Локально: отдельный StudioHeader с аккаунтом/возвратом, пять направлений в native dialog; public chrome остаётся на публичных маршрутах. Svelte 0 errors/0 warnings, architecture pass, UI 41/41, Docker web build/health pass, browser studio-priority/workspace/notification-isolation 6/6 (kk/ru, темы, 320/360/1280, keyboard/Escape/focus, переход в каталог, account isolation). Визуально проверены synthetic 360/1280. Не выпущено, независимый review по завершении пакета.
+
+Результат: 5dd3ace; итоговый проверенный пакет 05725000545f23f1ad1d9eaa063cd514aa9ca2b9. Независимый review: новых замечаний нет. Дополнительно browser notification-isolation pass; итоговые browser publishing/workspace 11/11 и Svelte/architecture/UI/contrast/ui-preview/Docker web pass. Review до выпуска. Следующий шаг очереди TASK-72.
 <!-- SECTION:NOTES:END -->

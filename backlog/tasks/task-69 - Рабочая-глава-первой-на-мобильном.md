@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 15:19'
+updated_date: '2026-10-20 15:26'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -46,4 +46,6 @@ ordinal: 44001
 
 <!-- SECTION:NOTES:BEGIN -->
 Локально: текущая версия и шаги стоят первыми в DOM на мобильном, выбор главы ниже с явной кнопкой и переносом фокуса; данные тайтла после работы. Пустой проект открывает создание. Svelte 0 errors/0 warnings, architecture pass, Docker web build/health pass, browser studio-priority + publishing-steps 5/5 pass (320/360/1280, kk/ru, обе темы, keyboard, empty, save failure/dirty guards). Выпуск не подтверждён; карточка остаётся Review. Независимый review будет выполнен по завершении пакета.
+
+Результат: a07cb40; итоговый проверенный пакет 05725000545f23f1ad1d9eaa063cd514aa9ca2b9. Независимый review и повторная сверка: новых замечаний нет. Связанные publishing-cover тесты адаптированы к явному раскрытию выбора главы. Итоговые browser 11/11, module 127/127, UI 41/41, Svelte/architecture/contrast/ui-preview и Docker web pass. Review до выпуска. Следующий шаг очереди TASK-72.
 <!-- SECTION:NOTES:END -->
