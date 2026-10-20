@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 16:49'
-updated_date: '2026-10-20 18:04'
+updated_date: '2026-10-20 18:43'
 labels:
   - web
   - publishing
@@ -47,6 +47,8 @@ Final live common-port smoke against rebuilt localhost production stack: AniList
 Final integration 2026-10-20 at833f606: Docker API/web/gateway rebuilt and healthy. 158 frontend module +46 UI PASS; Svelte0errors/0warnings; architecture, both-theme contrast and preview checks PASS; Backlog doctor clean. Full Go/PostgreSQL -p1 ./... passed, latest catalog/source/HTTP/bootstrap real-DB checks repeated after endpoint/pacing changes PASS. Latest CBZ/PDF browser7/7 (including immediate cold decoder cancellation); metadata browser5/5. Root additionally verified12 responsive kk/ru x themes x320/360/1280 combinations for import forms and44px targets, and actual local API→live Shikimori.io/AniList search/detail/reprocessed WebPcover. Independent CBZ/PDF/metadata and root docs/test reviews have no remaining blocking findings. All12 new browser scenarios enter existing CI glob. Product tasks remain Review until full remote Verify and observed release of the same SHA. Production access blocker remains TCP22 timeout before authentication; no lock/hold/firewall/deployment bypass used.
 
 Remote release readiness 2026-10-20: tested product SHA842a23f2c9bd55da1ad9447def70f428bda0b3b1. Verify Qmanga https://github.com/maqsatto/qmanga/actions/runs/39470308246 SUCCESS: both acceptance shards,88 browser scenarios (42+46),0 failures, full Go/PostgreSQL/codecs, frontend and all3 ARM64 images. Fast Release https://github.com/maqsatto/qmanga/actions/runs/39470308114 SUCCESS; refs/deploy-ready confirmed842a23f. Prior39468803806 failure was a real pre-hydration sidebar lost-Enter race, reproduced and fixed with native disabled-until-mounted control plus cold-JS regression; independent review passed, local workspace3/3/UI46/Svelte0/0 and repeated full CI green. Live Shikimori/AniList DTO→mapper→merge→metadataError/validPublication also validated (no titles created/changed). Public production still reports36b3a5f455eb37830408af44c2e2f00b48eabd51, health200; strict SSH with existing key and trusted known_hosts still times out before authentication. Rollout/production acceptance remains unconfirmed; keep Review. Next step: restore authorized SSH network access and inspect existing poller journal/state, preserve locks/backup/restore gates and release the ready immutable SHA through the single standard path.
+
+Observed production release 2026-10-20: e2c9c8910d6dedbe74eddbafa028b8bb67180340 via existing poller staging18:37UTC → production18:42UTC. Verify39474894775 and FastRelease39474894489 SUCCESS,88 browser scenarios42+46 and full checks; independent CI review passed after canonical tag publication fix. Both environments green sameSHA; migration backup and verified off-host production copy20261020T184220Z, restore/lock/hold gates preserved. Public HTTPS health/homepage/genres/PDF assets200; private metadata import route401 without login, exactSHA visible in browser. Local/CI real import acceptance already passed; no production fixtures or owner data modified for tests. Keep Review pending private production import acceptance under an authorized owner account; physical Android remains TASK97 not_run. Deployment itself is confirmed.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

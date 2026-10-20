@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 01:19'
-updated_date: '2026-10-20 18:26'
+updated_date: '2026-10-20 18:43'
 labels:
   - CI
   - deployment
@@ -24,7 +24,7 @@ ordinal: 41026
 <!-- AC:BEGIN -->
 - [ ] #1 push в main → production ≤300с без ручных действий
 - [x] #2 селективная сборка компонентов относительно последнего выпущенного SHA
-- [ ] #3 backup при миграциях; иначе fresh-check ≤30h
+- [x] #3 backup при миграциях; иначе fresh-check ≤30h
 - [x] #4 авто-rollback при провале health; три контрольных релиза замерены
 - [x] #5 owners review: независимый субагент
 <!-- AC:END -->
@@ -49,4 +49,6 @@ Oracle Console read-only diagnosis: owner signed in through the visible browser.
 2026-10-20: owner explicitly approved replacing the single stale OCI SSH source with current operator /32, retaining TCP22 only. Saved and verified visible state; strict existing-key/known-host SSH now succeeds. Both active environments remain36b3a5f. Existing enabled5min poller is held on842a23f because component selection expects api:6be46e4 (last backend input change), while successful CI publishes release-head tags. Hold preserved. Plan: reproduce tag-contract mismatch, fix safe immutable content-equivalent selection with regression, independent review, checks/push, observe existing poller gates and actual production SHA. No credentials or personal source addresses stored.
 
 Canonical publisher fix ready: both workflows publish missing last-input-change aliases; full history in Verify; shared per-component publication concurrency and strict HEAD existence preflight preserve existing HEAD/alias tags, auth/network failures fail closed. Regression covers distinct component history, missing/existing aliases, HEAD existing/missing, auth/network rejection and shared serialization. Root reran shell tests, bash -n, internal-staging/offsite regressions, diff check; Backlog doctor clean. Independent release_independent review found two races, both corrected and final re-review PASS. PyYAML unavailable, workflow syntax/real execution remains remote CI evidence. No VM selector/hold/lock/permissions changed. Next: push and observe full Verify, readyref, staging and production same SHA.
+
+Observed release e2c9c8910d6dedbe74eddbafa028b8bb67180340: Verify39474894775 and FastRelease39474894489 SUCCESS;88 browsercases42+46, fullGo/PostgreSQL/codecs/frontend, all3ARM64published with canonicalaliases. Existing poller staging18:37:09UTC and production18:42:57UTC green sameSHA; running component image IDs verified, oldblue retained. Mandatory migration backups created: staging20261020T183640Z, production20261020T184220Z; production off-host upload/download/checksum verified before switch, restoregatepreserved. Externalhealth/homepage/genres/PDFlicense/font200, metadata unauth401, browserfooter exactSHA. StrictSSH restored. RemainsReview: old5mintimer, sudo password required toinstall20secunits; <=300s not proven (push18:27→prod18:42). No hold removal, paralleldeploy or security expansion beyond owner-approved single/32 replacement.
 <!-- SECTION:NOTES:END -->

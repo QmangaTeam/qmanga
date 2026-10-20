@@ -14,6 +14,8 @@
 
 До этого автоматического пути production последовательно был на `bb8aec3`, `43c1a5d`, `cf45ae7`, `8d7d2dd`, а staging выпускался тем же poller-ом.
 
+2026-10-20 (18:42 UTC): staging и production автоматически выпущены штатным poller-ом на `e2c9c8910d6dedbe74eddbafa028b8bb67180340` (CBZ/PDF, Shikimori/AniList и автоматические теги, исправление публикации canonical component tags). [Verify Qmanga 39474894775](https://github.com/maqsatto/qmanga/actions/runs/39474894775) и [Fast Release 39474894489](https://github.com/maqsatto/qmanga/actions/runs/39474894489) success; обе acceptance-половины, 88 браузерных сценариев (42+46) и три ARM64 image publication прошли. Независимый review исправления CI завершён после устранения гонок HEAD/alias. Staging backup `20261020T183640Z`, production backup `20261020T184220Z`, последняя копия проверена off-host перед миграцией. Оба active-файла — green того же SHA, image ID проверены release.sh; предыдущий blue сохранён. Внешние HTTPS health/homepage/genres/PDF assets — 200, новый private metadata-import route — 401 без входа, SHA подтверждён в браузере. Приватный production сценарий импорта под аккаунтом владельца и физический Android остаются непроверенными; импортные карточки сохраняют Review. Старые 5-минутные systemd units действуют до установки владельцем, поэтому ≤300s пока не подтверждено.
+
 ## Адреса и доступ
 
 | Назначение | Адрес / путь |
