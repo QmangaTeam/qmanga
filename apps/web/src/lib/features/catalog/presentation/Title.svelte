@@ -108,11 +108,11 @@
 
  /* Equal fact columns and shared label/value rows keep links and plain values aligned. */
  .title-facts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;padding:16px;overflow:visible;scroll-snap-type:none}
- .title-facts>div{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;min-width:0;white-space:normal;align-items:end}
- .title-facts>div>div{display:grid;grid-template-rows:minmax(34px,auto) minmax(44px,auto);gap:4px;min-width:0}
- .title-facts>div>:global(svg){width:18px;height:18px;margin-bottom:26px}
- .title-facts dt{margin:0;line-height:1.4;align-self:end}
- .title-facts dd{display:flex;align-items:flex-start;min-height:44px;line-height:1.4}
+ .title-facts>div{display:grid;grid-template-columns:18px minmax(0,1fr);grid-template-rows:minmax(34px,auto) minmax(44px,auto);gap:4px 8px;min-width:0;white-space:normal;align-items:start}
+ .title-facts>div>div{display:contents}
+ .title-facts>div>:global(svg){width:18px;height:18px;grid-column:1;grid-row:2;align-self:start}
+ .title-facts dt{margin:0;line-height:1.4;align-self:end;grid-column:2;grid-row:1}
+ .title-facts dd{grid-column:2;grid-row:2;min-width:0;display:flex;align-items:flex-start;min-height:44px;line-height:1.4}
  .title-facts a{margin:0;min-height:44px;max-width:100%;align-items:flex-start}
  .title-facts .status-dot{margin-top:6px}
  .title-facts .stats-trigger{display:flex;align-items:flex-start;gap:4px;line-height:1.4}

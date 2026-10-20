@@ -86,6 +86,14 @@ The current workstation has two separate owner-requested manual review titles: <
 docker compose --env-file "$HOME/.config/qmanga/local-review/stack.env" up -d --wait
 ```
 
+For the current workstation's live frontend editing, start the private dev override instead:
+
+```sh
+docker compose --env-file "$HOME/.config/qmanga/local-review/stack.env" -f compose.yaml -f "$HOME/.config/qmanga/local-review/compose.dev.yaml" up -d --no-deps --wait web gateway
+```
+
+This runs Vite with the source directory mounted into the web container and forwards HMR WebSockets through the local gateway. Keep using `http://localhost:18080`; saving CSS/Svelte updates the browser without rebuilding. The backend and persistent manga volumes remain in the same project. Dependencies use the workstation's existing `apps/web/node_modules`. The override and gateway config are local workstation files, not production configuration. To return to the built frontend, run the base Compose command with `up -d --build --no-deps --wait web gateway`.
+
 Run this from the repository root. Keep the same Compose project and credentials; do not use `down -v` or volume pruning. This environment contains persistent user content and must not be used as a disposable browser-test fixture. Create a separate test project for automated seeding/cleanup. The old `tmp/task68/fixture.json` was moved to the private local review configuration to prevent accidental reuse; generated local account credentials are not stored in Git or this document.
 
 ## Stop, resume and inspect

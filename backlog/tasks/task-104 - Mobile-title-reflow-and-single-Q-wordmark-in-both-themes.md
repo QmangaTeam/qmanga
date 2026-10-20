@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 19:50'
-updated_date: '2026-10-20 20:29'
+updated_date: '2026-10-20 20:42'
 labels: []
 dependencies: []
 priority: high
@@ -44,4 +44,8 @@ Follow-up: equal five-column facts grid with shared label/value rows; two equal 
 Owner follow-up: compact visible label/value spacing to4px while preserving44px link/button targets and equal columns. Scope presentation only, both themes and phone/885/desktop checks.
 
 Compact follow-up verified: visible label/value CSSgap4px, label baselines aligned, links/statistics targets retain44px. Sveltecheck0errors0warnings,46UItests pass, Dockerwebbuild healthy; browser regression kk/ru × explicit/system dark/light at320/360/487/885/960/1280 passes. Independent review raised960px boundary coverage, now included and passing. Local browser screenshot tmp/task104/compact-facts.png. Await owner local review; no push/production release.
+
+Owner requested frontend hot reload and removal of icon magic margin. Keep localhost18080 backend/data; private Compose dev override, source bind mount and gateway WebSocket forwarding. Align icon in value grid row. Verify actual HMR and themes.
+
+Live dev frontend running on existinglocalhost18080 via private Compose override/sourcebind and local gateway WS forwarding; same backend and manga volumes. Actual HMR probe changed a temporary CSS custom property, observed browser update with0page reloads, restored source and observed restoration. Icon now explicit grid-column1/row2; dt/dd occupy column2 rows1/2, displaycontents inner wrapper, no marginoffset. Sveltecheck0errors0warnings;46UItests pass; livebrowser matrix kk/ru×explicit/systemlight/dark320–1280 passes incl960. Independent review passed. docs/LOCAL-DEVELOPMENT.md includes dev startup/revert. Localonly; awaits owner acceptance, no production release.
 <!-- SECTION:NOTES:END -->
