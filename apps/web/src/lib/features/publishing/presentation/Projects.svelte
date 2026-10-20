@@ -1,6 +1,6 @@
 <script lang="ts">
  import {onMount,untrack,tick} from 'svelte';
- import {replaceState} from '$app/navigation';
+ import {beforeNavigate,replaceState} from '$app/navigation';
  import {page} from '$app/stores';
  import type {Account} from '$lib/features/identity/domain/account';
  import type {PublishingGateway} from '../application/publishing';
@@ -11,6 +11,7 @@
  import SectionHeading from '$lib/shared/presentation/ui/SectionHeading.svelte';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {failureCode,noticeText} from '$lib/shared/presentation/copy';
+ import {boundedPosition} from '../domain/workspace-context';
  import {ProjectDirectory} from '../application/project-directory';
 
  let {user,gateway,teamsGateway,requestsGateway}:{user:Account|null;gateway:PublishingGateway;teamsGateway:TeamsGateway;requestsGateway:ProjectRequestsGateway}=$props();
@@ -27,8 +28,15 @@
  const directoryError=$derived.by(()=>{directoryVersion;return directory.error;});
  let searchGeneration=0;
  let loadedPages=$state(1),position=$state(0),mounted=$state(false);
+ let restoring=true,historyOwner='',positionTimer:ReturnType<typeof setTimeout>|undefined;
+ function cancelPositionWrite(){if(positionTimer!==undefined)clearTimeout(positionTimer);positionTimer=undefined;}
+ function flushPosition(generation=searchGeneration){
+  cancelPositionWrite();
+  if(generation===searchGeneration&&!restoring&&!directory.loading&&user?.id===historyOwner)updateURL();
+ }
+ beforeNavigate(()=>flushPosition());
  const returnTo=$derived('/studio/projects?'+new URLSearchParams({q:appliedCriteria.query,team:appliedCriteria.teamId,pages:String(loadedPages),position:String(position)}));
- function updateURL(){const next=new URL(window.location.href);next.search=new URLSearchParams({q:directory.appliedCriteria.query,team:directory.appliedCriteria.teamId,pages:String(loadedPages),position:String(Math.round(window.scrollY))}).toString();replaceState(next,$page.state);}
+ function updateURL(){if(!user||user.id!==historyOwner||window.location.pathname!=='/studio/projects')return;position=boundedPosition(window.scrollY);const next=new URL(window.location.href);next.search=new URLSearchParams({q:directory.appliedCriteria.query,team:directory.appliedCriteria.teamId,pages:String(loadedPages),position:String(position)}).toString();replaceState(next,$page.state);}
  async function more(){const generation=searchGeneration;await directory.more();if(generation===searchGeneration&&!directory.error){loadedPages++;updateURL();}}
 
 
@@ -43,6 +51,7 @@
 
  async function search(){
   const generation=++searchGeneration;
+  cancelPositionWrite();restoring=false;
   error='';
   loadedPages=1;await directory.search(query,team);
   if(generation===searchGeneration)updateURL();
@@ -57,6 +66,7 @@
 
  async function restore(){
   const generation=++searchGeneration;
+  cancelPositionWrite();restoring=true;historyOwner=user?.id||'';
   directory.reset();teams=[];error='';
   if(!user)return;
   const params=new URL(window.location.href).searchParams;
@@ -66,14 +76,19 @@
   while(generation===searchGeneration&&loadedPages<pages&&directory.hasMore&&!directory.error){await directory.more();if(generation===searchGeneration&&!directory.error)loadedPages++;}
   if(generation!==searchGeneration)return;
   await loadTeams(generation);if(generation!==searchGeneration)return;await tick();if(generation!==searchGeneration)return;
-  const top=Math.min(1000000,Math.max(0,Number(params.get('position'))||0));window.scrollTo({top,behavior:'instant'});
+  const top=boundedPosition(Number(params.get('position')));window.scrollTo({top,behavior:'instant'});position=boundedPosition(window.scrollY);restoring=false;if(!directory.error)updateURL();
  }
  $effect(()=>{const account=user?.id;if(mounted){untrack(()=>{void restore();});}return ()=>{if(account!==user?.id)directory.reset();};});
  onMount(()=>{
   mounted=true;
-  const remember=()=>{position=Math.min(1000000,Math.round(window.scrollY));};
-  const pop=()=>{void restore();};window.addEventListener('scroll',remember,{passive:true});window.addEventListener('popstate',pop);
-  return ()=>{searchGeneration++;directory.reset();window.removeEventListener('scroll',remember);window.removeEventListener('popstate',pop);};
+  const remember=()=>{
+   position=boundedPosition(window.scrollY);
+   if(restoring||positionTimer!==undefined)return;
+   const generation=searchGeneration;positionTimer=setTimeout(()=>flushPosition(generation),150);
+  };
+  const leave=()=>flushPosition();
+  const pop=()=>{void restore();};window.addEventListener('scroll',remember,{passive:true});window.addEventListener('popstate',pop);window.addEventListener('pagehide',leave);window.addEventListener('beforeunload',leave);
+  return ()=>{flushPosition();cancelPositionWrite();searchGeneration++;directory.reset();window.removeEventListener('scroll',remember);window.removeEventListener('popstate',pop);window.removeEventListener('pagehide',leave);window.removeEventListener('beforeunload',leave);};
  });
 </script>
 <svelte:head><title>{text($locale,'Аударма жобалары','Проекты переводов')} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>

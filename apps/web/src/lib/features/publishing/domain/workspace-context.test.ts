@@ -19,3 +19,7 @@ test('preview round trip carries the validated applied list context through both
  expect(workspaceLocation('project','revision-b','draft-preview',320,'https://foreign.test')).not.toContain('foreign');
  for(const value of ['https://foreign.test','/studio/projects/private','/studio/projects?account=other','/studio/projects?pages=100000'])expect(workspaceReturn('/studio/projects/project?revision=revision-b&step=draft-preview&position=320&projectsReturn='+encodeURIComponent(value),'revision-b')).toBe('/studio/projects');
 });
+test('history positions are finite bounded integers',async()=>{
+ const {boundedPosition}=await import('./workspace-context');
+ for(const [value,expected] of [[NaN,0],[Infinity,0],[-40,0],[17.6,18],[10000000,1000000]])expect(boundedPosition(value)).toBe(expected);
+});
