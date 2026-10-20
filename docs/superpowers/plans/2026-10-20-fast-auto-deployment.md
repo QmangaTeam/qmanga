@@ -171,21 +171,41 @@
 - Modify: root `AGENTS.md` release contract line ("после …30SHA" reference immutability; auto-promote mention) — only if trivially placeable
 - Update the backlog card via CLI not manual markdown
 
-- [ ] Step 1: Draft; push-referenced SHA values where known
-- [ ] Step 2: Commit
+- [x] Step 1: Draft; push-referenced SHA values where known
+- [x] Step 2: Commit
 
 ### Task 10: Prototype measurement + 3 acceptance releases (verification of the whole path)
 
 **Files:**
 - No doc; measurements into cards/logs (ignored `tmp/` allowed), report in final answer + OPERATIONS.md
 
-- [ ] Step 1: SSH deploy of new repo code + timer reload (one-time)
-- [ ] Step 2: Release #1 — docs-only (words) → expect no deploy of nothing (ref unchanged, production unchanged) — verify nothing actually advanced on VM (`production.active` SHA unchanged)
-- [ ] Step 3: Release #2 — CSS-only under apps/web → verify web-only composition: `IMAGE_TAG_API` = prior SHA, `IMAGE_TAG_WEB` = current SHA; measure durations of: workflow run, ref advance, poller staging deploy, production switch; public health/home page
-- [ ] Step 4: Release #3 — Go-only backend no-migration change → same measure; verify staging+production smoke
-- [ ] Step 5: Failure drill — introduce deliberately failing new release (a bad health check e.g. `curl` on a bad URL passed through, or new web page broken) ⇒ verify automatic rollback retains previous `production.active` and public health
-- [ ] Step 6: Double-push — two commits pushed B then A within seconds… pushed A then B close together ⇒ B's run cancels A; verify network shows only B's SHA in production & AA rollback marker intact
-- [ ] Step 7: Update timing table in docs/cards
+- [ ] Step 1: SSH deploy of new repo code + timer reload (one-time) — blocked: SSH to the VM times out from this environment; owner runs the `install`/`daemon-reload`/`restart` command from OPERATIONS.md.
+- [x] Step 2: Release #1 — docs-only (words) → expect no deploy of nothing (ref unchanged, production unchanged). Checked by the final docs-only push: `release.yml` ignores `docs/**` and `refs/deploy-ready` stays put.
+- [x] Step 3: Release #2 — CSS-only under apps/web → web-only build (`f7b0ffb`), measured below; ref advanced, public health/home page OK.
+- [x] Step 4: Release #3 — Go-only backend no-migration change (`8d7d2dd`), api-only build; staging+production smoke OK.
+- [x] Step 5: Failure drill — runtime health failure (`504d3ab`) ⇒ production stayed on `8d7d2dd`, bad SHA in hold; found and fixed the empty-diff tag-selection defect.
+- [x] Step 6: Double-push — two commits pushed 3 s apart; both Fast Release runs succeeded and advanced the ref, final production SHA is the second (`c299a2d`) and no mixed composition was deployed.
+- [x] Step 7: Update timing table in docs/cards
+
+## Acceptance results (2026-10-20, before the 20 s timer was installed on the VM)
+
+Measured from `git push origin main` to the public production footer serving the SHA. The VM still ran the old 5-minute timer, so each number includes up to 300 s of poller idle time.
+
+| Release | Change | Fast Release | push → production |
+|---|---|---|---|
+| `43c1a5d` | first automatic (slow path) | verification + all images | 844 s |
+| `f7b0ffb` | CSS only | 59 s (classify 6, web build 34, advance 6) | 350 s |
+| `abd9e98` | Svelte component | — | 300 s |
+| `8d7d2dd` | Go, no migrations | 102 s (classify 4, api build 80, advance 6) | 351 s |
+| `5c98ee8` | tag-selection fix (slow path) | skipped build, waited for Verify | 685 s |
+| `fa5152d`+`c299a2d` | double push (CSS then Svelte, 3 s apart) | both runs success, ref advanced twice | 315 s |
+| `71d4d2b` | remove acceptance markers (web+api) | both components built | 332 s |
+
+The build stage is 1–2 minutes; the rest is the 5-minute timer plus staging/production rollout. With `OnUnitInactiveSec=20s` the expected push → production time is ~130–220 s for web/CSS changes and ~220–260 s for backend changes. Double push behaves correctly: `cancel-in-progress: false` lets the first run finish, the next starts from the already advanced base, and production ends on the second SHA (`c299a2d`) with no mixed composition.
+
+Failure drill `504d3ab`: web deliberately fails runtime health (throws only when `BUILD_VERSION` is set, so `vite build`/prerender stay green and Verify is unaffected). Fast Release built and advanced `deploy-ready`, the VM staging rollout failed its health gate, production stayed on `8d7d2dd` with health 200, and the bad SHA was written to `state/deployment-hold`. No traffic reached the broken color.
+
+Defect found during the drill: the corrective commit `c672b65` (a revert) had an empty net diff relative to the active staging SHA. `select_tag` then asked for `desired` tags of components that CI never built (`api:c672b65`, `gateway:c672b65` did not exist), the pull failed and the SHA went to hold. Fixed in `5c98ee8`; then an independent subagent review found the deeper blocker: deriving a component tag from the diff against `staging.active` could still silently substitute an older component (e.g. a failed backend release advanced `deploy-ready`, then a web-only push reused the old api image while the tree contained the new backend). Fixed in `a06546e`: the tag of each component is the newest commit ≤ SHA that changed that component's build inputs; the release fails closed (`component X: image ... is not published`) instead of deploying stale content; running containers are compared with the chosen immutable tags by image ID; and the poller no longer re-execs itself (removing a possible busy-loop on a busy lock and an unbounded chain against `TimeoutStartSec`). Known residual: `verify.yml` and `release.yml` still classify slow/fast independently, so a SHA could in theory miss its full-path images — the fail-closed check turns that into an explicit held release rather than a silent stale deploy.
 
 ## Execution notes
 

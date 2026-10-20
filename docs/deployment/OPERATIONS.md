@@ -73,12 +73,12 @@ docker ps --format 'table {{.Names}}\t{{.Status}}'
 1. **Fast Release** (`.github/workflows/release.yml`, блокирующий). Сравнивает файлы с последним выпущенным SHA (`refs/deploy-ready`), собирает только изменённые компоненты (`web` — `apps/web/`; `api`+worker — `backend/`; `gateway` — nginx/Caddy) с GHA Docker cache, пушит immutable arm64 теги и двигает `refs/deploy-ready`. Push только с документацией ничего не выпускает. Изменения `backend/migrations/`, `deploy/`, `infra/`, `.github/` — медленный путь: workflow ждёт успешный `Verify Qmanga` этого же SHA и только затем двигает ref.
 2. **Full Verification** (`verify.yml`) — полный Go/PostgreSQL/codec/browser acceptance и публикация всех трёх arm64 images. Он больше не блокирует обычный релиз; его результат виден в Actions.
 
-VM-poller (`qmanga-staging-poll.timer`, каждые 20 с) читает `refs/deploy-ready` через `git fetch` (без GitHub API/token) и вызывает `release.sh staging`, затем автоматически `release.sh production` того же SHA. `release.sh`:
+VM-poller (`qmanga-staging-poll.timer`) читает `refs/deploy-ready` через `git fetch` (без GitHub API/token) и вызывает `release.sh staging`, а на следующем тике — автоматически `release.sh production` того же SHA (poller не делает re-exec: каждая итерация берёт свежий код из репозитория). Интервал в репозитории — 20 с, но на VM до установки файлов ниже действует старый 5-минутный юнит. `release.sh`:
 
-- переиспользует неизменённые компоненты предыдущего релиза (manifest в `/opt/qmanga/state/manifests/`), поэтому CSS-изменение не пересобирает и не перезапускает API/gateway;
+- выбирает тег каждого компонента как последний коммит ≤ SHA, менявший его входы сборки (`apps/web`+`infra/web.Dockerfile`; `backend`+`infra/api.Dockerfile`/`imagemagick-policy.xml`; `infra/nginx.conf`+`gateway.Dockerfile`), и использует только опубликованный immutable-образ. Это корректно, даже если предыдущий релиз упал и `staging.active` отстал от `deploy-ready`; если нужного образа нет, релиз падает с явной ошибкой `component X: image ... is not published` и hold, а не молча подставляет устаревший компонент. CSS-изменение не пересобирает и не перезапускает API/gateway;
 - пропускает полный backup, если есть проверенная копия моложе 30 ч (`QMANGA_MAX_BACKUP_AGE_H`, можно задать в systemd-юните poller-а) и нет изменений в `backend/migrations/`; при миграциях, отсутствии/устаревании маркера `COMPLETE` или первом релизе полный backup с off-host hook обязателен; staging и production используют одну политику;
 - сохраняет blue-green, deployment lock, staging gate, restore gate, короткие health checks и автоматический возврат маршрута/worker при ошибке; схема БД автоматически не откатывается;
-- проверяет, что публичная главная действительно отдаёт выпущенный SHA (footer `BUILD_VERSION`), а не кэш прошлого цвета;
+- проверяет, что публичная главная отвечает и отдаёт выпущенный SHA (footer `BUILD_VERSION`), и что контейнеры нового цвета используют именно выбранные теги (`docker inspect` image ID против выбранного immutable-тега), а не кэш прошлого цвета или старый компонент;
 - при провале release или ручном `rollback.sh` пишет `state/deployment-hold` с плохим SHA; poller не выкатывает этот SHA повторно, пока `deploy-ready` не уедет на новый. Снять hold вручную: удалить `/opt/qmanga/state/deployment-hold` (только осознанно).
 
 Обновление systemd-юнитов на VM после изменения их файлов (единственная ручная операция для инфраструктуры CI):
@@ -99,7 +99,7 @@ curl -fsS https://qmanga.maqsatto.dev/api/v1/health
 curl -fsS https://qmanga.maqsatto.dev/ | grep -o <40-sha>
 ```
 
-Ручной `release.sh` остаётся для согласованных случаев, когда автоматический путь осознанно приостановлен. Не включать второй (SSH) способ деплоя. Fail-fast: повторный выпуск уже упавшего SHA не выполняется 30 минут, чтобы timer не штормил; исправление выпускается новым коммитом.
+Ручной `release.sh` остаётся для согласованных случаев, когда автоматический путь осознанно приостановлен. Не включать второй (SSH) способ деплоя. Fail-fast: SHA, который упал или был откатан, не выкатывается повторно, пока `deploy-ready` не уедет на другой SHA (hold по конкретному SHA, без таймера); исправление выпускается новым коммитом. Если образ нужного компонента не опубликован (например, сборку отменили или удалили пакет), релиз останавливается с сообщением `component X: image ... is not published` — повтори Fast Release/Verify для этого SHA; снимать hold вручную только осознанно.
 
 Одинаковый уже активный SHA — no-op: **не применит новые env**. Секреты/конфигурация требуют согласованного нового выпуска; не считать запись env фактом включения сервиса.
 
