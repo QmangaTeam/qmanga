@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@admin-agent'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 16:22'
+updated_date: '2026-10-20 16:31'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -44,3 +44,15 @@ ordinal: 44017
 <!-- SECTION:NOTES:BEGIN -->
 Ответственный: admin_finish. Реализовано локально: очередь администратора (531a2c4), безопасный текстовый diff (fbf2d13), точный comment context (cd01a49), inline account editor и taxonomy search (531a2c4), полный server title search (e66ae39), server audit filters (911c0e5). Svelte check: 0 errors/0 warnings; targeted TS unit/SSR tests pass; Go catalog/community/identity/HTTP packages pass (DB tests без TEST_DATABASE_URL пропускаются). Финальная DB/browser проверка, независимый review и наблюдаемый production SHA выполняются root; выпуск пока не подтверждён.
 <!-- SECTION:NOTES:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-10-20 16:31
+
+---
+
+Независимый review: fdbf9bb отделяет root.reply_cursor (последний из первых 10 последовательных ответов) от дополнительно загруженного focus reply. Merge обычной страницы удаляет дубли и сортирует ответы. Unit регрессия RED: старый cursor=25 вместо10; GREEN:4 assertions. DB регрессия30 ответов focus25 + load more подготовлена; browser регрессия в604cf77 ожидает общего прогона root.
+
+---
+<!-- COMMENTS:END -->
