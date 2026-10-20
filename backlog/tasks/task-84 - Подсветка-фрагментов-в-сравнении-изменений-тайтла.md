@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@admin-agent'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 16:52'
+updated_date: '2026-10-20 19:03'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -45,4 +45,6 @@ ordinal: 44016
 Ответственный: admin_finish. Реализовано локально: очередь администратора (531a2c4), безопасный текстовый diff (fbf2d13), точный comment context (cd01a49), inline account editor и taxonomy search (531a2c4), полный server title search (e66ae39), server audit filters (911c0e5). Svelte check: 0 errors/0 warnings; targeted TS unit/SSR tests pass; Go catalog/community/identity/HTTP packages pass (DB tests без TEST_DATABASE_URL пропускаются). Финальная DB/browser проверка, независимый review и наблюдаемый production SHA выполняются root; выпуск пока не подтверждён.
 
 Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
+
+21 октября, admin_acceptance_remaining: text-diff unit2/2 PASS: исходный текст сохраняется точно, добавление/удаление/пустые строки/HTML остаются буквальными данными. TitleChangeDetail выводит before/current/proposed и семантические del/ins через безопасную интерполяцию Svelte, а не raw HTML; version review контракт сохранён. Общие158 module и46 UI PASS. Нового пробела реализации не найдено; визуальная приватная production приёмка отдельно.
 <!-- SECTION:NOTES:END -->
