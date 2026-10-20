@@ -61,3 +61,12 @@ test('description preview has an accessible localized disclosure',async()=>{
   expect(html).toContain(language==='kk'?'Толығырақ':'Подробнее');
  }
 });
+
+test('title tab links preserve scroll without a content fragment',async()=>{
+ const html=render(Title).body;
+ for(const link of await elements(html,'.title-tabs a')){expect(link.href).not.toContain('#');expect(link['data-sveltekit-noscroll']).toBeDefined();}
+ expect(await elements(html,'.metadata .metadata-rail')).toHaveLength(1);
+ expect(html).toContain('Издатель');
+ expect(await elements(html,'.metadata .contributors')).toHaveLength(0);
+ expect(await elements(html,'.title-information>.contributors')).toHaveLength(1);
+});

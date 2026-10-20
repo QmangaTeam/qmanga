@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 19:50'
-updated_date: '2026-10-20 21:09'
+updated_date: '2026-10-20 21:14'
 labels: []
 dependencies: []
 priority: high
@@ -34,6 +34,8 @@ Inspect existing rendering; adjust presentation only, compose existing Q mark wi
 Owner reference layout: replace separate horizontal facts and metadata cards with one information panel. Desktop under cover/actions; mobile below tabs before active content. Preserve title routes/actions/stats, actual metadata only, current palette. Verify320/360/768/885/960/1080/1440, both locales/themes, stats interaction and one metadata instance; independent review.
 
 Owner refinement: horizontal native swipe/keyboard metadata below960px, desktop sidebar unchanged; description3line preview + localized expand/collapse button on all widths. Preserve44pxtargets and page reflow. Verify keyboardscroll and repeated expansion in both locales/themes, independent review.
+
+Owner refinement: tabs noScroll links withoutfragment, sliding active indicator/content with reducedmotion optout. Compact horizontal facts rail preserving all fields; author/publisher/team credit chips below rail. Verify tab scrollposition and URL/back history pluscompact rail/actions/themes; independentreview.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -58,4 +60,6 @@ Reference-layout follow-up implemented locally: single TitleMetadata panel now c
 Final refinement: removed negative metadata action margins; label/control4px gap,44px targets and nooverflow rechecked independently320/360/885/960/1080. Final rerun0Svelteerrors/warnings,46UItests764assertions,2browserregressions pass. Screenshots under ignoredtmp/task104/unified-screenshots. Source dev mode remains live. Review pending owner visual acceptance.
 
 Owner swipe/disclosure refinement complete locally. Below960px the entire combined metadata section is native horizontal flex rail with snap proximity, visible thin scrollbar and keyboard focus; desktop sidebar preserved. Description allwidths:3line preview, accessible44px button aria-expanded/controls, localized Толығырақ/Жию and Подробнее/Свернуть; resets on title change, no toggle on empty description. ActualCua expand/collapse observed; reviewer verified Enter/Space plus ArrowRight scrolling688px without pageoverflow. Final checks Svelte0errors0warnings,47UItests774assertions,2browserregressions pass incl mobile scroll and repeated description toggle320/688/1440 inkk/ru×explicit/systemthemes; architecture/contrast and frontendbuild pass. Early browser assertion raced hydration; final test waits hydration/networkidle and reactive state. Independent review no blockers. Screenshot tmp/task104/swipe-description.png. DevHMR remains running; no data or production changes. Await owner visual acceptance.
+
+Owner compact-tabs/credits follow-up implemented locally: tablinks no fragment + data-sveltekit-noscroll;180ms slidingindicator and160ms directional content transition,disabled reducedmotion. Compact mobile facts use content-based88–156px widths,smallerpadding/font; all original fields retained. Authors/publishers/team labeled44px chips now OUTSIDE metadata container per latestownercomment, linkedteams preserved. Final checks Svelte0errors0warnings,48UItests784assertions,3browserregressions pass. New scroll regression checks About→Chapters andBack360/688/1280 withnormal/reducedmotion, no scrolljump and correct URL/activeindicator. Existing kk/ru explicit/systemthemes responsive/disclosure/filter/sort tests pass. Build/architecture/contrast pass. Independent reviewer confirmed607px exactpreservedscroll,creditsoutside/nooverflow andnodataloss. Screenshot tmp/task104/compact-tabs-credits.png. Minor test fixes wait for reactive backnavigation and allow Svelte-scoped animationname; final fullrun3pass0fail. Localdev running, no push/productionchange. Await owner acceptance.
 <!-- SECTION:NOTES:END -->

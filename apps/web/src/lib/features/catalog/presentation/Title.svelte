@@ -24,6 +24,7 @@
  let statsDialog=$state<HTMLDialogElement|undefined>();
  let libraryDialog=$state<HTMLDialogElement|undefined>(),reportDialog=$state<HTMLDialogElement|undefined>();
  const maxRating=$derived(Math.max(1,...(title.ratingDistribution||[])));
+ let slideDirection=$state(1);
  let descriptionExpanded=$state(false);
  $effect(()=>{title.id;descriptionExpanded=false;});
  let shareNotice=$state('');
@@ -54,11 +55,12 @@
   <div class="title-information"><TitleMetadata {title} onStatistics={()=>statsDialog?.showModal()}/></div>
  </aside>
 
-  <nav class="title-tabs" aria-label={text($locale,'Тайтл бөлімдері','Разделы тайтла')}>{#each tabs as item}<a href={base+'?tab='+item.id+'#title-content'} aria-current={active===item.id?'page':undefined}><Icon name={item.icon} size={18}/><span>{item.label}</span>{#if item.count!==undefined}<span class="tab-count">{item.count}</span>{/if}</a>{/each}</nav>
+  <nav class="title-tabs" style:--active-tab={tabs.findIndex(item=>item.id===active)} aria-label={text($locale,'Тайтл бөлімдері','Разделы тайтла')}>{#each tabs as item}<a data-sveltekit-noscroll href={base+'?tab='+item.id} onclick={()=>slideDirection=tabs.findIndex(value=>value.id===item.id)>=tabs.findIndex(value=>value.id===active)?1:-1} aria-current={active===item.id?'page':undefined}><Icon name={item.icon} size={18}/><span>{item.label}</span>{#if item.count!==undefined}<span class="tab-count">{item.count}</span>{/if}</a>{/each}</nav>
  <div class="title-main">
   <dialog bind:this={statsDialog} class="stats-dialog" aria-labelledby="stats-title"><div class="stats-dialog-heading"><h2 id="stats-title">{text($locale,'Тайтл статистикасы','Статистика тайтла')}</h2><button class="button subtle" type="button" onclick={()=>statsDialog?.close()} aria-label={text($locale,'Жабу','Закрыть')}>×</button></div><dl class="stats-summary"><div><dt>{text($locale,'Бағалар','Оценки')}</dt><dd>{title.ratingCount}</dd></div><div><dt>{text($locale,'Тараулар','Главы')}</dt><dd>{title.chapterCount??'—'}</dd></div><div><dt>{text($locale,'Оқырмандар','Читатели')}</dt><dd>{title.readerCount??'—'}</dd></div></dl><h3>{text($locale,'Бағалардың таралуы','Распределение оценок')}</h3>{#if title.ratingCount>0}<div class="rating-bars">{#each [10,9,8,7,6,5,4,3,2,1] as value}<div class="rating-bar"><span>{value}</span><span class="rating-bar-track"><span style:width={(100*(title.ratingDistribution?.[value-1]||0)/maxRating)+'%'}></span></span><span>{title.ratingDistribution?.[value-1]||0}</span></div>{/each}</div>{:else}<p class="muted">{text($locale,'Әзірге баға жоқ','Оценок пока нет')}</p>{/if}<p class="muted stats-explainer">{text($locale,'Оқырмандар — оқу орны сақталған аккаунттар. Қонақтағы оқу мен қаралымдар есепке кірмейді.','Читатели — аккаунты с сохранённым прогрессом. Гостевое чтение и просмотры сюда не входят.')}</p></dialog>
 
   <div id="title-content" class="title-content">
+   {#key active}<div class="tab-panel" style:--tab-shift={(slideDirection*12)+'px'}>
    {#if active==='chapters'}
     <section id="chapters" aria-label={text($locale,'Тараулар','Главы')}>
      <form class="chapter-search" action={base+'#chapters'} method="GET"><input type="hidden" name="tab" value="chapters"/><label class="search-field"><input type="search" name="q" value={chapterFilter.query||''} placeholder={text($locale,'Тарау нөмірі немесе атауы','Номер или название главы')} aria-label={text($locale,'Тарау іздеу','Поиск главы')} maxlength="80"/></label><button class="button subtle" type="submit" name="sort" value={chapterFilter.sort||'asc'} aria-label={text($locale,'Іздеу','Найти')} title={text($locale,'Іздеу','Найти')}><Icon name="search"/></button><button class="button subtle" type="submit" name="sort" value={chapterFilter.sort==='desc'?'asc':'desc'} aria-label={chapterFilter.sort==='desc'?text($locale,'Басынан','Сначала старые'):text($locale,'Соңғысынан','Сначала новые')} title={chapterFilter.sort==='desc'?text($locale,'Басынан','Сначала старые'):text($locale,'Соңғысынан','Сначала новые')}><Icon name={chapterFilter.sort==='desc'?'down':'up'}/></button></form>
@@ -70,6 +72,7 @@
    {:else if active==='comments'}
     {#if discussion}{@render discussion()}{/if}
    {/if}
+   </div>{/key}
   </div>
  </div>
 </div>
@@ -104,6 +107,12 @@
  .about p.description-collapsed{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
  .description-toggle{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:4px 0;border:0;background:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer}
  .description-toggle:hover{text-decoration:underline}.description-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+ .title-tabs{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;gap:0}
+ .title-tabs::before{content:'';position:absolute;inset:0 auto 0 0;width:calc(100% / 3);border:1px solid var(--accent);border-radius:9px;background:var(--panel);transform:translateX(calc(var(--active-tab)*100%));transition:transform 180ms ease;pointer-events:none;z-index:-1}
+ .title-tabs a{justify-content:center;min-width:0}.title-tabs a[aria-current]{border-color:transparent;background:none}
+ .tab-panel{animation:tab-enter 160ms ease-out}
+ @keyframes tab-enter{from{opacity:.6;transform:translateX(var(--tab-shift))}to{opacity:1;transform:translateX(0)}}
+ @media(prefers-reduced-motion:reduce){.title-tabs::before{transition:none}.tab-panel{animation:none}}
  /* One information panel: sidebar on desktop, below navigation on small screens. */
  .title-information{grid-column:1/-1;grid-row:4;min-width:0}
  .title-tabs{grid-column:1/-1;grid-row:3;margin:0;padding:0}

@@ -18,8 +18,8 @@ test('mobile title reflows and the single-Q wordmark follows explicit and system
     assert.ok(cover.width>=170,'cover has useful phone size');assert.ok(heading.y+heading.height<=cover.y+1,'heading precedes cover');
     assert.equal(await page.locator('.title-information').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'horizontal metadata stays contained in the panel');
     if(width===320){
-     const rail=page.locator('.metadata');assert.equal(await rail.evaluate(e=>e.scrollWidth>e.clientWidth),true,'mobile metadata slides horizontally');
-     await rail.focus();await page.keyboard.press('ArrowRight');await page.waitForFunction(()=>document.querySelector('.metadata').scrollLeft>0);
+     const rail=page.locator('.metadata-rail');assert.equal(await rail.evaluate(e=>e.scrollWidth>e.clientWidth),true,'mobile metadata slides horizontally');
+     await rail.focus();await page.keyboard.press('ArrowRight');await page.waitForFunction(()=>document.querySelector('.metadata-rail').scrollLeft>0);
     }
     assert.equal(await page.locator('.title-tabs').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'all title tabs fit');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'page reflows');
