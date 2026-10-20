@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 19:50'
-updated_date: '2026-10-20 21:00'
+updated_date: '2026-10-20 21:09'
 labels: []
 dependencies: []
 priority: high
@@ -32,6 +32,8 @@ Owner requests mobile title-page responsiveness using attached second image only
 Inspect existing rendering; adjust presentation only, compose existing Q mark with manga text; add regressions, rebuild existing local Docker stack, inspect mobile/desktop kk/ru/theme matrix, independent review and local handoff.
 
 Owner reference layout: replace separate horizontal facts and metadata cards with one information panel. Desktop under cover/actions; mobile below tabs before active content. Preserve title routes/actions/stats, actual metadata only, current palette. Verify320/360/768/885/960/1080/1440, both locales/themes, stats interaction and one metadata instance; independent review.
+
+Owner refinement: horizontal native swipe/keyboard metadata below960px, desktop sidebar unchanged; description3line preview + localized expand/collapse button on all widths. Preserve44pxtargets and page reflow. Verify keyboardscroll and repeated expansion in both locales/themes, independent review.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -54,4 +56,6 @@ Live dev frontend running on existinglocalhost18080 via private Compose override
 Reference-layout follow-up implemented locally: single TitleMetadata panel now contains kind, statuses, chapters, format, year where present, statistics, publishers/source/country/authors, aliases, links and teams. Removed separate facts strip and duplicate metadata rendering; no invented data/functions. Desktop>=960 sidebar below cover/actions; smaller screens below tabs,2columns phone/3tablet. Old obsolete facts CSS removed. Verified Svelte0errors0warnings,46UItests764assertions, architecture+both-theme contrast pass, production frontendbuild pass,2read-only browser regressions pass preserving chapter query/sort andstatsdialog. Matrix kk/ru × explicit/system dark/light at320/360/487/768/885/960/1080/1440; independent review confirmed44pxtargets,nooverflow,onepanel and placement. Minor nonblocking reviewer note: mobile keyboard sequence follows DOM metadata before tabs whereas visual tabs precede metadata. DevHMR remains active localhost18080; no productionpush/release. Await owner visual acceptance.
 
 Final refinement: removed negative metadata action margins; label/control4px gap,44px targets and nooverflow rechecked independently320/360/885/960/1080. Final rerun0Svelteerrors/warnings,46UItests764assertions,2browserregressions pass. Screenshots under ignoredtmp/task104/unified-screenshots. Source dev mode remains live. Review pending owner visual acceptance.
+
+Owner swipe/disclosure refinement complete locally. Below960px the entire combined metadata section is native horizontal flex rail with snap proximity, visible thin scrollbar and keyboard focus; desktop sidebar preserved. Description allwidths:3line preview, accessible44px button aria-expanded/controls, localized Толығырақ/Жию and Подробнее/Свернуть; resets on title change, no toggle on empty description. ActualCua expand/collapse observed; reviewer verified Enter/Space plus ArrowRight scrolling688px without pageoverflow. Final checks Svelte0errors0warnings,47UItests774assertions,2browserregressions pass incl mobile scroll and repeated description toggle320/688/1440 inkk/ru×explicit/systemthemes; architecture/contrast and frontendbuild pass. Early browser assertion raced hydration; final test waits hydration/networkidle and reactive state. Independent review no blockers. Screenshot tmp/task104/swipe-description.png. DevHMR remains running; no data or production changes. Await owner visual acceptance.
 <!-- SECTION:NOTES:END -->

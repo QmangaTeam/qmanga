@@ -24,6 +24,8 @@
  let statsDialog=$state<HTMLDialogElement|undefined>();
  let libraryDialog=$state<HTMLDialogElement|undefined>(),reportDialog=$state<HTMLDialogElement|undefined>();
  const maxRating=$derived(Math.max(1,...(title.ratingDistribution||[])));
+ let descriptionExpanded=$state(false);
+ $effect(()=>{title.id;descriptionExpanded=false;});
  let shareNotice=$state('');
  async function share(){
   const url=new URL(base,window.location.origin).href;
@@ -64,7 +66,7 @@
      {#if nextURL}<Pager label={text($locale,'Тарау беттері','Страницы глав')} next={{label:text($locale,'Келесі тараулар','Следующие главы'),href:nextURL}}/>{/if}
     </section>
    {:else if active==='about'}
-    <section class="about"><h2>{text($locale,'Сипаттама','Описание')}</h2><p>{title.description||text($locale,'Сипаттама әлі қосылмаған','Описание пока не добавлено')}</p></section>
+    <section class="about"><h2>{text($locale,'Сипаттама','Описание')}</h2><p id="title-description" class:description-collapsed={!descriptionExpanded}>{title.description||text($locale,'Сипаттама әлі қосылмаған','Описание пока не добавлено')}</p>{#if title.description}<button class="description-toggle" type="button" aria-expanded={descriptionExpanded} aria-controls="title-description" onclick={()=>descriptionExpanded=!descriptionExpanded}>{descriptionExpanded?text($locale,'Жию','Свернуть'):text($locale,'Толығырақ','Подробнее')}<Icon name={descriptionExpanded?'up':'down'} size={16}/></button>{/if}</section>
    {:else if active==='comments'}
     {#if discussion}{@render discussion()}{/if}
    {/if}
@@ -99,6 +101,9 @@
   .title-tabs :global(svg){display:none}
  }
 
+ .about p.description-collapsed{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
+ .description-toggle{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:4px 0;border:0;background:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer}
+ .description-toggle:hover{text-decoration:underline}.description-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
  /* One information panel: sidebar on desktop, below navigation on small screens. */
  .title-information{grid-column:1/-1;grid-row:4;min-width:0}
  .title-tabs{grid-column:1/-1;grid-row:3;margin:0;padding:0}

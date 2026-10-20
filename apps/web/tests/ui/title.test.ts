@@ -51,3 +51,13 @@ test('title uses a wide cover fallback and an explicit banner when provided',asy
  const explicit=render(Title,{props:{bannerURL:'/api/v1/media/banner'}}).body;
  expect((await elements(explicit,'.title-banner img'))[0].src).toBe('/api/v1/media/banner');
 });
+
+test('description preview has an accessible localized disclosure',async()=>{
+ for(const language of ['kk','ru'] as const){
+  const html=render(Title,{props:{tab:'about',language}}).body;
+  const buttons=await elements(html,'.description-toggle');expect(buttons).toHaveLength(1);
+  expect(buttons[0]['aria-expanded']).toBe('false');expect(buttons[0]['aria-controls']).toBe('title-description');
+  expect(await elements(html,'#title-description.description-collapsed')).toHaveLength(1);
+  expect(html).toContain(language==='kk'?'Толығырақ':'Подробнее');
+ }
+});

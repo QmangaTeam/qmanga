@@ -12,7 +12,8 @@
  let notice=$state('');
  async function copyName(value:string){try{await navigator.clipboard.writeText(value);notice=text($locale,'Атауы көшірілді','Название скопировано');}catch{notice=text($locale,'Көшіру мүмкін болмады. Мәтінді белгіле.','Не удалось скопировать. Выдели текст вручную.');}}
 </script>
-<section class="metadata" aria-label={text($locale,'Тайтл туралы мәлімет','Сведения о тайтле')}>
+<!-- svelte-ignore a11y_no_noninteractive_tabindex (Native horizontal metadata scrolling supports keyboard users.) -->
+<section class="metadata" tabindex="0" aria-label={text($locale,'Тайтл туралы мәлімет','Сведения о тайтле')}>
  <dl class="summary-facts">
   <div><dt>{text($locale,'Түрі','Тип')}</dt><dd><a href={'/catalog?kind='+title.kind}>{names.kind[title.kind]}</a></dd></div>
   <div><dt>{text($locale,'Тайтл күйі','Статус тайтла')}</dt><dd><a href={'/catalog?original_status='+title.originalStatus}>{names.original[title.originalStatus]}</a></dd></div>
@@ -27,9 +28,9 @@
   {#if publication?.country}<div><dt>{text($locale,'Шыққан елі','Страна производства')}</dt><dd>{publication.country}</dd></div>{/if}
   {#if title.authors?.length}<div><dt>{text($locale,'Авторлар','Авторы')}</dt><dd>{title.authors.join(', ')}</dd></div>{/if}
  </dl>
- {#if aliases.length}<h2>{text($locale,'Басқа атаулары','Другие названия тайтла')}</h2><ul class="aliases">{#each aliases as alias}<li><span>{alias}</span><button type="button" title={text($locale,'Атауын көшіру','Скопировать название')} aria-label={text($locale,'Атауын көшіру: ','Скопировать название: ')+alias} onclick={()=>copyName(alias)}><Icon name="copy" size={16}/></button></li>{/each}</ul>{/if}
- {#if publication?.links.length}<h2>{text($locale,'Сілтемелер','Ссылки')}</h2><ul class="links">{#each publication.links as link}{#if safeExternalURL(link.url)}<li><a href={link.url} target="_blank" rel="noopener noreferrer"><Icon name="link" size={16}/>{link.label}<span class="sr-only">{text($locale,' — жаңа бетте',' — в новой вкладке')}</span></a></li>{/if}{/each}</ul>{/if}
- {#if title.projects.length}<h2>{text($locale,'Аударма командалары','Команды перевода')}</h2><ul class="links">{#each title.projects as project}<li><a href={'/teams/'+encodeURIComponent(project.teamSlug)}><Icon name="users" size={16}/>{project.teamName}</a></li>{/each}</ul>{/if}
+ {#if aliases.length}<div class="metadata-group"><h2>{text($locale,'Басқа атаулары','Другие названия тайтла')}</h2><ul class="aliases">{#each aliases as alias}<li><span>{alias}</span><button type="button" title={text($locale,'Атауын көшіру','Скопировать название')} aria-label={text($locale,'Атауын көшіру: ','Скопировать название: ')+alias} onclick={()=>copyName(alias)}><Icon name="copy" size={16}/></button></li>{/each}</ul></div>{/if}
+ {#if publication?.links.length}<div class="metadata-group"><h2>{text($locale,'Сілтемелер','Ссылки')}</h2><ul class="links">{#each publication.links as link}{#if safeExternalURL(link.url)}<li><a href={link.url} target="_blank" rel="noopener noreferrer"><Icon name="link" size={16}/>{link.label}<span class="sr-only">{text($locale,' — жаңа бетте',' — в новой вкладке')}</span></a></li>{/if}{/each}</ul></div>{/if}
+ {#if title.projects.length}<div class="metadata-group"><h2>{text($locale,'Аударма командалары','Команды перевода')}</h2><ul class="links">{#each title.projects as project}<li><a href={'/teams/'+encodeURIComponent(project.teamSlug)}><Icon name="users" size={16}/>{project.teamName}</a></li>{/each}</ul></div>{/if}
  {#if notice}<p role="status">{notice}</p>{/if}
 </section>
 <style>
@@ -44,6 +45,11 @@
  .links a{display:flex;align-items:center;gap:8px;min-height:44px;text-decoration:none;color:var(--text);overflow-wrap:anywhere}
  a:hover,.statistics:hover{text-decoration:underline}button:focus-visible,a:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
  p{font-size:12px;margin-top:12px}
- @media(min-width:600px) and (max-width:959px){dl{grid-template-columns:repeat(3,minmax(0,1fr))}}
+ @media(max-width:959px){
+  .metadata{display:flex;gap:20px;overflow-x:auto;scroll-snap-type:x proximity;scroll-padding-inline:16px;overscroll-behavior-x:contain;scrollbar-width:thin;padding-bottom:12px}
+  dl{display:contents}dl>div,.metadata-group{flex:0 0 clamp(140px,40vw,200px);min-width:0;scroll-snap-align:start}
+  h2{margin:0 0 4px}.links a{align-items:flex-start;padding-block:4px}.aliases li{align-items:flex-start}
+ }
+ .metadata:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
  @media(min-width:960px){dl{grid-template-columns:minmax(0,1fr);gap:16px}.metadata{padding:16px}}
 </style>
