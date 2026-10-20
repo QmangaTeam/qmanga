@@ -33,3 +33,21 @@ test('account load more uses the applied search until another search is submitte
   assert.deepEqual(calls.at(-1),{query:'new-unsubmitted-search',after:''});assert.equal(await page.getByText('Synthetic second',{exact:true}).count(),0);
  }finally{await context.close();}
 });
+
+test('account edit moves keyboard focus into the form and cancellation returns to its row',{timeout:30000},async()=>{
+ const context=await session('admin');
+ try{
+  const page=await context.newPage();
+  await page.route('**/api/v1/moderation/accounts?*',route=>route.fulfill({json:{items:[{id:'focus-reader',name:'Synthetic focus reader',role:'reader',blocked:false,version:1}],has_more:false}}));
+  await page.goto('/admin/accounts');
+  const edit=page.getByRole('button',{name:'Изменить',exact:true});
+  await edit.waitFor();await edit.focus();await page.keyboard.press('Enter');
+  const role=page.getByRole('combobox',{name:'Роль',exact:true});
+  await role.waitFor();
+  assert.equal(await role.evaluate(element=>element===document.activeElement),true,'editing starts inside the inline form');
+  await page.getByRole('button',{name:'Отмена',exact:true}).click();
+  await role.waitFor({state:'hidden'});
+  assert.equal(await edit.evaluate(element=>element===document.activeElement),true,'cancel returns keyboard focus to the original row');
+  assert.equal(await page.getByRole('status').count(),0,'cancellation does not claim a persisted change');
+ }finally{await context.close();}
+});
