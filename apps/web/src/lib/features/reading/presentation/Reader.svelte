@@ -1,5 +1,6 @@
 <script lang="ts">
  import {page} from '$app/state';
+ import {safeQueueReturn} from '$lib/shared/presentation/queue-context';
  import {workspaceReturn} from '../../publishing/domain/workspace-context';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import ChoiceChips from '$lib/shared/presentation/ui/ChoiceChips.svelte';
@@ -116,7 +117,7 @@
   <div class="desktop-chapters">{#if manifest.previousId}<a class="icon" href={`/read/${manifest.previousId}`} aria-label={copy($locale,"Алдыңғы тарау")}>‹</a>{/if}<button onclick={()=>openPanel('chapters')}>{text($locale,manifest.chapterLabel+'-тарау','Глава '+manifest.chapterLabel)} <span aria-hidden="true">⌄</span></button>{#if manifest.nextId}<a class="icon" href={`/read/${manifest.nextId}`} aria-label={copy($locale,"Келесі тарау")}>›</a>{/if}</div>
   <button class="icon desktop-settings" onclick={()=>openPanel('settings')} aria-label={copy($locale,"Оқу баптаулары")}>⚙</button>
  </header>
- {#if preview}<div class="preview-note"><a href={workspaceReturn(page.url.searchParams.get('returnTo'),preview)}>{text($locale,'Жұмыс орнына оралу','Вернуться к работе')}</a> · {text($locale,'Нұсқаны алдын ала қарау · қызметкерлерге','Предпросмотр версии · для сотрудников')}</div>{/if}
+ {#if preview}<div class="preview-note"><a href={safeQueueReturn(page.url.searchParams.get('returnTo'),'')||workspaceReturn(page.url.searchParams.get('returnTo'),preview)}>{text($locale,'Жұмыс орнына оралу','Вернуться к работе')}</a> · {text($locale,'Нұсқаны алдын ала қарау · қызметкерлерге','Предпросмотр версии · для сотрудников')}</div>{/if}
  {#if offlineTier}<div class="preview-note">{copy($locale,"Сақталған көшірме · желісіз оқу")}</div>{/if}
  {#if conflict}<div class="reader-message" role="status"><span>{text($locale,'Оқу орындары әртүрлі','Позиции чтения различаются')}</span><button onclick={()=>openPanel('settings')}>{text($locale,'Орындарды салыстыру','Сравнить позиции')}</button></div>{/if}
  {#if message}<div class="reader-message" role="status">{noticeText($locale,message)}<button onclick={()=>message=''} aria-label={copy($locale,"Хабарды жабу")}>×</button></div>{/if}
