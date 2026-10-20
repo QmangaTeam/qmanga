@@ -28,9 +28,7 @@ func (*Processor) ProcessAvatar(source io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	if format == "jpeg" {
-		src = orientedImage{src, jpegOrientation(raw)}
-	}
+	src = orientedImage{src, sourceOrientation(raw, format)}
 	bounds := src.Bounds()
 	side := min(bounds.Dx(), bounds.Dy())
 	left := bounds.Min.X + (bounds.Dx()-side)/2

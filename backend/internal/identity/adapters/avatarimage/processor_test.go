@@ -2,11 +2,14 @@ package avatarimage
 
 import (
 	"bytes"
+	"encoding/binary"
 	"fmt"
+	"hash/crc32"
 	"image"
 	"image/color"
 	"image/jpeg"
 	"image/png"
+	"os"
 	"qmanga/internal/identity/application"
 	"testing"
 )
@@ -133,9 +136,101 @@ func TestAvatarMalformedEXIFKeepsSafeDefault(t *testing.T) {
 func FuzzJPEGOrientationBounds(f *testing.F) {
 	f.Add([]byte{255, 216, 255, 225, 0, 2, 255, 217})
 	f.Add([]byte("Exif\x00\x00MM\x00*\xff\xff\xff\xff"))
+	f.Add([]byte("\x89PNG\r\n\x1a\n\xff\xff\xff\xffeXIf"))
+
 	f.Fuzz(func(t *testing.T, raw []byte) {
+		for _, parser := range []func([]byte) uint16{pngOrientation} {
+			if got := parser(raw); got < 1 || got > 8 {
+				t.Fatalf("orientation %d", got)
+			}
+		}
 		if orientation := jpegOrientation(raw); orientation < 1 || orientation > 8 {
 			t.Fatalf("orientation %d", orientation)
 		}
 	})
+}
+
+func TestAvatarMatchesPNGAndWebPBrowserOrientation(t *testing.T) {
+	// Reuse the generated JPEG's quadrants and TIFF metadata, converting only
+	// the container. WebP fixture is our own 400x200 four-color artwork encoded
+	// by ffmpeg libwebp -lossless 1. Chrome preserves its pixels despite EXIF6;
+	// PNG/JPEG are oriented. Test samples encode this observed preview contract.
+	for _, format := range []string{"png", "webp"} {
+		t.Run(format, func(t *testing.T) {
+			source := orientedJPEG(t, 6, false)
+			tiff := source[12:38]
+			var raw []byte
+			if format == "png" {
+				decoded, err := jpeg.Decode(bytes.NewReader(append([]byte{255, 216}, source[38:]...)))
+				if err != nil {
+					t.Fatal(err)
+				}
+				var encoded bytes.Buffer
+				if err = png.Encode(&encoded, decoded); err != nil {
+					t.Fatal(err)
+				}
+				payload := append([]byte("eXIf"), tiff...)
+				chunk := make([]byte, 4)
+				binary.BigEndian.PutUint32(chunk, uint32(len(tiff)))
+				chunk = append(chunk, payload...)
+				crc := make([]byte, 4)
+				binary.BigEndian.PutUint32(crc, crc32.ChecksumIEEE(payload))
+				chunk = append(chunk, crc...)
+				raw = append(append(append([]byte{}, encoded.Bytes()[:33]...), chunk...), encoded.Bytes()[33:]...)
+			} else {
+				encoded, err := os.ReadFile("testdata/quadrants.webp")
+				if err != nil {
+					t.Fatal(err)
+				}
+				// Extended header: EXIF flag, 400x200 canvas, followed by original VP8L.
+				raw = append([]byte("RIFF\x00\x00\x00\x00WEBPVP8X\x0a\x00\x00\x00\x08\x00\x00\x00\x8f\x01\x00\xc7\x00\x00"), encoded[12:]...)
+				raw = append(raw, []byte("EXIF\x1a\x00\x00\x00")...)
+				raw = append(raw, tiff...)
+				binary.LittleEndian.PutUint32(raw[4:8], uint32(len(raw)-8))
+			}
+			if format == "png" {
+				if got := pngOrientation(raw); got != 6 {
+					t.Fatalf("container orientation=%d", got)
+				}
+				for size := 0; size < len(raw); size++ {
+					pngOrientation(raw[:size])
+				}
+				broken := bytes.Clone(raw)
+				binary.BigEndian.PutUint32(broken[8:12], 0xffffffff)
+				if got := pngOrientation(broken); got != 1 {
+					t.Fatalf("unbounded chunk orientation=%d", got)
+				}
+				broken = bytes.Clone(raw)
+				broken[33+8] ^= 1
+				if got := pngOrientation(broken); got != 1 {
+					t.Fatalf("bad EXIF CRC orientation=%d", got)
+				}
+			}
+
+			output, err := New().ProcessAvatar(bytes.NewReader(raw))
+			if err != nil {
+				t.Fatal(err)
+			}
+			result, err := jpeg.Decode(bytes.NewReader(output))
+			if err != nil {
+				t.Fatal(err)
+			}
+			for index, point := range []image.Point{{32, 32}, {224, 32}, {32, 224}, {224, 224}} {
+				got := color.RGBAModel.Convert(result.At(point.X, point.Y)).(color.RGBA)
+				want := []color.RGBA{{20, 20, 240, 255}, {240, 20, 20, 255}, {240, 240, 20, 255}, {20, 240, 20, 255}}[index]
+				if format == "webp" {
+					want = []color.RGBA{{240, 20, 20, 255}, {20, 240, 20, 255}, {20, 20, 240, 255}, {240, 240, 20, 255}}[index]
+				}
+				if absColor(got.R, want.R) > 35 || absColor(got.G, want.G) > 35 || absColor(got.B, want.B) > 35 {
+					t.Fatalf("corner %d got%v want%v", index, got, want)
+				}
+			}
+		})
+	}
+}
+func absColor(a, b uint8) int {
+	if a > b {
+		return int(a - b)
+	}
+	return int(b - a)
 }

@@ -3,9 +3,50 @@ package avatarimage
 import (
 	"bytes"
 	"encoding/binary"
+	"hash/crc32"
 	"image"
 	"image/color"
 )
+
+// Container readers only slice existing bounded input; lengths never drive
+// allocations. TIFF orientation is shared across all accepted image formats.
+func sourceOrientation(raw []byte, format string) uint16 {
+	switch format {
+	case "jpeg":
+		return jpegOrientation(raw)
+	case "png":
+		return pngOrientation(raw)
+	case "webp":
+		// Browser WebP decoders currently preserve pixel orientation even with
+		// EXIF. Match that preview; JPEG/PNG metadata is applied above.
+		return 1
+	}
+	return 1
+}
+func pngOrientation(raw []byte) uint16 {
+	if len(raw) < 8 || !bytes.Equal(raw[:8], []byte{137, 80, 78, 71, 13, 10, 26, 10}) {
+		return 1
+	}
+	for offset := 8; offset <= len(raw)-12; {
+		length := uint64(binary.BigEndian.Uint32(raw[offset : offset+4]))
+		if length > uint64(len(raw)-offset-12) {
+			return 1
+		}
+		end := offset + 8 + int(length)
+		kind := string(raw[offset+4 : offset+8])
+		if kind == "eXIf" {
+			if crc32.ChecksumIEEE(raw[offset+4:end]) != binary.BigEndian.Uint32(raw[end:end+4]) {
+				return 1
+			}
+			return tiffOrientation(raw[offset+8 : end])
+		}
+		if kind == "IEND" {
+			return 1
+		}
+		offset = end + 4
+	}
+	return 1
+}
 
 // jpegOrientation reads only the bounded JPEG APP1/IFD0 orientation scalar.
 // It never follows sub-IFDs or allocates from untrusted metadata counts/offsets.
