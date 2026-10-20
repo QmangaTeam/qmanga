@@ -32,7 +32,9 @@
  {#if publication?.links.length}<div class="metadata-group"><h2><Icon name="link" size={13}/>{text($locale,'Сілтемелер','Ссылки')}</h2><ul class="links">{#each publication.links as link}{#if safeExternalURL(link.url)}<li><a href={link.url} target="_blank" rel="noopener noreferrer"><Icon name="link" size={16}/>{link.label}<span class="sr-only">{text($locale,' — жаңа бетте',' — в новой вкладке')}</span></a></li>{/if}{/each}</ul></div>{/if}
  </div>
 </section>
- {#if title.authors?.length||publication?.publishers.length||title.projects.length}<ul class="contributors">
+ {#if title.authors?.length||publication?.publishers.length||title.projects.length}
+ <!-- svelte-ignore a11y_no_noninteractive_tabindex (Dense contributor groups remain keyboard-scrollable.) -->
+ <ul class="contributors" tabindex="0" aria-label={text($locale,'Авторлар, баспалар және аударма командалары','Авторы, издатели и команды перевода')}>
   {#each title.authors||[] as author}<li><span class="credit-chip"><Icon name="users" size={16}/><span><strong>{author}</strong><small>{text($locale,'Автор','Автор')}</small></span></span></li>{/each}
   {#each publication?.publishers||[] as publisher}<li><span class="credit-chip"><Icon name="file" size={16}/><span><strong>{publisher}</strong><small>{text($locale,'Баспа','Издатель')}</small></span></span></li>{/each}
   {#each title.projects as project}<li><a class="credit-chip" href={'/teams/'+encodeURIComponent(project.teamSlug)}><span class="team-avatar" aria-hidden="true">{#if project.teamId&&!failedTeamAvatars.includes(project.teamId)}<img src={'/media/avatars/team/'+encodeURIComponent(project.teamId)} alt="" width="32" height="32" loading="lazy" onerror={()=>failedTeamAvatars=[...failedTeamAvatars,project.teamId]}/>{:else}<Icon name="users" size={18}/>{/if}</span><span><strong>{project.teamName}</strong><small>{text($locale,'Аударма командасы','Команда перевода')}</small></span></a></li>{/each}
@@ -55,15 +57,15 @@
  .status-dot.ongoing{background:#3ac66d}.status-dot.completed{background:#4894ee}.status-dot.hiatus,.status-dot.paused{background:#e3a52d}.status-dot.cancelled,.status-dot.stopped{background:#e55b60}
  .team-avatar{width:32px;height:32px;flex:none;display:grid;place-items:center;overflow:hidden;border-radius:5px;background:var(--bg)}.team-avatar img{width:100%;height:100%;object-fit:cover}
  @media(max-width:959px){
-  .metadata-rail{display:flex;gap:14px;overflow-x:auto;scroll-snap-type:x proximity;scroll-padding-inline:0;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:4px}
+  .metadata-rail{display:flex;gap:14px;overflow:auto;max-height:88px;scroll-snap-type:x proximity;scroll-padding-inline:0;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:4px}
   dl{display:contents}dl>div,.metadata-group{flex:0 0 auto;width:max-content;min-width:88px;max-width:156px;scroll-snap-align:start}
   .metadata-group:has(.aliases){max-width:none}.aliases{display:flex;gap:12px}.aliases li{width:230px;flex:0 0 230px}
   h2{margin:0 0 4px}.links a{align-items:flex-start;padding-block:4px}.aliases li{align-items:flex-start}
  }
  .metadata-rail::-webkit-scrollbar{display:none}
  .metadata-rail:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
- .contributors{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
- .contributors li{min-width:0;max-width:100%}.credit-chip{display:flex;align-items:center;gap:8px;min-height:44px;max-width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text);text-decoration:none}
+ .contributors{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));align-items:start;gap:8px;margin-top:10px;max-height:clamp(144px,24dvh,192px);overflow:auto;overscroll-behavior-y:contain;scrollbar-width:thin}
+ .contributors li{min-width:0;max-width:100%}.contributors:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.credit-chip{height:100%;display:flex;align-items:center;gap:8px;min-height:44px;max-width:100%;padding:6px 8px;border:1px solid var(--line);border-radius:6px;background:var(--panel);color:var(--text);text-decoration:none}
  .credit-chip>span{min-width:0}.credit-chip strong{display:block;font-size:12px;font-weight:500;overflow-wrap:anywhere}.credit-chip small{display:block;color:var(--muted);font-size:11px;line-height:1.4}
- @media(min-width:960px){dl{grid-template-columns:minmax(0,1fr);gap:16px}.metadata{padding:16px}}
+ @media(min-width:960px){dl{grid-template-columns:minmax(0,1fr);gap:12px}.metadata{padding:12px}.metadata-rail{max-height:clamp(280px,42dvh,380px);overflow:auto;overscroll-behavior-y:contain;scrollbar-width:thin}.metadata-rail::-webkit-scrollbar{display:initial;width:6px}.contributors{grid-template-columns:minmax(0,1fr)}}
 </style>

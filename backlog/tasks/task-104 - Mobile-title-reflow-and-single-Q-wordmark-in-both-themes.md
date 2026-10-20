@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 19:50'
-updated_date: '2026-10-20 21:26'
+updated_date: '2026-10-20 21:46'
 labels: []
 dependencies: []
 priority: high
@@ -38,6 +38,8 @@ Owner refinement: horizontal native swipe/keyboard metadata below960px, desktop 
 Owner refinement: tabs noScroll links withoutfragment, sliding active indicator/content with reducedmotion optout. Compact horizontal facts rail preserving all fields; author/publisher/team credit chips below rail. Verify tab scrollposition and URL/back history pluscompact rail/actions/themes; independentreview.
 
 Owner: remove chapter count only fromfacts,add fieldicons/statusdots and actualteamavatar withfallback. Populate existing synthetic local title with full clearlysynthetic metadata/ownedgeneratedartwork,longtext,multipleteams/avatar to review dense realshape. Keep realCBZ titles untouched; verify fallback,allfields,responsive,themes andindependentreview.
+
+Owner dense-spacing refinement: intrinsic-height metadata/credits up to viewport-aware caps, native scrolling only onactualoverflow, no fixedemptyheight. Desktopboundsfacts+longaliases andcontributors;mobileboundsrailheight andusescompactcreditgrid. Preserveallfields,44pxcontrols,scrollkeyboard andhiddenhorizontalbar. RootownsTitleMetadata+title tests;branding/commentsassignedindependenttasks106/107.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -66,4 +68,6 @@ Owner swipe/disclosure refinement complete locally. Below960px the entire combin
 Owner compact-tabs/credits follow-up implemented locally: tablinks no fragment + data-sveltekit-noscroll;180ms slidingindicator and160ms directional content transition,disabled reducedmotion. Compact mobile facts use content-based88–156px widths,smallerpadding/font; all original fields retained. Authors/publishers/team labeled44px chips now OUTSIDE metadata container per latestownercomment, linkedteams preserved. Final checks Svelte0errors0warnings,48UItests784assertions,3browserregressions pass. New scroll regression checks About→Chapters andBack360/688/1280 withnormal/reducedmotion, no scrolljump and correct URL/activeindicator. Existing kk/ru explicit/systemthemes responsive/disclosure/filter/sort tests pass. Build/architecture/contrast pass. Independent reviewer confirmed607px exactpreservedscroll,creditsoutside/nooverflow andnodataloss. Screenshot tmp/task104/compact-tabs-credits.png. Minor test fixes wait for reactive backnavigation and allow Svelte-scoped animationname; final fullrun3pass0fail. Localdev running, no push/productionchange. Await owner acceptance.
 
 Owner icons/avatar/dense-data follow-up: removed chapter fact only (tab/stats retained); all8populated fieldlabels haveicons, original/translationstatuses showdecorativecoloreddots withtext includingpaused/stopped enums. Teamchips use existing/media/avatars/team/id withlazyimage,errorfallback andtitle-resetstate. Horizontal scrollbar hidden inFirefox/WebKit whilekeyboard/swipe preserved. Dense data exposed absolute sr-onlyexternal-link text escapingrail; positionrelative onlinks fixespageoverflow. Longaliaslist nowhorizontalmobile, preservingallnames with~136pxrail. Checks finalSvelte0errors0warnings,49UItests789assertions, frontendbuild/architecture/contrast pass;3genericbrowserregressions pluslocaldenseacceptance pass onfullfixture, targeted dense rerunafteraliascompactness passes kk/ru dark/light widths320/360/730/960/1280, actualavatar+fallback,hiddenbarArrowRight,longtextexpansion. Independentreview confirmed nooverflow320/730/1280,allfields/statusdots/avatar andcompactrail. Denseverification script/assets/screenshots ignoredtmp/task104/dense-demo; sourceSSR regressions retained inCI. Localdevlive, no push/productionchange. Await ownervisualacceptance.
+
+Owner dense-spacing follow-up: intrinsic metadata/creditheight withcaps only; mobilefacts max88px/nativeoverflow, desktoprail clamp280px/42dvh/380px; contributors compact2columnmobile/1columndesktop max144–192px nativescroll. Allfields preserved,hiddenhorizontalbar unchanged,44pxcontrols. LocalSvelte0/0 andUI51tests pass atinterim withbranding included. New title-density browserregression passes dark/light320/360/730/960/1440. Independentreview reran density/auth tests2pass andchecked dense/sparse320/360/960/1440: sparsemobilefacts69px andcreditsnatural81–103px, densecreditscap192px/content282–360px; final contributor keyboardfocus scrollsfullyintoview. Awaitownerlocalacceptance; no productionrelease.
 <!-- SECTION:NOTES:END -->
