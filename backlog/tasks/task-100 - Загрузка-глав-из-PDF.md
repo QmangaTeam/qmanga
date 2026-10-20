@@ -39,6 +39,8 @@ ordinal: 45002
 
 <!-- SECTION:NOTES:BEGIN -->
 Локально реализован PDF.js 6.4.299 decoder с отдельным self-hosted Worker, PNG в порядке документа, 50MiB/100 страниц/1600px/7500px/120M суммарных пикселей/250MiB output/60s; cancel завершает worker и render, очищает canvas. Шифрованные/повреждённые документы отклоняются; исходный PDF не отправляется. Локальные fonts/cmaps/wasm и их лицензии поставляет Vite plugin, QuickJS/fallback JS исключены. Проверено: 3 unit (15 asserts), реальный Chromium codec (2 цветные страницы и порядок, generated Standard R2 password PDF, corrupt, pre-abort, cancel после 1 страницы, forced timeout, retry, локальные assets/license/no external requests); frontend boundaries pass. CBZ agent independently reviewed adapter/assets; shared UI account-binding review finding исправлен. Ограничения: браузер не даёт hard OS memory cap; mobile physical device, полный shared UI/release и фактический production SHA ожидаются от root.
+
+Commit реализации 049c929. Root проверил общий upload UI на actual Docker app: 12 сочетаний kk/ru × dark/light × 320/360/1280 прошли, screenshot tmp/task99/import-kk-dark-320.png просмотрен. Это viewport emulation, не физическое Android-устройство. Ожидается финальный rebuild с assets plugin и внешняя проверка выпуска.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
