@@ -29,6 +29,7 @@ type Source struct {
 	cache      map[string]cacheItem
 	cacheBytes int
 	covers     map[string]string
+	pending    chan struct{}
 	next       time.Time
 	endpoint   string
 }
@@ -38,7 +39,7 @@ func New(kind string) *Source {
 	if kind == "anilist" {
 		endpoint = "https://graphql.anilist.co"
 	}
-	return &Source{kind: kind, endpoint: endpoint, client: &http.Client{Timeout: 8 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, cache: map[string]cacheItem{}, covers: map[string]string{}}
+	return &Source{kind: kind, endpoint: endpoint, client: &http.Client{Timeout: 8 * time.Second, CheckRedirect: func(*http.Request, []*http.Request) error { return http.ErrUseLastResponse }}, cache: map[string]cacheItem{}, covers: map[string]string{}, pending: make(chan struct{}, 8)}
 }
 func (s *Source) fetch(ctx context.Context, key, path string, body any) ([]byte, error) {
 	s.mu.Lock()
@@ -146,7 +147,7 @@ func safeImage(value string, hosts ...string) string {
 	return ""
 }
 func initial(source, id string) application.ImportTitle {
-	return application.ImportTitle{Source: source, ID: id, Aliases: []string{}, Authors: []string{}, Tags: []application.ExternalTag{}, GenreIDs: []string{}, CategoryIDs: []string{}, Candidates: []application.ImportCandidate{}}
+	return application.ImportTitle{Source: source, ID: id, Aliases: []string{}, Authors: []string{}, Tags: []application.ExternalTag{}, GenreIDs: []string{}, CategoryIDs: []string{}, Candidates: []application.ImportCandidate{}, Publishers: []string{}, Formats: []string{}}
 }
 
 type shikiTitle struct {
@@ -170,6 +171,16 @@ func (s *Source) shikiMap(item shikiTitle) application.ImportTitle {
 	result.OriginalName = first(item.Japanese)
 	result.Aliases = names(append(append(append([]string{item.Russian}, item.English...), item.Synonyms...), item.Japanese...), 12)
 	result.Description = plain(item.Description, 10000)
+	for _, publisher := range item.Publishers {
+		result.Publishers = append(result.Publishers, plain(publisher.Name, 160))
+	}
+	result.Publishers = names(result.Publishers, 12)
+	if item.Kind == "one_shot" {
+		result.Formats = []string{"Сингл"}
+	}
+	if item.Kind == "doujin" {
+		result.Formats = []string{"Додзинси"}
+	}
 	if item.Kind == "manga" || item.Kind == "manhwa" || item.Kind == "manhua" {
 		result.Kind = item.Kind
 	}
@@ -224,6 +235,19 @@ func (s *Source) Search(ctx context.Context, query string) ([]application.Import
 	return result, nil
 }
 func (s *Source) Detail(ctx context.Context, id string) (application.ImportTitle, error) {
+	select {
+	case s.pending <- struct{}{}:
+		defer func() { <-s.pending }()
+	default:
+		return application.ImportTitle{}, application.ErrSourceLimited
+	}
+	key := "detail:" + id
+	if s.kind == "anilist" {
+		key = "ani::" + id
+	}
+	if err := s.waitBudget(ctx, key); err != nil {
+		return application.ImportTitle{}, err
+	}
 	if s.kind == "anilist" {
 		items, err := s.anilist(ctx, "", id)
 		if err != nil {
@@ -274,17 +298,17 @@ func (s *Source) Detail(ctx context.Context, id string) (application.ImportTitle
 	return result, nil
 }
 
-const mediaFields = `id title{romaji english native} synonyms description(asHtml:false) format status countryOfOrigin startDate{year} coverImage{large} genres tags{id name} staff(perPage:12){edges{role node{name{full}}}}`
+const mediaFields = `id title{romaji english native} synonyms description(asHtml:false) format status source(version:3) countryOfOrigin startDate{year} coverImage{large} genres tags{id name} staff(perPage:12){edges{role node{name{full}}}}`
 
 type aniMedia struct {
-	ID                                           int
-	Title                                        struct{ Romaji, English, Native string }
-	Synonyms                                     []string
-	Description, Format, Status, CountryOfOrigin string
-	StartDate                                    struct{ Year int }
-	CoverImage                                   struct{ Large string }
-	Genres                                       []string
-	Tags                                         []struct {
+	ID                                                   int
+	Title                                                struct{ Romaji, English, Native string }
+	Synonyms                                             []string
+	Description, Format, Status, Source, CountryOfOrigin string
+	StartDate                                            struct{ Year int }
+	CoverImage                                           struct{ Large string }
+	Genres                                               []string
+	Tags                                                 []struct {
 		ID   int
 		Name string
 	}
@@ -357,7 +381,11 @@ func (s *Source) anilist(ctx context.Context, query, id string) ([]application.I
 			value.OriginalStatus = "cancelled"
 		}
 		value.Year = item.StartDate.Year
-		value.Country = item.CountryOfOrigin
+		value.Country = map[string]string{"JP": "Япония", "KR": "Корея", "CN": "Китай", "US": "США", "RU": "Россия", "FR": "Франция"}[item.CountryOfOrigin]
+		value.PublicationSource = map[string]string{"ORIGINAL": "Оригинал", "MANGA": "Манга", "LIGHT_NOVEL": "Ранобэ", "NOVEL": "Новелла", "DOUJINSHI": "Додзинси", "ANIME": "Аниме", "VIDEO_GAME": "Игра", "COMIC": "Комикс"}[item.Source]
+		if item.Format == "ONE_SHOT" {
+			value.Formats = []string{"Сингл"}
+		}
 		value.CoverURL = safeImage(item.CoverImage.Large, "s4.anilist.co")
 		for _, genre := range item.Genres {
 			value.Tags = append(value.Tags, application.ExternalTag{ID: "genre:" + genre, Name: plain(genre, 160), Aliases: []string{}})
@@ -422,4 +450,29 @@ func (s *Source) rememberCover(item application.ImportTitle) {
 		s.covers = map[string]string{}
 	}
 	s.covers[item.ID] = item.CoverURL
+}
+
+// Pace an explicit selection behind the immediately preceding search without exceeding source budgets.
+func (s *Source) waitBudget(ctx context.Context, key string) error {
+	s.mu.Lock()
+	if cached, ok := s.cache[key]; ok && time.Now().Before(cached.expires) {
+		s.mu.Unlock()
+		return nil
+	}
+	delay := time.Until(s.next)
+	s.mu.Unlock()
+	if delay <= 0 {
+		return nil
+	}
+	if delay > 3*time.Second {
+		return application.ErrSourceLimited
+	}
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
 }

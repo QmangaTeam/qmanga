@@ -2,10 +2,12 @@ package metadatasource
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"qmanga/internal/catalog/application"
+	"strings"
 	"testing"
 	"time"
 )
@@ -82,5 +84,33 @@ func TestAniListDetailPreservesRateLimit(t *testing.T) {
 	source.endpoint = server.URL
 	if _, err := source.Detail(context.Background(), "13"); !errors.Is(err, application.ErrSourceLimited) {
 		t.Fatal(err)
+	}
+}
+func TestImmediateSearchThenSelectWaitsForOrdinaryBudget(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var input struct{ Query string }
+		if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(input.Query, "Page") {
+			w.Write([]byte(`{"data":{"Page":{"media":[{"id":13,"title":{"romaji":"Title"}}]}}}`))
+		} else {
+			w.Write([]byte(`{"data":{"Media":{"id":13,"title":{"romaji":"Title"}}}}`))
+		}
+	}))
+	defer server.Close()
+	source := New("anilist")
+	source.endpoint = server.URL
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+	if _, err := source.Search(ctx, "Title"); err != nil {
+		t.Fatal(err)
+	}
+	started := time.Now()
+	if _, err := source.Detail(ctx, "13"); err != nil {
+		t.Fatal(err)
+	}
+	if time.Since(started) < 2*time.Second {
+		t.Fatal("ordinary source budget not respected")
 	}
 }

@@ -18,23 +18,26 @@ type ExternalTag struct {
 	Aliases []string `json:"aliases"`
 }
 type ImportTitle struct {
-	Source         string            `json:"source"`
-	ID             string            `json:"id"`
-	URL            string            `json:"url"`
-	Name           string            `json:"name"`
-	OriginalName   string            `json:"original_name"`
-	Aliases        []string          `json:"aliases"`
-	Authors        []string          `json:"authors"`
-	Description    string            `json:"description"`
-	Kind           string            `json:"kind"`
-	OriginalStatus string            `json:"original_status"`
-	Year           int               `json:"year"`
-	Country        string            `json:"country"`
-	CoverURL       string            `json:"cover_url"`
-	Tags           []ExternalTag     `json:"tags"`
-	GenreIDs       []string          `json:"genre_ids"`
-	CategoryIDs    []string          `json:"category_ids"`
-	Candidates     []ImportCandidate `json:"candidates"`
+	Source            string            `json:"source"`
+	ID                string            `json:"id"`
+	URL               string            `json:"url"`
+	Name              string            `json:"name"`
+	OriginalName      string            `json:"original_name"`
+	Aliases           []string          `json:"aliases"`
+	Authors           []string          `json:"authors"`
+	Description       string            `json:"description"`
+	Kind              string            `json:"kind"`
+	OriginalStatus    string            `json:"original_status"`
+	Year              int               `json:"year"`
+	Country           string            `json:"country"`
+	Publishers        []string          `json:"publishers"`
+	PublicationSource string            `json:"publication_source"`
+	Formats           []string          `json:"formats"`
+	CoverURL          string            `json:"cover_url"`
+	Tags              []ExternalTag     `json:"tags"`
+	GenreIDs          []string          `json:"genre_ids"`
+	CategoryIDs       []string          `json:"category_ids"`
+	Candidates        []ImportCandidate `json:"candidates"`
 }
 type ImportCandidate struct {
 	Source  string   `json:"source"`
