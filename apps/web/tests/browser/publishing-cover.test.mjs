@@ -67,6 +67,8 @@ test('accidental draft can be cancelled then discarded without touching the publ
   const page=await context.newPage();
   try{
    await page.goto('/studio/projects/'+fixture.project_id);
+   await page.locator('.draft-panel h2').waitFor();
+   if(!await page.locator('.chapter-choice form').isVisible())await page.locator('.chapter-choice summary').click();
    await page.locator('.chapter-sidebar select').first().selectOption({label:'Добавить новую главу'});
    await page.getByRole('textbox',{name:'Номер или обозначение главы'}).fill(label);
    await page.getByRole('button',{name:'Добавить главу и открыть черновик'}).click();
