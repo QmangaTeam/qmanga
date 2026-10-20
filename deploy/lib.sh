@@ -72,6 +72,13 @@ image_present() { # component sha
   docker image inspect "$IMAGE_PREFIX-${1:?component required}:${2:?sha required}" >/dev/null 2>&1
 }
 
+# A locally missing image may still be published. Never select a tag that does
+# not exist: fall back to the previous working component instead.
+image_available() { # component sha
+  image_present "$1" "$2" ||
+    docker manifest inspect "$IMAGE_PREFIX-$1:$2" >/dev/null 2>&1
+}
+
 app_compose() {
   local color=${1:?color required} sha=${2:?SHA required}
   shift 2

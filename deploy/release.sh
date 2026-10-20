@@ -84,7 +84,7 @@ else
     old_gateway=$desired old_api=$desired old_web=$desired
   fi
   select_tag() { # component previous-tag regex
-    if test -z "$changed_text" || path_changed "$3" || image_present "$1" "$desired"; then
+    if path_changed "$3" && image_available "$1" "$desired"; then
       printf '%s\n' "$desired"
     else
       printf '%s\n' "$2"
