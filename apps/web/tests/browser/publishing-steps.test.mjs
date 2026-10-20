@@ -19,6 +19,8 @@ test('chapter steps retain edits, recover failed saves and expose only the chose
   assert.equal(login.status(),200);
   const page=await context.newPage();
   await page.goto('/studio/projects/'+fixture.project_id);
+  await page.locator('.draft-panel h2').waitFor();
+  if(!await page.locator('.chapter-choice form').isVisible())await page.locator('.chapter-choice summary').click();
   await page.locator('.chapter-sidebar select').first().selectOption({label:'Добавить новую главу'});
   const label='Steps-'+Date.now();
   await page.getByRole('textbox',{name:'Номер или обозначение главы'}).fill(label);
@@ -79,6 +81,8 @@ test('step navigation fits Kazakh and Russian in both themes with keyboard acces
    assert.equal(login.status(),200);
    const page=await context.newPage();
    await page.goto('/studio/projects/'+fixture.project_id);
+  await page.locator('.draft-panel h2').waitFor();
+  if(!await page.locator('.chapter-choice form').isVisible())await page.locator('.chapter-choice summary').click();
    const rail=page.locator('.draft-steps');await rail.waitFor();
    const details=rail.locator('a[href="#draft-details"]');
    await details.press('Enter');
@@ -104,12 +108,12 @@ test('new chapter input requires confirmation before leaving and survives cancel
   await context.addCookies([{name:'qmanga_locale',value:'ru',url:fixture.app_url}]);
   const login=await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.owner_email,password:fixture.owner_password}});assert.equal(login.status(),200);
   const page=await context.newPage();page.setDefaultTimeout(5000);const editorPath='/studio/projects/'+fixture.project_id;
-  await page.goto(editorPath);await page.locator('.chapter-sidebar select').first().waitFor();
+  await page.goto(editorPath);await page.locator('.draft-panel h2').waitFor();if(!await page.locator('.chapter-choice form').isVisible())await page.locator('.chapter-choice summary').click();await page.locator('.chapter-sidebar select').first().waitFor();
   let confirmations=0;const cancel=async dialog=>{confirmations++;assert.equal(dialog.type(),'confirm');await dialog.dismiss();};
   page.on('dialog',cancel);
   // The initially selected existing chapter is saved state, so leaving is unrestricted.
   await page.getByRole('link',{name:'← Все проекты'}).click();await page.waitForURL('**/studio/projects');assert.equal(confirmations,0);page.off('dialog',cancel);
-  await page.goto(editorPath);await page.locator('.chapter-sidebar select').first().selectOption({label:'Добавить новую главу'});
+  await page.goto(editorPath);await page.locator('.draft-panel h2').waitFor();if(!await page.locator('.chapter-choice form').isVisible())await page.locator('.chapter-choice summary').click();await page.locator('.chapter-sidebar select').first().selectOption({label:'Добавить новую главу'});
   await page.getByRole('textbox',{name:'Номер или обозначение главы'}).fill('Unsaved number');
   await page.getByRole('textbox',{name:'Название главы · необязательно'}).fill('Unsaved title');
   await page.route('**/api/v1/studio/projects/*/chapters',route=>route.fulfill({status:500,contentType:'application/json',body:JSON.stringify({error:{code:'internal'}})}));
