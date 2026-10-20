@@ -1,5 +1,4 @@
 <script lang="ts">
- // Acceptance release marker: component-only build path.
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import type {AgeRating} from '../domain/catalog';
  let {value=0}:{value?:AgeRating}=$props();

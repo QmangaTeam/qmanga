@@ -1,7 +1,5 @@
 package main
 
-// Acceptance release marker: backend-only fast path.
-
 import (
 	"context"
 	"log"

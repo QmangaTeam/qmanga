@@ -1,5 +1,4 @@
 <script lang="ts">
-	// Acceptance marker: double-push release B.
 	import { goto } from '$app/navigation';
 	import { catalogParams, type CatalogFilter, type Genre, type Collection, type ResultPage, type Summary } from '../application/catalog';
 	import { facetLabel, formatFacets, sourceFacets, countryFacets } from '../domain/facets';
