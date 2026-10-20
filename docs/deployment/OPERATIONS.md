@@ -76,9 +76,18 @@ docker ps --format 'table {{.Names}}\t{{.Status}}'
 VM-poller (`qmanga-staging-poll.timer`, каждые 20 с) читает `refs/deploy-ready` через `git fetch` (без GitHub API/token) и вызывает `release.sh staging`, затем автоматически `release.sh production` того же SHA. `release.sh`:
 
 - переиспользует неизменённые компоненты предыдущего релиза (manifest в `/opt/qmanga/state/manifests/`), поэтому CSS-изменение не пересобирает и не перезапускает API/gateway;
-- пропускает полный backup, если есть проверенная копия моложе 30 ч (`QMANGA_MAX_BACKUP_AGE_H`) и нет изменений в `backend/migrations/`; при миграциях полный backup с off-host hook обязателен;
+- пропускает полный backup, если есть проверенная копия моложе 30 ч (`QMANGA_MAX_BACKUP_AGE_H`, можно задать в systemd-юните poller-а) и нет изменений в `backend/migrations/`; при миграциях, отсутствии/устаревании маркера `COMPLETE` или первом релизе полный backup с off-host hook обязателен; staging и production используют одну политику;
 - сохраняет blue-green, deployment lock, staging gate, restore gate, короткие health checks и автоматический возврат маршрута/worker при ошибке; схема БД автоматически не откатывается;
-- проверяет, что публичная главная действительно отдаёт выпущенный SHA (footer `BUILD_VERSION`), а не кэш прошлого цвета.
+- проверяет, что публичная главная действительно отдаёт выпущенный SHA (footer `BUILD_VERSION`), а не кэш прошлого цвета;
+- при провале release или ручном `rollback.sh` пишет `state/deployment-hold` с плохим SHA; poller не выкатывает этот SHA повторно, пока `deploy-ready` не уедет на новый. Снять hold вручную: удалить `/opt/qmanga/state/deployment-hold` (только осознанно).
+
+Обновление systemd-юнитов на VM после изменения их файлов (единственная ручная операция для инфраструктуры CI):
+
+```sh
+sudo install -m 644 /opt/qmanga/repo/deploy/qmanga-staging-poll.{service,timer} /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl restart qmanga-staging-poll.timer
+```
 
 Проверка состояния и таймингов:
 

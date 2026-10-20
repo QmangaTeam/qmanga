@@ -2,23 +2,30 @@ name: Fast Release
 
 # Blocking release path: push to main → changed component images in GHCR →
 # refs/deploy-ready → VM poller deploys staging, smokes it, then production.
-# Full Verification (verify.yml) runs separately and does not gate this path
-# unless the change touches migrations or deployment infrastructure.
+# Full Verification (verify.yml) runs separately and gates this path only for
+# migrations or deployment-infrastructure changes.
 on:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'backlog/**'
+      - '**/*.md'
+      - 'tmp/**'
 permissions:
-  contents: write
-  packages: write
-  actions: read
+  contents: read
 concurrency:
+  # Do not cancel an in-flight release: a docs/scripts push must never drop an
+  # already built SHA. Monotonic deploy-ready advancement keeps last-wins.
   group: fast-release-main
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   classify:
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: read
     outputs:
       matrix: ${{ steps.classify.outputs.matrix }}
       slow: ${{ steps.classify.outputs.slow }}
@@ -27,17 +34,28 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
       - name: Detect changed components since the last released SHA
         id: classify
+        shell: bash
         run: |
           set -euo pipefail
-          git fetch --quiet origin '+refs/deploy-ready:refs/remotes/origin/deploy-ready' || true
-          base=$(git rev-parse --verify --quiet refs/remotes/origin/deploy-ready || true)
-          if test -z "$base"; then
-            changed=$(git diff-tree --no-commit-id --name-only -r HEAD)
-          else
-            changed=$(git diff --name-only "$base" HEAD)
+          if ! refs=$(git ls-remote origin refs/deploy-ready 2>/dev/null); then
+            echo 'Could not query deploy-ready; refusing to guess a release scope' >&2
+            exit 1
           fi
+          if test -z "$refs"; then
+            # No release baseline yet: publish every component and use the
+            # verified slow path for the very first release.
+            matrix='["api","gateway","web"]'
+            echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+            echo 'slow=true' >> "$GITHUB_OUTPUT"
+            echo 'deploy=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base=$(awk '{print $1}' <<<"$refs")
+          git fetch --quiet origin "$base" '+refs/deploy-ready:refs/remotes/origin/deploy-ready'
+          changed=$(git diff --name-only "$base" HEAD)
           echo "Changed files since $base:"
           printf '%s\n' "$changed"
           components=()
@@ -69,6 +87,9 @@ jobs:
     if: needs.classify.outputs.matrix != '[]' && !cancelled()
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
     strategy:
       fail-fast: false
       matrix:
@@ -77,6 +98,7 @@ jobs:
       - uses: actions/checkout@v6
         with:
           fetch-depth: 0
+          persist-credentials: false
       - uses: docker/setup-buildx-action@v3
       - uses: docker/login-action@v3
         with:
@@ -97,7 +119,10 @@ jobs:
     needs: classify
     if: needs.classify.outputs.slow == 'true' && !cancelled()
     runs-on: ubuntu-latest
-    timeout-minutes: 50
+    timeout-minutes: 65
+    permissions:
+      contents: read
+      actions: read
     steps:
       - name: Wait for Full Verification of this exact SHA
         env:
@@ -106,17 +131,20 @@ jobs:
           SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          for _ in $(seq 1 90); do
-            run=$(gh api "repos/$REPOSITORY/actions/workflows/verify.yml/runs?head_sha=$SHA&event=push&per_page=20" \
-              | jq -c --arg sha "$SHA" '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.created_at) | last // {}')
-            status=$(jq -r '.status // "missing"' <<<"$run")
-            conclusion=$(jq -r '.conclusion // ""' <<<"$run")
-            if test "$status" = completed; then
-              test "$conclusion" = success || {
-                echo "Full Verification concluded $conclusion for $SHA" >&2; exit 1;
-              }
-              echo "Full Verification passed for $SHA"
-              exit 0
+          for _ in $(seq 1 180); do
+            if run=$(gh api "repos/$REPOSITORY/actions/workflows/verify.yml/runs?head_sha=$SHA&event=push&per_page=20" 2>/dev/null \
+              | jq -c --arg sha "$SHA" '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.created_at) | last // {}'); then
+              status=$(jq -r '.status // "missing"' <<<"$run")
+              conclusion=$(jq -r '.conclusion // ""' <<<"$run")
+              if test "$status" = completed; then
+                test "$conclusion" = success || {
+                  echo "Full Verification concluded $conclusion for $SHA" >&2; exit 1;
+                }
+                echo "Full Verification passed for $SHA"
+                exit 0
+              fi
+            else
+              echo 'Transient GitHub API error while waiting for verification; retrying'
             fi
             sleep 20
           done
@@ -131,6 +159,8 @@ jobs:
       (needs.verify-gate.result == 'success' || needs.verify-gate.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    permissions:
+      contents: write
     steps:
       - uses: actions/checkout@v6
         with:

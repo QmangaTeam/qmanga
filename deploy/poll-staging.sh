@@ -18,26 +18,30 @@ if ! valid_sha "$desired"; then
   exit 0
 fi
 
-failed_within() { # file seconds
-  local file="$QMANGA_HOST_ROOT/state/${1:?file required}" failed_sha failed_at now
-  test -f "$file" || return 1
-  read -r failed_sha failed_at < "$file"
-  test "$failed_sha" = "$desired" || return 1
-  [[ "$failed_at" =~ ^[0-9]+$ ]] || return 1
-  now=$(date +%s)
-  test $((now - failed_at)) -lt "${2:?seconds required}" && return 0
-  return 1
+# A failed or rolled-back SHA stays held until deploy-ready moves elsewhere.
+if held=$(hold_sha) 2>/dev/null && test "$held" = "$desired"; then
+  echo "Release $desired is held after a failed or rolled-back deployment"
+  exit 0
+fi
+
+active_sha_of() { # state file
+  awk '{print $2; exit}' "$1" 2>/dev/null || true
 }
-record_failure() { # file
-  printf '%s %s\n' "$desired" "$(date +%s)" > "$QMANGA_HOST_ROOT/state/${1:?file required}"
+newer_already_active() { # target state file
+  local active
+  active=$(active_sha_of "$1")
+  valid_sha "$active" && {
+    test "$active" = "$desired" ||
+      git -C "$QMANGA_REPO_ROOT" merge-base --is-ancestor "$desired" "$active"
+  }
 }
 
 staging_done=false
-if grep -Eq "^[a-z]+ $desired$" "$QMANGA_HOST_ROOT/state/staging.active" 2>/dev/null; then
+if newer_already_active "$QMANGA_HOST_ROOT/state/staging.active"; then
   staging_done=true
 fi
 production_done=false
-if grep -Eq "^[a-z]+ $desired$" "$QMANGA_HOST_ROOT/state/production.active" 2>/dev/null; then
+if newer_already_active "$QMANGA_HOST_ROOT/state/production.active"; then
   production_done=true
 fi
 if "$staging_done" && "$production_done"; then
@@ -48,27 +52,29 @@ fi
 # poller descriptor across a child process would make that lock conflict.
 exec 8>&-
 
-if ! "$staging_done"; then
-  if failed_within staging.last-failure 1800; then
-    echo "Staging release $desired failed recently; not retrying yet"
-    exit 0
+run_release() { # target
+  local code
+  if bash "$QMANGA_REPO_ROOT/deploy/release.sh" "$1" "$desired"; then
+    return 0
+  else
+    code=$?
   fi
-  if ! bash "$QMANGA_REPO_ROOT/deploy/release.sh" staging "$desired"; then
-    record_failure staging.last-failure
-    exit 1
+  if locked_release "$code"; then
+    echo "Deployment lock is busy; retrying on the next poll"
+    return 0
   fi
+  record_hold "$desired"
+  echo "Release $desired failed for $1; deployment held until a newer release is ready" >&2
+  return 1
+}
+
+if test "$staging_done" = false; then
+  run_release staging || exit 1
 fi
 
 # Staging smoke passed in the same release run: production is promoted
 # automatically for this exact SHA. The production release re-checks the
 # staging state, restore gate, backup freshness and health with auto-rollback.
-if ! "$production_done"; then
-  if failed_within production.last-failure 1800; then
-    echo "Production release $desired failed recently; not retrying yet"
-    exit 0
-  fi
-  if ! bash "$QMANGA_REPO_ROOT/deploy/release.sh" production "$desired"; then
-    record_failure production.last-failure
-    exit 1
-  fi
+if test "$production_done" = false; then
+  run_release production || exit 1
 fi

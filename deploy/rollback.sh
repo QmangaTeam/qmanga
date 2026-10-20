@@ -49,5 +49,6 @@ printf '%s %s\n' "$active_color" "$active_sha" > "$previous_file"
 state_tmp=$(mktemp "$QMANGA_HOST_ROOT/state/.active.XXXXXX")
 printf '%s %s\n' "$previous_color" "$previous_sha" > "$state_tmp"
 mv "$state_tmp" "$active_file"
+record_hold "$active_sha"
 trap - EXIT
-echo "$DEPLOY_TARGET rolled back to $previous_sha; database migrations were not reversed"
+echo "$DEPLOY_TARGET rolled back to $previous_sha; database migrations were not reversed. $active_sha is held until deploy-ready moves"

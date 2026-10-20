@@ -7,13 +7,18 @@ valid_sha "$desired" || { echo 'Release SHA must be 40 lowercase hex characters'
 load_public_origin
 
 exec 9>"$QMANGA_HOST_ROOT/state/deployment.lock"
-flock -n 9 || { echo 'Another Qmanga deployment or rollback is running' >&2; exit 1; }
+flock -n 9 || { echo 'Another Qmanga deployment or rollback is running' >&2; exit 75; }
 git -C "$QMANGA_REPO_ROOT" fetch --quiet origin main
 git -C "$QMANGA_REPO_ROOT" cat-file -e "$desired^{commit}"
 git -C "$QMANGA_REPO_ROOT" merge-base --is-ancestor "$desired" origin/main || {
   echo 'Refusing a release outside main history' >&2; exit 2;
 }
 git -C "$QMANGA_REPO_ROOT" checkout --detach --quiet "$desired"
+
+if held=$(hold_sha) && test "$held" = "$desired"; then
+  echo "Release $desired is held after a failed or rolled-back deployment; remove $QMANGA_HOST_ROOT/state/deployment-hold to retry" >&2
+  exit 3
+fi
 
 active_file="$QMANGA_HOST_ROOT/state/$DEPLOY_TARGET.active"
 old_color= old_sha=
@@ -31,6 +36,10 @@ if test -f "$active_file"; then
     echo "$DEPLOY_TARGET is already healthy on $desired"
     exit 0
   fi
+  if git -C "$QMANGA_REPO_ROOT" merge-base --is-ancestor "$desired" "$old_sha"; then
+    echo "Refusing to move $DEPLOY_TARGET backwards from $old_sha to $desired" >&2
+    exit 2
+  fi
 fi
 
 if test "$DEPLOY_TARGET" = production; then
@@ -44,39 +53,54 @@ if test "$DEPLOY_TARGET" = production; then
 fi
 
 # ---- selective component images -------------------------------------------
-# Only components whose sources changed (or whose immutable image is already
-# present for this SHA) are assigned the new tag. Everything else keeps the
-# exact immutable tag that the currently active release runs, so a CSS-only
-# change does not rebuild or restart unrelated API/gateway code.
+# Staging derives the composition from changed sources since its active
+# release. Production promotes the exact staging manifest, so the public
+# composition is always the one that passed staging smoke.
+old_available=true
+if test -n "$old_sha" && ! git -C "$QMANGA_REPO_ROOT" cat-file -e "$old_sha^{commit}" 2>/dev/null; then
+  old_available=false
+fi
 changed_paths=()
-if test -n "$old_sha"; then
+changed_text=''
+migrations_changed=true
+if test "$old_available" = true && test -n "$old_sha"; then
   mapfile -t changed_paths < <(git -C "$QMANGA_REPO_ROOT" diff --name-only "$old_sha" "$desired")
-fi
-path_changed() {
-  test -n "$old_sha" || return 0
-  printf '%s\n' "${changed_paths[@]}" | grep -qE "$1"
-}
-select_tag() { # component
-  local component=$1
-  if test -z "$old_sha" || path_changed "$2" || image_present "$component" "$desired"; then
-    printf '%s\n' "$desired"
+  changed_text=$(printf '%s\n' "${changed_paths[@]}")
+  if grep -q '^backend/migrations/' <<<"$changed_text"; then
+    migrations_changed=true
   else
-    printf '%s\n' "$old_sha"
+    migrations_changed=false
   fi
-}
-tag_gateway=$(select_tag gateway '^infra/(nginx\.conf|gateway\.Dockerfile)$|^deploy/Caddyfile$')
-tag_api=$(select_tag api '^backend/|^infra/(api\.Dockerfile|imagemagick-policy\.xml)$')
-tag_web=$(select_tag web '^apps/web/|^infra/web\.Dockerfile$')
-
-migrations_changed=false
-if test -n "$old_sha" && printf '%s\n' "${changed_paths[@]}" | grep -q '^backend/migrations/'; then
-  migrations_changed=true
 fi
+path_changed() { # regex
+  test -n "$changed_text" && grep -qE "$1" <<<"$changed_text"
+}
+if test "$DEPLOY_TARGET" = production; then
+  read -r tag_gateway tag_api tag_web < <(read_manifest_for staging "$desired")
+else
+  if test "$old_available" = true && test -n "$old_sha"; then
+    read -r old_gateway old_api old_web < <(read_manifest "$old_sha")
+  else
+    old_gateway=$desired old_api=$desired old_web=$desired
+  fi
+  select_tag() { # component previous-tag regex
+    if test -z "$changed_text" || path_changed "$3" || image_present "$1" "$desired"; then
+      printf '%s\n' "$desired"
+    else
+      printf '%s\n' "$2"
+    fi
+  }
+  tag_gateway=$(select_tag gateway "$old_gateway" '^infra/(nginx\.conf|gateway\.Dockerfile)$|^deploy/Caddyfile$')
+  tag_api=$(select_tag api "$old_api" '^backend/|^infra/(api\.Dockerfile|imagemagick-policy\.xml)$')
+  tag_web=$(select_tag web "$old_web" '^apps/web/|^infra/web\.Dockerfile$')
+fi
+valid_sha "$tag_gateway" && valid_sha "$tag_api" && valid_sha "$tag_web" || {
+  echo 'Release component manifest is invalid' >&2; exit 2;
+}
 
-if test "$migrations_changed" = true || test -z "$old_sha"; then
-  "$QMANGA_REPO_ROOT/deploy/backup.sh" "$DEPLOY_TARGET"
-elif test "$DEPLOY_TARGET" = production && ! backup_fresh; then
-  echo "No verified backup younger than ${QMANGA_MAX_BACKUP_AGE_H:-30}h; taking one before release" >&2
+"$QMANGA_REPO_ROOT/deploy/bootstrap.sh" "$DEPLOY_TARGET"
+
+if test "$migrations_changed" = true || ! backup_fresh; then
   "$QMANGA_REPO_ROOT/deploy/backup.sh" "$DEPLOY_TARGET"
 else
   echo "Skipping full backup: no migrations and a verified ${DEPLOY_TARGET} backup is younger than ${QMANGA_MAX_BACKUP_AGE_H:-30}h"
@@ -93,8 +117,9 @@ release_tags() {
 }
 restore_previous() {
   local result=$?
-  trap - EXIT
+  trap - EXIT TERM INT HUP
   if test "$result" -ne 0; then
+    record_hold "$desired"
     if "$new_worker"; then
       release_tags --profile worker stop worker || true
     fi
@@ -113,15 +138,16 @@ restore_previous() {
   exit "$result"
 }
 trap restore_previous EXIT
+trap 'exit 143' TERM
+trap 'exit 130' INT HUP
 
-"$QMANGA_REPO_ROOT/deploy/bootstrap.sh" "$DEPLOY_TARGET"
 release_tags --profile worker stop worker >/dev/null 2>&1 || true
 
 # Pull only the immutable images that this release actually introduces.
 pull_components=()
-test "$tag_gateway" = "$desired" && pull_components+=(gateway)
-test "$tag_api" = "$desired" && pull_components+=(api)
-test "$tag_web" = "$desired" && pull_components+=(web)
+if test "$tag_gateway" = "$desired"; then pull_components+=(gateway); fi
+if test "$tag_api" = "$desired"; then pull_components+=(api); fi
+if test "$tag_web" = "$desired"; then pull_components+=(web); fi
 if test ${#pull_components[@]} -gt 0; then
   release_tags pull "${pull_components[@]}"
 fi
@@ -162,5 +188,5 @@ mv "$manifest_tmp" "$manifest"
 state_tmp=$(mktemp "$QMANGA_HOST_ROOT/state/.active.XXXXXX")
 printf '%s %s\n' "$new_color" "$desired" > "$state_tmp"
 mv "$state_tmp" "$active_file"
-trap - EXIT
+trap - EXIT TERM INT HUP
 echo "$DEPLOY_TARGET now serves $desired on $new_color (gateway $tag_gateway, api $tag_api, web $tag_web); previous app remains ready for rollback"

@@ -3,6 +3,11 @@ on:
   pull_request:
   push:
     branches: [main]
+    paths-ignore:
+      - 'docs/**'
+      - 'backlog/**'
+      - '**/*.md'
+      - 'tmp/**'
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,7 +16,7 @@ permissions:
 # refs/deploy-ready → the outbound VM poller; there is no SSH deploy path.
 concurrency:
   group: verify-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'push' }}
+  cancel-in-progress: false
 jobs:
   local-acceptance:
     runs-on: ubuntu-latest
@@ -34,6 +39,17 @@ jobs:
         run: |
           bun install --frozen-lockfile
           bun run backlog doctor
+      - name: Frontend checks (full verification)
+        if: matrix.browser_shard == 0
+        working-directory: apps/web
+        run: |
+          bun install --frozen-lockfile
+          bun run check
+          bun run check:architecture
+          bun run check:ui-contrast
+          bun test src/lib/features src/lib/shared src/lib/server
+          bun run test:ui
+          bun run check:ui-preview
       - name: Check setup and create isolated configuration
         shell: pwsh
         run: |
@@ -117,9 +133,47 @@ jobs:
         if: always()
         run: docker compose down --remove-orphans
 
-  publish-images:
+  release-class:
     if: (github.event_name == 'push' || github.event_name == 'workflow_dispatch') && github.ref == 'refs/heads/main'
-    needs: local-acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    outputs:
+      slow: ${{ steps.classify.outputs.slow }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Classify whether this SHA needs full-path images
+        id: classify
+        shell: bash
+        run: |
+          set -euo pipefail
+          if ! refs=$(git ls-remote origin refs/deploy-ready 2>/dev/null); then
+            echo 'slow=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          base=$(awk '{print $1}' <<<"$refs")
+          if test -z "$base"; then
+            echo 'slow=true' >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          git fetch --quiet origin "$base"
+          changed=$(git diff --name-only "$base" HEAD)
+          if grep -qE '^(backend/migrations/|deploy/|infra/|\.github/)' <<<"$changed"; then
+            echo 'slow=true' >> "$GITHUB_OUTPUT"
+          else
+            echo 'slow=false' >> "$GITHUB_OUTPUT"
+          fi
+
+  publish-images:
+    if: >-
+      (github.event_name == 'push' || github.event_name == 'workflow_dispatch') &&
+      github.ref == 'refs/heads/main' &&
+      needs.release-class.outputs.slow == 'true'
+    needs: [local-acceptance, release-class]
     runs-on: ubuntu-24.04-arm
     timeout-minutes: 60
     permissions:

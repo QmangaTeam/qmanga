@@ -8,4 +8,4 @@ Type=oneshot
 User=qmanga
 WorkingDirectory=/opt/qmanga/repo
 ExecStart=/bin/bash /opt/qmanga/repo/deploy/poll-staging.sh
-TimeoutStartSec=20min
+TimeoutStartSec=60min

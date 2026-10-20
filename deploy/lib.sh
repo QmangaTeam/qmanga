@@ -38,12 +38,15 @@ manifest_path() {
   printf '%s\n' "$QMANGA_HOST_ROOT/state/manifests/$DEPLOY_TARGET-${1:?sha required}"
 }
 
+manifest_path_for() {
+  printf '%s\n' "$QMANGA_HOST_ROOT/state/manifests/${1:?target required}-${2:?sha required}"
+}
+
 # A release may reuse an unchanged component's immutable image from its
 # predecessor. The manifest records the exact tag per component; tagged
 # releases before manifests existed fall back to their release SHA.
-read_manifest() {
-  local sha=${1:?sha required} file gateway api web
-  file=$(manifest_path "$sha")
+read_manifest_file() {
+  local file=${1:?manifest required} fallback=${2:?sha required} gateway api web
   if test -f "$file"; then
     gateway=$(awk '$1 == "gateway" {print $2; exit}' "$file")
     api=$(awk '$1 == "api" {print $2; exit}' "$file")
@@ -53,7 +56,16 @@ read_manifest() {
       return
     fi
   fi
-  printf '%s %s %s\n' "$sha" "$sha" "$sha"
+  printf '%s %s %s\n' "$fallback" "$fallback" "$fallback"
+}
+
+read_manifest() { # sha -> "gateway api web" tags
+  read_manifest_file "$(manifest_path "${1:?sha required}")" "$1"
+}
+
+read_manifest_for() { # target sha -> "gateway api web" tags
+  local target=${1:?target required} sha=${2:?sha required}
+  read_manifest_file "$(manifest_path_for "$target" "$sha")" "$sha"
 }
 
 image_present() { # component sha
@@ -85,6 +97,22 @@ backup_fresh() {
   age=$((now - $(stat -c %Y "$newest")))
   limit=$(( ${QMANGA_MAX_BACKUP_AGE_H:-30} * 3600 ))
   test "$age" -le "$limit"
+}
+
+# A failed or manually rolled-back release stays held until deploy-ready
+# moves to a different SHA. Poller and manual releases respect the hold, so a
+# bad SHA is not re-promoted every retry window.
+hold_sha() {
+  local file="$QMANGA_HOST_ROOT/state/deployment-hold" sha
+  test -f "$file" || return 1
+  read -r sha _ < "$file"
+  printf '%s\n' "$sha"
+}
+record_hold() { # sha
+  printf '%s %s\n' "${1:?sha required}" "$(date +%s)" > "$QMANGA_HOST_ROOT/state/deployment-hold"
+}
+locked_release() { # exit code from release.sh meaning "another run holds the lock"
+  test "${1:-}" -eq 75
 }
 
 front_compose() {
