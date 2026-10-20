@@ -29,6 +29,19 @@ for(const locale of ['kk','ru'])for(const theme of ['light','dark'])test(`catalo
   assert.equal(await aside.locator('input[type="checkbox"][value="18"]').isChecked(),true);
   assert.equal(await aside.locator('input[type="checkbox"][value="manhwa"]').isChecked(),true);
   assert.equal(await aside.getByRole('button',{name:locale==='ru'?'Применить':'Қолдану',exact:true}).count(),0,'the reference panel has no apply button');
+  const desktopScroll=aside.locator('.panel-scroll');
+  assert.equal(await desktopScroll.evaluate(el=>getComputedStyle(el).overflowY),'auto');
+  assert.equal(await desktopScroll.evaluate(el=>el.scrollHeight>el.clientHeight+1),true,'desktop filter panel must scroll internally instead of clipping its content');
+  const reach=await aside.evaluate(el=>{
+   const ps=el.querySelector('.panel-scroll');
+   ps.scrollTop=ps.scrollHeight;
+   const clip=el.querySelector('.panel-clip').getBoundingClientRect();
+   const heads=[...el.querySelectorAll('.filter-section h3')];
+   const last=heads[heads.length-1].getBoundingClientRect();
+   return {moved:ps.scrollTop>0,inside:last.y>=clip.y-1&&last.y+last.height<=clip.y+clip.height+1};
+  });
+  assert.equal(reach.moved,true,'desktop filter panel scrolls to the end');
+  assert.equal(reach.inside,true,'the last filter section is reachable inside the panel');
   for(const width of [320,360]){
    await page.setViewportSize({width,height:800});
    await page.goto(url);

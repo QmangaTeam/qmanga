@@ -268,6 +268,6 @@
 		.filters-shell { grid-column: 2; grid-row: 1 / span 2; align-self: start; position: sticky; top: 88px; }
 		.filter-trigger { display: none; }
 		.catalogue-filters { display: block; position: relative; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
-		.panel-clip { display: flex; flex-direction: column; max-height: calc(100dvh - 166px); min-height: 180px; border-radius: 12px; overflow: hidden; }
+		.panel-clip { display: flex; flex-direction: column; height: calc(100dvh - 166px); min-height: 180px; border-radius: 12px; overflow: hidden; }
 	}
 </style>
