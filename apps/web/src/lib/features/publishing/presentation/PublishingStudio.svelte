@@ -16,7 +16,7 @@
  import {processingSummary,submissionObstacles,type SubmissionObstacle} from '../domain/preflight';
  import { canEdit, canSubmit } from '../domain/revision';
  let { user, projectId, gateway }: { user: Account | null; projectId: string; gateway: PublishingGateway } = $props();
- function previewHref(){if(!active)return '#';const returnTo=workspaceLocation(projectId,active.id,activeStep,previewPosition);return '/read/'+encodeURIComponent(active.releaseId)+'?preview='+encodeURIComponent(active.id)+'&returnTo='+encodeURIComponent(returnTo);}
+ function previewHref(){if(!active)return '#';const returnTo=workspaceLocation(projectId,active.id,activeStep,previewPosition,$routePage.url.searchParams.get('projectsReturn'));return '/read/'+encodeURIComponent(active.releaseId)+'?preview='+encodeURIComponent(active.id)+'&returnTo='+encodeURIComponent(returnTo);}
  let previewPosition=$state(0);
  let discardDialog:HTMLDialogElement|undefined;
  let activeStep=$state('draft-pages');
