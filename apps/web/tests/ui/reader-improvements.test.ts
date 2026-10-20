@@ -10,5 +10,6 @@ test('mixed library shows compact real status outside the unchanged options dial
 
 test('unavailable catalogue retries the exact request including cursor',async()=>{
  const html=render(Fixture,{props:{screen:'catalogue'}}).body;
+ expect(await elements(html,'a[data-sveltekit-reload]')).toHaveLength(1);
  expect((await elements(html,'a')).some(link=>link.href?.replaceAll('&amp;','&')==='/catalog?q=query&genre=action&sort=name&cursor=cursor')).toBe(true);
 });

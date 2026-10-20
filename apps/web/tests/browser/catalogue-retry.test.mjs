@@ -12,7 +12,7 @@ test('catalogue retry recovers exact search filters sort and cursor after API ou
  const browser=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});
  const context=await browser.newContext({baseURL,viewport:{width:360,height:800}});let paused=false;const titleId=randomUUID();
  try{
-  sql(`INSERT INTO titles(id,slug,name_kk,is_listed) VALUES('${titleId}','outage-${titleId}','Synthetic outage fixture',true)`);
+  sql(`INSERT INTO titles(id,slug,name_kk,is_listed,search_text) VALUES('${titleId}','outage-${titleId}','Synthetic outage fixture',true,'synthetic outage fixture')`);
   await context.addCookies([{name:'qmanga_locale',value:'ru',url:baseURL}]);
   const source=await context.request.get('/api/v1/titles?q=Synthetic&kind=manga&sort=name&limit=1');assert.equal(source.status(),200);
   const cursor=(await source.json()).next_cursor;assert.ok(cursor,'fixture must have enough public titles to supply a real cursor');
