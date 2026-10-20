@@ -1,13 +1,15 @@
 <script lang="ts">
+ import {onMount} from 'svelte';
  import type {NavigationItem} from './types';
  let {items,currentPath,label,sidebar=false,menuLabel=''}:{items:Pick<NavigationItem,'href'|'label'>[];currentPath:string;label:string;sidebar?:boolean;menuLabel?:string}=$props();
- let expanded=$state(false);
+ let expanded=$state(false),ready=$state(false);
+ onMount(()=>{ready=true;});
  const current=$derived(items.find(item=>active(item.href))?.label);
  $effect(()=>{currentPath;expanded=false;});
  function active(href:string){return href==='/admin'||href==='/moderation'?currentPath===href:currentPath===href||currentPath.startsWith(href+'/');}
 </script>
 <div class:sidebar class="workspace-navigation">
- {#if sidebar}<button class="section-toggle" type="button" aria-expanded={expanded} aria-controls="workspace-sections" onclick={()=>expanded=!expanded}><span>{menuLabel}</span><strong>{current}</strong><span aria-hidden="true">{expanded?'−':'+'}</span></button>{/if}
+ {#if sidebar}<button class="section-toggle" type="button" disabled={!ready} aria-expanded={expanded} aria-controls="workspace-sections" onclick={()=>expanded=!expanded}><span>{menuLabel}</span><strong>{current}</strong><span aria-hidden="true">{expanded?'−':'+'}</span></button>{/if}
  <nav id={sidebar?'workspace-sections':undefined} class="workspace-nav" class:expanded aria-label={label}>{#each items as item}<a href={item.href} aria-current={active(item.href)?'page':undefined}>{item.label}</a>{/each}</nav>
 </div>
 <style>

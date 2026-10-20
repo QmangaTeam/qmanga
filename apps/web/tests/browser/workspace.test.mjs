@@ -18,6 +18,7 @@ test('studio sidebar adapts to phone disclosure, supports keyboard and closes af
     const toggle=page.getByRole('button',{name:/Разделы/});
     if(width<900){
      assert.equal(await nav.isVisible(),false);
+     await page.waitForFunction(()=>{const toggle=document.querySelector('.section-toggle');return toggle&&!toggle.disabled;});
      await toggle.focus();await page.keyboard.press('Enter');
      await nav.waitFor({state:'visible'});assert.equal(await toggle.getAttribute('aria-expanded'),'true');
      await page.keyboard.press('Tab');assert.equal(await nav.locator('a').first().evaluate(el=>el===document.activeElement),true);
@@ -37,4 +38,27 @@ test('studio sidebar adapts to phone disclosure, supports keyboard and closes af
 test('settings keep appearance after account in the visible page order',{timeout:15000},async()=>{
  const browser=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});
  try{const page=await browser.newPage({baseURL});await page.goto('/settings');const headings=await page.locator('.settings>section>h2').allTextContents();assert.deepEqual(headings,['Аккаунт','Сыртқы көрініс','Оқу']);}finally{await browser.close();}
+});
+
+test('sidebar disclosure waits for hydration before accepting keyboard input',{timeout:30000},async()=>{
+ const browser=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});
+ let release;
+ const blocked=new Promise(resolve=>{release=resolve;});
+ let arrived;const requested=new Promise(resolve=>{arrived=resolve;});
+ try{
+  const context=await browser.newContext({baseURL,viewport:{width:360,height:800}});
+  await context.addCookies([{name:'qmanga_locale',value:'ru',url:baseURL}]);
+  const page=await context.newPage();
+  await page.route(/\/_app\/.*\.js(?:\?|$)/,async route=>{arrived();await blocked;await route.continue();});
+  await page.goto('/studio/projects',{waitUntil:'commit'});
+  const toggle=page.getByRole('button',{name:/Разделы/});
+  await toggle.waitFor({state:'visible'});await requested;
+  assert.equal(await toggle.isDisabled(),true,'SSR disclosure must be disabled while its event handler is unavailable');
+  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+  release();
+  await page.waitForFunction(()=>{const toggle=document.querySelector('.section-toggle');return toggle&&!toggle.disabled;});
+  await toggle.focus();await page.keyboard.press('Enter');
+  await page.getByRole('navigation',{name:'Кабинет переводчика'}).waitFor({state:'visible'});
+  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+ }finally{release();await browser.close();}
 });
