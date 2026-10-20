@@ -78,6 +78,16 @@ Missing fixture values fail the run; they are not skips. The browser uses a new 
 
 `/admin/projects/{id}` and `GET /api/v1/admin/projects/{id}` are admin-only, read-only context cards with title, team, status and links to catalogue editing/moderation. They do not grant membership or permit uploads, chapter creation or submission. Moderators continue to use `/moderation` and its existing review permissions. Studio remains team-scoped: owner/editor/member keep their own roles; a member is not an editor. Blocked/unverified accounts cannot use the staff read contract.
 
+## Persistent owner review library
+
+The current workstation has an owner-requested manual review library at <http://localhost:18080/titles/ajal-arnasy>, including 54 pages supplied as a CBZ. Its database and media use the existing named volumes. The protected config is stored separately from disposable test fixtures:
+
+```sh
+docker compose --env-file "$HOME/.config/qmanga/local-review/stack.env" up -d --wait
+```
+
+Run this from the repository root. Keep the same Compose project and credentials; do not use `down -v` or volume pruning. This environment contains persistent user content and must not be used as a disposable browser-test fixture. Create a separate test project for automated seeding/cleanup. The old `tmp/task68/fixture.json` was moved to the private local review configuration to prevent accidental reuse; generated local account credentials are not stored in Git or this document.
+
 ## Stop, resume and inspect
 
 ```powershell
