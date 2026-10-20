@@ -50,8 +50,9 @@
  }
 
  async function retry(){
-  if(directory.error){const append=directory.items.length>0&&directory.hasMore;await directory.retry();if(!directory.error){if(append)loadedPages++;updateURL();}}
-  if(error)await loadTeams(searchGeneration);
+  const generation=searchGeneration;
+  if(directory.error){const append=directory.items.length>0&&directory.hasMore;await directory.retry();if(generation===searchGeneration&&!directory.error){if(append)loadedPages++;updateURL();}}
+  if(generation===searchGeneration&&error)await loadTeams(generation);
  }
 
  async function restore(){
@@ -64,7 +65,7 @@
   const pages=Math.min(20,Math.max(1,Number(params.get('pages'))||1));
   while(generation===searchGeneration&&loadedPages<pages&&directory.hasMore&&!directory.error){await directory.more();if(generation===searchGeneration&&!directory.error)loadedPages++;}
   if(generation!==searchGeneration)return;
-  await loadTeams(generation);if(generation!==searchGeneration)return;await tick();
+  await loadTeams(generation);if(generation!==searchGeneration)return;await tick();if(generation!==searchGeneration)return;
   const top=Math.min(1000000,Math.max(0,Number(params.get('position'))||0));window.scrollTo({top,behavior:'instant'});
  }
  $effect(()=>{const account=user?.id;if(mounted){untrack(()=>{void restore();});}return ()=>{if(account!==user?.id)directory.reset();};});
