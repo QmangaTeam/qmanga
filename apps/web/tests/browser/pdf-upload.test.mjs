@@ -30,6 +30,9 @@ test('production PDF bundle previews locally and uploads ordered images through 
   assert.equal(chapter.status(),201);
   const created=await context.request.post('/api/v1/studio/projects/'+fixture.project_id+'/revisions',{headers,data:{chapter_id:(await chapter.json()).id}});
   assert.equal(created.status(),201);revision=(await created.json()).id;
+  for(const asset of ['LICENSE','standard_fonts/FoxitSerif.pfb','cmaps/Adobe-Japan1-UCS2.bcmap','wasm/openjpeg.wasm']){
+   assert.equal((await context.request.get('/_pdf-assets/'+asset)).status(),200,'self-hosted PDF asset '+asset);
+  }
   const page=await context.newPage();let uploads=0;const assetFailures=[];
   page.on('request',request=>{if(request.method()==='PUT'&&request.url().includes('/pages?'))uploads++;});
   page.on('response',response=>{if(response.status()>=400&&(response.url().includes('pdf.worker')||response.url().includes('_pdf-assets')))assetFailures.push(response.status());});
