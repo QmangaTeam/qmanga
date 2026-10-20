@@ -1,4 +1,6 @@
 <script lang="ts">
+ import MetadataImport from './MetadataImport.svelte';
+ import {mergeImportedTitle,omittedImportTags,type ImportedTitle,type MetadataImportsGateway} from '../application/metadata-import';
  import {fieldValidation} from '$lib/shared/presentation/form-validation';
  import {onMount} from 'svelte';
  import {beforeNavigate} from '$app/navigation';
@@ -9,7 +11,7 @@
  import PublicationFields from './PublicationFields.svelte';
  import TaxonomySelection from './TaxonomySelection.svelte';
  import {catalogNames} from './messages';
- let {gateway,projectId,coverPageId=''}:{gateway:TitleChangesGateway;projectId:string;coverPageId?:string}=$props();
+ let {gateway,projectId,coverPageId='',imports}:{imports?:MetadataImportsGateway;gateway:TitleChangesGateway;projectId:string;coverPageId?:string}=$props();
  const {locale}=useLocale();const names=$derived(catalogNames($locale));
  const taxonomyFields=['genre_ids','category_ids'] as const;
  let actor=$state(''),context=$state<TitleChangeContext|null>(null),proposal=$state<TitleChangeProposal|null>(null),taxonomy=$state<Taxonomy>({genres:[],categories:[],collections:[]}),history=$state<TitleChange[]>([]),hasMore=$state(false),loading=$state(true),busy=$state(false),error=$state(''),saved=$state(false),dirty=$state(false),links=$state(''),files=$state<ChangeFiles>({evidence:[]});
@@ -18,6 +20,7 @@
  async function load(){const run=++generation;loading=true;actor='';context=null;proposal=null;history=[];files={evidence:[]};links='';dirty=false;error='';try{const account=await gateway.currentAccount();if(!account)throw Error('unauthorized');const [current,taxa,requests]=await Promise.all([gateway.context(account,projectId),gateway.taxonomy(),gateway.list(account,projectId)]);if(run!==generation)return;actor=account;context=current;taxonomy=taxa;history=requests.items;hasMore=requests.has_more;proposal={base_version:current.base_version,data:structuredClone(current.snapshot.data),reason:'',links:[],cover_action:coverPageId?'replace':'keep',banner_action:'keep',cover_page_id:coverPageId};}catch(e){if(run===generation)error=failureCode(e);}finally{if(run===generation)loading=false;}}
  async function refreshDraft(){if(dirty&&!window.confirm(text($locale,'Деректерді жаңартып, сақталмаған өзгерістерді жою керек пе?','Обновить данные и удалить несохранённые изменения?')))return;saved=false;await load();}
  async function more(){if(busy)return;busy=true;const run=generation;try{const result=await gateway.list(actor,projectId,history.at(-1)?.id);if(run===generation){history=[...history,...result.items];hasMore=result.has_more;}}catch(e){if(run===generation)error=failureCode(e);}finally{if(run===generation)busy=false;}}
+ function importTitle(item:ImportedTitle,cover?:File){if(!proposal)return;const d=proposal.data;const omittedTags=omittedImportTags(d.genre_ids,d.category_ids,item);const merged=mergeImportedTitle({slug:'',name:d.name,originalName:d.original_name,aliases:d.aliases,authors:d.authors,kind:d.kind,originalStatus:d.original_status,translationStatus:d.translation_status,description:d.description,direction:d.direction,genreIds:d.genre_ids,publication:d.publication,demo:false},item);proposal.data={...d,name:merged.name,original_name:merged.originalName,aliases:merged.aliases,authors:merged.authors||[],kind:merged.kind,original_status:merged.originalStatus,description:merged.description,genre_ids:merged.genreIds,category_ids:[...new Set([...d.category_ids,...item.categoryIds])].slice(0,24),publication:merged.publication!};links=[...new Set([...links.split('\n').filter(Boolean),item.url])].join('\n');if(cover){files={...files,cover};proposal.cover_page_id='';proposal.cover_action='replace';}dirty=true;return {omittedTags};}
  async function submit(event:SubmitEvent){event.preventDefault();if(!proposal||busy)return;busy=true;error='';const run=generation;try{if(proposal.cover_action!=='replace'){proposal.cover_page_id='';files.cover=undefined;}if(proposal.banner_action!=='replace')files.banner=undefined;proposal.links=links.split('\n').map(x=>x.trim()).filter(Boolean);await gateway.submit(actor,projectId,$state.snapshot(proposal),$state.snapshot(files));if(run!==generation)return;dirty=false;saved=true;busy=false;await load();}catch(e){if(run===generation)error=failureCode(e);}finally{if(run===generation)busy=false;}}
  function artwork(event:Event,kind:'cover'|'banner'){const file=(event.currentTarget as HTMLInputElement).files?.[0];files={...files,[kind]:file};if(proposal){if(kind==='cover'){proposal.cover_page_id='';proposal.cover_action=file?'replace':'keep';}else proposal.banner_action=file?'replace':'keep';}dirty=true;}
  beforeNavigate(({cancel})=>{if(dirty&&!window.confirm(text($locale,'Сақталмаған өзгерістерді қалдыру керек пе?','Уйти без сохранения изменений?')))cancel();});
@@ -33,6 +36,7 @@
 {#if proposal&&context}
  <h2>{context.title_name}</h2>
  {#if history.some(x=>x.status==='pending')}<p class="notice">{text($locale,'Осы жобаның өтінімі қаралуда. Шешімді күтіңіз.','Заявка этого проекта уже рассматривается. Дождитесь решения.')}</p>{:else}
+ {#if imports}<MetadataImport gateway={imports} {actor} project={projectId} hasValues={!!proposal.data.name||dirty} onimport={importTitle}/>{/if}
  <form use:fieldValidation={{locale:$locale}} onsubmit={submit} oninput={()=>dirty=true}>
  <fieldset disabled={busy}>
  <section class="panel fields"><h2>{text($locale,'Тайтл туралы','Сведения о тайтле')}</h2>
@@ -54,8 +58,9 @@
  {#if context.snapshot[kind==='cover'?'cover_id':'banner_id']}<img src={'/api/v1/media/'+encodeURIComponent(context.snapshot[kind==='cover'?'cover_id':'banner_id'])} alt={kind==='cover'?text($locale,'Қазіргі мұқаба','Текущая обложка'):text($locale,'Қазіргі баннер','Текущий баннер')} class:banner={kind==='banner'}/>{/if}
  <label>{text($locale,'Әрекет','Действие')}<select bind:value={proposal[kind==='cover'?'cover_action':'banner_action']}><option value="keep">{text($locale,'Өзгеріссіз','Без изменений')}</option><option value="replace">{text($locale,'Ауыстыру','Заменить')}</option><option value="remove" disabled={!context.snapshot[kind==='cover'?'cover_id':'banner_id']}>{text($locale,'Алып тастау','Удалить')}</option></select></label>
  {#if proposal[kind==='cover'?'cover_action':'banner_action']==='replace'}
+ {#if kind==='cover'&&files.cover}<p>{files.cover.name}</p>{/if}
  {#if kind==='cover'&&proposal.cover_page_id}<p>{text($locale,'Таңдалған тарау беті мұқаба ретінде ұсынылады.','Выбранная страница главы будет предложена как обложка.')}</p>{/if}
- <label>{text($locale,'JPEG, PNG, WebP · 25 MiB-қа дейін','JPEG, PNG, WebP · до 25 MiB')}<input type="file" accept="image/jpeg,image/png,image/webp" required={kind==='banner'||!proposal.cover_page_id} onchange={e=>artwork(e,kind as 'cover'|'banner')}/></label>{/if}</div>{/each}
+ <label>{text($locale,'JPEG, PNG, WebP · 25 MiB-қа дейін','JPEG, PNG, WebP · до 25 MiB')}<input type="file" accept="image/jpeg,image/png,image/webp" required={kind==='banner'?!files.banner:!proposal.cover_page_id&&!files.cover} onchange={e=>artwork(e,kind as 'cover'|'banner')}/></label>{/if}</div>{/each}
  </section>
  <section class="panel fields"><h2>{text($locale,'Негіздеме және дәлелдер','Обоснование и доказательства')}</h2>
  <label>{text($locale,'Нені және не үшін өзгертесіз?','Что и почему нужно изменить?')}<textarea bind:value={proposal.reason} minlength="3" maxlength="2000" rows="4" required></textarea></label>

@@ -57,3 +57,6 @@ import {readingChanges} from '$lib/features/reading/infrastructure/reading-chang
 
 import {HttpTitleChanges} from '$lib/features/catalog/infrastructure/http-title-changes';
 export function createTitleChanges(){const {api,scope}=scopedApi();return new HttpTitleChanges(api,scope);}
+
+import {HttpMetadataImports} from '$lib/features/catalog/infrastructure/http-metadata-import';
+export function createMetadataImports(){return new HttpMetadataImports(new ApiClient(globalThis.fetch.bind(globalThis)),globalThis.fetch.bind(globalThis));}

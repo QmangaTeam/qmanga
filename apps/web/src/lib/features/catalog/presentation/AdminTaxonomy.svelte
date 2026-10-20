@@ -1,4 +1,6 @@
 <script lang="ts">
+ import ImportCandidates from './ImportCandidates.svelte';
+ import type {MetadataImportsGateway} from '../application/metadata-import';
  import UnsavedChanges from '$lib/shared/presentation/ui/UnsavedChanges.svelte';
  import {fieldValidation} from '$lib/shared/presentation/form-validation';
  import {searchTaxonomy} from '../domain/taxonomy-search';
@@ -7,7 +9,7 @@
  import type {Genre,Collection,Taxonomy,Summary} from '../application/catalog';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {failureCode,noticeText} from '$lib/shared/presentation/copy';
- let {gateway}:{gateway:CatalogManagementGateway}=$props();
+ let {gateway,imports,actor=''}:{gateway:CatalogManagementGateway;imports?:MetadataImportsGateway;actor?:string}=$props();
  const {locale}=useLocale();
  let taxonomy=$state<Taxonomy>({genres:[],categories:[],collections:[]});
  let taxonQuery=$state('');
@@ -57,6 +59,7 @@
 <fieldset><legend>{text($locale,'Тайтлдарды таңдау','Выбрать тайтлы')}</legend>{#each titles as title}<label class="check"><input type="checkbox" checked={collection.titleIds.includes(title.id)} onchange={event=>toggleTitle(title.id,event.currentTarget.checked)}/>{title.name}</label>{/each}{#if more}<button type="button" class="button subtle" disabled={busy} onclick={()=>operation(loadTitles)}>{text($locale,'Тағы тайтлдар','Ещё тайтлы')}</button>{/if}</fieldset>
 <button class="button primary" disabled={busy}>{text($locale,'Жинақты сақтау','Сохранить подборку')}</button>{#if collection.id}<button class="button subtle" type="button" disabled={busy} onclick={()=>operation(async()=>{await gateway.deleteTaxon('collections',collection.id);resetCollection();await reload();})}>{text($locale,'Жинақты жою','Удалить подборку')}</button>{/if}
 </form></section></div>
+{#if imports&&actor}<ImportCandidates gateway={imports} {actor} {taxonomy}/>{/if}
 <style>
  form{display:grid;gap:12px}.panel{min-width:0}fieldset{border:1px solid var(--line);padding:12px;max-height:380px;overflow:auto}.check{display:flex;align-items:center;gap:10px;min-height:44px;overflow-wrap:anywhere}.check input{width:20px;height:20px;min-height:20px;flex:none}ol{padding-left:24px}li{display:flex;gap:6px;align-items:center;min-width:0;margin:6px 0}li span{flex:1;overflow-wrap:anywhere}li button{min-width:44px;min-height:44px;background:var(--panel);border:1px solid var(--line);border-radius:6px;color:var(--text)}
 </style>

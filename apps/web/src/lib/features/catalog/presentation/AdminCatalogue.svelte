@@ -1,4 +1,6 @@
 <script lang="ts">
+ import MetadataImport from './MetadataImport.svelte';
+ import {mergeImportedTitle,omittedImportTags,type ImportedTitle,type MetadataImportsGateway} from '../application/metadata-import';
  import {untrack} from 'svelte';
  import UnsavedChanges from '$lib/shared/presentation/ui/UnsavedChanges.svelte';
  import {fieldValidation} from '$lib/shared/presentation/form-validation';
@@ -16,7 +18,7 @@
  import TagSearch from './TagSearch.svelte';
  import {emptyPublication} from '../domain/publication';
  const kindNames=$derived(catalogNames($locale).kind),originalStatusNames=$derived(catalogNames($locale).original),translationStatusNames=$derived(catalogNames($locale).translation);
- let { user, gateway, initialTitleId = '' }: { user: Account | null; gateway: CatalogManagementGateway; initialTitleId?: string } = $props();
+ let { user, gateway, initialTitleId = '', imports }: { imports?:MetadataImportsGateway; user: Account | null; gateway: CatalogManagementGateway; initialTitleId?: string } = $props();
  let categories=$state<Genre[]>([]), categoryIds=$state<string[]>([]);
  let titles = $state<Summary[]>([]), genres = $state<Genre[]>([]), teams = $state<{id: string; name: string}[]>([]);
  let titleQuery=$state(''),appliedTitleQuery=$state('');
@@ -39,6 +41,7 @@
  async function operation(action: () => Promise<void>, success = '') { if (busy) return; busy = true; failure = ''; notice = ''; try { await action(); notice = success; } catch (error) { failure = failureCode(error); } finally { busy = false; } }
  async function choose(id: string) { const next = id ? await gateway.detail(id) : null; selected = id; detail = next;chapterLabel='';chapterName='';volume='';teamId='';chapterOrder=1;categoryIds=(next?.categories||[]).map(item=>item.id); input = detail ? editableMetadata(detail) : emptyMetadata(); input.publication??=emptyPublication(); aliases = input.aliases.join('\n'); authors=(input.authors||[]).join('\n'); savedMetadata=JSON.stringify({input,aliases,authors,categoryIds}); }
  onMount(() => { if (user?.role === 'admin') operation(async () => { await reload(); await choose(initialTitleId); }); });
+ function importTitle(item:ImportedTitle){const omittedTags=omittedImportTags(input.genreIds,categoryIds,item);input=mergeImportedTitle({...input,aliases:aliases.split('\n').filter(Boolean),authors:authors.split('\n').filter(Boolean)},item);aliases=input.aliases.join('\n');authors=(input.authors||[]).join('\n');categoryIds=[...new Set([...categoryIds,...item.categoryIds])].slice(0,24);return {omittedTags};}
  async function save(event: SubmitEvent) { event.preventDefault(); notice = ''; input.authors=authors.split('\n').map(value=>value.trim()).filter(Boolean); input.aliases = aliases.split('\n').map(value => value.trim()).filter(Boolean); if (metadataError(input)) { failure = "metadata_invalid"; return; } await operation(async () => { const id = await gateway.save(input, selected || undefined); await gateway.setCategories(id,categoryIds); await reload(); await choose(id); }, 'saved'); }
 </script>
 <UnsavedChanges bind:this={guard} {dirty}/>
@@ -50,6 +53,7 @@
 <form use:fieldValidation={{locale:$locale}} onsubmit={event=>{event.preventDefault();void searchTitles();}}><label>{text($locale,'Тайтл іздеу','Поиск тайтла')}<input type="search" bind:value={titleQuery} maxlength="160"/></label><button class="button subtle" disabled={busy}>{text($locale,'Іздеу','Найти')}</button></form>
 <label>{copy($locale,"Таңдау")}<select value={selected} disabled={busy} onchange={event => { const picker = event.currentTarget; if(!guard.confirmDiscard()){picker.value=selected;return;} void operation(() => choose(picker.value)).finally(() => { picker.value = selected; }); }}><option value="">{copy($locale,"Жаңа тайтл")}</option>{#each titles as title}<option value={title.id}>{title.name}</option>{/each}</select></label>
 {#if moreTitles}<button class="button subtle" disabled={busy} onclick={()=>operation(loadMoreTitles)}>{text($locale,'Тағы тайтлдар','Ещё тайтлы')}</button>{/if}
+{#if imports}<MetadataImport gateway={imports} actor={user.id} hasValues={!!input.name||dirty} onimport={importTitle}/>{/if}
 <form use:fieldValidation={{locale:$locale}} onsubmit={save} oninput={() => { notice = ''; }}>
  <label>{copy($locale,"Қазақша атауы")}<input bind:value={input.name} required maxlength="200"/></label>
  <label>{copy($locale,"Сілтемедегі атауы")}<input bind:value={input.slug} required pattern="[a-z0-9]+(-[a-z0-9]+)*" maxlength="128" placeholder="dala-sapary"/></label>
