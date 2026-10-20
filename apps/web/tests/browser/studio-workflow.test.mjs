@@ -33,3 +33,13 @@ test('project return restores applied criteria and loaded pages without applying
  await page.goto(back.href);await page.getByText('Second project',{exact:true}).first().waitFor();assert.equal(await page.locator('.project-search input').inputValue(),'Applied');await page.waitForFunction(()=>window.scrollY>=500);
  }finally{await context.close();await browser.close();}
 });
+test('reader preview returns to the exact authorized workspace version and step',{timeout:45000},async()=>{
+ const {browser,context}=await session();try{
+ const response=await context.request.get('/api/v1/studio/projects/'+fixture.project_id+'/revisions?offset=0');assert.equal(response.status(),200);
+ const revision=(await response.json()).items.find(item=>item.release_id===fixture.release_id&&item.state==='published');assert.ok(revision,'published fixture revision required');
+ const page=await context.newPage();await page.goto('/studio/projects/'+fixture.project_id+'?revision='+revision.id+'&step=draft-preview');await page.locator('#draft-preview').waitFor({state:'visible'});
+ const preview=page.getByRole('link',{name:'Предпросмотр',exact:true});const expected=new URL(await preview.getAttribute('href'),fixture.app_url).searchParams.get('returnTo');await preview.click();await page.locator('.preview-note a').waitFor();assert.equal(await page.locator('.preview-note a').getAttribute('href'),expected);await page.getByRole('link',{name:'Вернуться к работе',exact:true}).click();await page.locator('#draft-preview').waitFor({state:'visible'});assert.equal(new URL(page.url()).searchParams.get('revision'),revision.id);assert.equal(await page.locator('.revision-option[aria-current="true"]').count(),1);
+ await page.reload();await page.locator('#draft-preview').waitFor({state:'visible'});assert.equal(new URL(page.url()).searchParams.get('step'),'draft-preview');
+ await page.route('**/api/v1/studio/revisions/unavailable-workflow',route=>route.fulfill({status:404,json:{error:{code:'not_found'}}}));await page.goto('/studio/projects/'+fixture.project_id+'?revision=unavailable-workflow&step=draft-preview');await page.getByRole('alert').first().waitFor();assert.match(await page.getByRole('alert').first().innerText(),/Запрошенная версия недоступна/);assert.equal(await page.locator('.draft-panel h2').count(),1);
+ }finally{await context.close();await browser.close();}
+});
