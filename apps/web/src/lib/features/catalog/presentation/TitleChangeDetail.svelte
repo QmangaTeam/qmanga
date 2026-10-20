@@ -1,4 +1,6 @@
 <script lang="ts">
+ import {page} from '$app/state';
+ import {safeQueueReturn} from '$lib/shared/presentation/queue-context';
  import {textDiff} from '../domain/text-diff';
  import {onMount} from 'svelte';
  import {useLocale,text} from '$lib/shared/presentation/locale';
@@ -18,6 +20,7 @@
  onMount(()=>{void load();const stop=gateway.watchAccount(()=>{busy=false;void load();});return()=>{generation++;stop();};});
 </script>
 <svelte:head><title>{text($locale,'Тайтл өзгерістері','Изменения тайтла')} — Qmanga</title></svelte:head>
+<a class="button subtle" href={safeQueueReturn(page.url.searchParams.get('returnTo'),'/moderation/title-changes')}>{text($locale,'Кезекке оралу','Вернуться в очередь')}</a>
 <h1>{text($locale,'Тайтл өзгерістері','Изменения тайтла')}</h1>
 {#if loading}<p role="status">{text($locale,'Жүктелуде…','Загрузка…')}</p>{/if}
 {#if error}<p class="notice" role="alert">{noticeText($locale,error)}</p><button class="button subtle" onclick={load}>{text($locale,'Қайта жүктеу','Обновить')}</button>{/if}

@@ -60,6 +60,10 @@ func TestModerationContextHistoryAndCursor(tester *testing.T) {
 	if _, failure = repository.Reports(ctx, "reader", ""); !errors.Is(failure, domain.ErrForbidden) {
 		tester.Fatal("report context leaked", failure)
 	}
+	noTeam, filterErr := repository.Reports(ctx, "admin", "", "not-a-team", "")
+	if filterErr != nil || len(noTeam) != 0 {
+		tester.Fatal("team filter", noTeam, filterErr)
+	}
 	reports, failure := repository.Reports(ctx, "admin", "")
 	if failure != nil || len(reports) != 50 {
 		tester.Fatal("first report page", len(reports), failure)

@@ -1,0 +1,3 @@
+import {test,expect} from 'bun:test';
+import {queueDepth,queueReturn,safeQueueReturn} from './queue-context';
+test('queue context retains applied criteria and bounded loading without saving records',()=>{const url=new URL('https://local.test/admin/moderation?team=one&kind=manual');const result=queueReturn(url,3,'revision');expect(result).toBe('/admin/moderation?team=one&kind=manual&loaded=3#queue-revision');expect(queueDepth(new URL('https://local.test'+result))).toBe(3);expect(queueDepth(new URL('https://local.test/?loaded=99999'))).toBe(20);expect(safeQueueReturn('//evil.test','/moderation')).toBe('/moderation');expect(safeQueueReturn('/admin/moderation?team=one#queue-two','/moderation')).toBe('/admin/moderation?team=one#queue-two');});

@@ -135,7 +135,7 @@ func (h *TitleChangesHandler) projectList(c *gin.Context) {
 }
 func (h *TitleChangesHandler) queue(c *gin.Context) {
 	account, _ := CurrentAccount(c)
-	items, err := h.service.Queue(c.Request.Context(), account.ID, c.Query("after"))
+	items, err := h.service.Queue(c.Request.Context(), account.ID, c.Query("after"), c.Query("team"), c.Query("kind"))
 	h.list(c, items, err)
 }
 func (h *TitleChangesHandler) list(c *gin.Context, items []application.TitleChange, err error) {

@@ -236,7 +236,7 @@ func (handler *PublishingHandler) submit(request *gin.Context) {
 	request.Status(204)
 }
 func (handler *PublishingHandler) queue(request *gin.Context) {
-	items, failure := handler.service.ModerationQueue(request.Request.Context(), handler.actor(request), requestOffset(request))
+	items, failure := handler.service.FilteredModerationQueue(request.Request.Context(), handler.actor(request), request.Query("team"), request.Query("kind"), requestOffset(request))
 	if failure != nil {
 		publicationError(request, failure)
 		return

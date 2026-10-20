@@ -1,4 +1,8 @@
 <script lang="ts">
+ import {queueDepth,queueReturn} from '$lib/shared/presentation/queue-context';
+ import {tick} from 'svelte';
+ import {page} from '$app/state';
+ import QueueFilters from '$lib/shared/presentation/ui/QueueFilters.svelte';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {copy,noticeText,failureCode} from '$lib/shared/presentation/copy';
  const {locale,change:changeLanguage}=useLocale();
@@ -10,22 +14,24 @@
  import {validReport} from '../domain/content';
  let {gateway}:{gateway:CommunityGateway}=$props();
  let account=$state<string|null>(null),queue=$state<ReportQueue>({items:[],next:'',hasMore:false}),reasons=$state<Record<string,string>>({}),busy=$state(false),message=$state(''),loadError=$state(''),retryAfter='';
- async function load(after=''){busy=true;loadError='';message='';retryAfter=after;try{account=await gateway.account();if(!account){loadError="login_required";return;}const result=await gateway.reports(account,after);queue=receiveReports(queue,result,!!after);}catch(failure){loadError=failureCode(failure);}finally{busy=false;}}
- onMount(()=>{void load();});
+ let depth=$state(1);
+ async function load(after=''){busy=true;loadError='';message='';retryAfter=after;try{account=await gateway.account();if(!account){loadError="login_required";return;}const result=await gateway.reports(account,after,page.url.searchParams.get('team')||'',page.url.searchParams.get('kind')||'');queue=receiveReports(queue,result,!!after);if(after)depth++;else depth=1;}catch(failure){loadError=failureCode(failure);}finally{busy=false;}}
+ onMount(()=>{void (async()=>{await load();const wanted=queueDepth(page.url);for(let step=1;step<wanted&&queue.hasMore&&!loadError;step++)await load(queue.next);await tick();if(page.url.hash)document.getElementById(page.url.hash.slice(1))?.scrollIntoView();})();});
  async function decide(item:ModerationReport,status:string){if(!account||!validReport(reasons[item.id]||'')){message="decision_reason";return;}busy=true;try{await gateway.resolve(account,item.id,status,reasons[item.id]);queue=resolveReport(queue,item.id);message="decision_saved";}catch(failure){message=failureCode(failure);}finally{busy=false;}}
  async function visibility(item:ModerationReport,hidden:boolean){if(!account||!validReport(reasons[item.id]||'')){message="action_reason";return;}busy=true;try{await gateway.visibility(account,item.targetId,hidden,reasons[item.id]);queue={...queue,items:queue.items.map(report=>report.targetType==='comment'&&report.targetId===item.targetId?{...report,commentHidden:hidden}:report)};message=hidden?"comment_hidden":"comment_restored";}catch(failure){message=failureCode(failure);}finally{busy=false;}}
 </script>
 <svelte:head><title>{copy($locale,"Шағымдар — Qmanga")}</title><meta name="robots" content="noindex"/></svelte:head>
 <a class="auth-link" href="/moderation">{copy($locale,"Жарияланымдарды тексеру")}</a><h1>{copy($locale,"Шағымдар")}</h1>{#if message}<p class="form-message" role="status">{noticeText($locale,message)}</p>{/if}
+<QueueFilters kinds={[{value:'title',kk:'Тайтл',ru:'Тайтл'},{value:'release',kk:'Тарау',ru:'Глава'},{value:'page',kk:'Бет',ru:'Страница'},{value:'comment',kk:'Пікір',ru:'Комментарий'}]}/>
 {#if loadError}<p class="form-message" role="alert">{noticeText($locale,loadError)}</p><button class="button subtle" disabled={busy} onclick={()=>load(retryAfter)}>{text($locale,'Қайталау','Повторить')}</button>{/if}
-{#each queue.items as item}<article id={'report-'+item.id}>
+{#each queue.items as item}<article id={'queue-'+item.id}>
  <header><h2>{item.titleName||text($locale,'Қолжетімсіз тайтл','Тайтл недоступен')}</h2><span>{categoryNames[item.category]||item.category}</span><time datetime={item.createdAt}>{new Date(item.createdAt).toLocaleString($locale==='ru'?'ru-RU':'kk-KZ')}</time></header>
  <nav aria-label={text($locale,'Нысанға өту','Перейти к объекту')}>
  {#if item.titleSlug}<a class="auth-link" href={'/titles/'+encodeURIComponent(item.titleSlug)}>{text($locale,'Тайтл','Тайтл')}</a>{/if}
  {#if item.teamSlug}<a class="auth-link" href={'/teams/'+encodeURIComponent(item.teamSlug)}>{item.teamName}</a>{/if}
  {#if item.releaseId}<a class="auth-link" href={'/read/'+encodeURIComponent(item.releaseId)+(item.revisionId?'?preview='+encodeURIComponent(item.revisionId)+'&page='+encodeURIComponent(item.targetType==='page'?item.targetId:item.pageId):'')}>{text($locale,'Тарау','Глава')} {item.chapterLabel}{#if item.pagePosition} · {text($locale,'Бет','Страница')} {item.pagePosition}{/if}</a>{/if}
- {#if item.targetType==='comment'&&item.releaseId}<a class="auth-link" href={'/read/'+encodeURIComponent(item.releaseId)+'?comment='+encodeURIComponent(item.targetId)}>{text($locale,'Пікір','Комментарий')}</a>{/if}
- {#if item.targetType==='comment'&&item.titleSlug&&!item.releaseId}<a class="auth-link" href={'/titles/'+encodeURIComponent(item.titleSlug)+'?tab=comments&comment='+encodeURIComponent(item.targetId)}>{text($locale,'Талқылау','Обсуждение')}</a>{/if}
+ {#if item.targetType==='comment'&&item.releaseId}<a class="auth-link" href={'/read/'+encodeURIComponent(item.releaseId)+'?comment='+encodeURIComponent(item.targetId)+'&returnTo='+encodeURIComponent(queueReturn(page.url,depth,item.id))}>{text($locale,'Пікір','Комментарий')}</a>{/if}
+ {#if item.targetType==='comment'&&item.titleSlug&&!item.releaseId}<a class="auth-link" href={'/titles/'+encodeURIComponent(item.titleSlug)+'?tab=comments&comment='+encodeURIComponent(item.targetId)+'&returnTo='+encodeURIComponent(queueReturn(page.url,depth,item.id))}>{text($locale,'Талқылау','Обсуждение')}</a>{/if}
  </nav>
  {#if item.targetType==='comment'}<blockquote><strong>{item.commentAuthor||text($locale,'Оқырман','Читатель')}</strong><p>{item.commentDeleted?text($locale,'Пікір өшірілген','Комментарий удалён'):item.commentBody||text($locale,'Мәтін қолжетімсіз','Текст недоступен')}</p>{#if item.commentHidden}<small>{text($locale,'Жасырылған','Скрыт')}</small>{/if}</blockquote>{/if}
  <p>{item.reason}</p>{#if item.contactEmail}<p>{text($locale,'Байланыс поштасы (расталмаған)','Почта для связи (не подтверждена)')}: {item.contactEmail}</p>{/if}

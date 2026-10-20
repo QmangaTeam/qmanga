@@ -539,7 +539,7 @@ func (repository *Repository) SearchAdminTitles(ctx context.Context, actorID, qu
 	if !allowed {
 		return nil, domain.ErrForbidden
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT "+summaryColumns+" FROM titles title WHERE ($1='' OR title.name_kk ILIKE '%'||$1||'%' OR title.original_name ILIKE '%'||$1||'%' OR title.slug ILIKE '%'||$1||'%' OR title.id=$1) ORDER BY title.updated_at DESC,title.id DESC LIMIT 100 OFFSET "+pageOffset(offset), query)
+	rows, failure := repository.pool.Query(ctx, "SELECT "+summaryColumns+" FROM titles title WHERE ($1='' OR title.name_kk ILIKE '%'||$1||'%' OR title.name_original ILIKE '%'||$1||'%' OR title.slug ILIKE '%'||$1||'%' OR title.id=$1) ORDER BY title.updated_at DESC,title.id DESC LIMIT 100 OFFSET "+pageOffset(offset), query)
 	if failure != nil {
 		return nil, failure
 	}

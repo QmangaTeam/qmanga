@@ -224,7 +224,7 @@ func (r *Repository) ProjectChanges(ctx context.Context, actor, project, after s
 	}
 	return r.listChanges(ctx, project, after, false)
 }
-func (r *Repository) ChangeQueue(ctx context.Context, actor, after string) ([]application.TitleChange, error) {
+func (r *Repository) ChangeQueue(ctx context.Context, actor, after string, team ...string) ([]application.TitleChange, error) {
 	allowed, err := changeStaff(ctx, r.pool, actor)
 	if err != nil {
 		return nil, err
@@ -232,14 +232,21 @@ func (r *Repository) ChangeQueue(ctx context.Context, actor, after string) ([]ap
 	if !allowed {
 		return nil, domain.ErrForbidden
 	}
-	return r.listChanges(ctx, "", after, true)
+	return r.listChanges(ctx, "", after, true, team...)
 }
-func (r *Repository) listChanges(ctx context.Context, project, after string, queue bool) ([]application.TitleChange, error) {
+func (r *Repository) listChanges(ctx context.Context, project, after string, queue bool, teams ...string) ([]application.TitleChange, error) {
+	teamFilter, kind := "", ""
+	if queue && len(teams) > 0 {
+		teamFilter = teams[0]
+	}
+	if queue && len(teams) > 1 {
+		kind = teams[1]
+	}
 	condition := "request.project_id=$1"
 	if queue {
 		condition = "request.status='pending' AND $1::text=''"
 	}
-	rows, err := r.pool.Query(ctx, "SELECT "+changeColumns+changeJoins+" WHERE "+condition+" AND ($2::text='' OR (request.created_at,request.id)<(SELECT created_at,id FROM title_change_requests WHERE id=$2)) ORDER BY request.created_at DESC,request.id DESC LIMIT 50", project, after)
+	rows, err := r.pool.Query(ctx, "SELECT "+changeColumns+changeJoins+" WHERE "+condition+" AND ($2::text='' OR (request.created_at,request.id)<(SELECT created_at,id FROM title_change_requests WHERE id=$2)) AND ($3='' OR team.id=$3 OR team.name ILIKE '%'||$3||'%') AND ($4='' OR ($4='artwork' AND (request.cover_action<>'keep' OR request.banner_action<>'keep')) OR ($4='metadata' AND request.cover_action='keep' AND request.banner_action='keep')) ORDER BY request.created_at DESC,request.id DESC LIMIT 50", project, after, teamFilter, kind)
 	if err != nil {
 		return nil, err
 	}

@@ -179,3 +179,7 @@ func (worker *Worker) process(ctx context.Context, job Job) error {
 	}
 	return worker.repository.CompleteJob(ctx, job, variants)
 }
+
+func (service *Service) FilteredModerationQueue(ctx context.Context, actor, team, kind string, offset ...int) ([]StudioRevision, error) {
+	return service.repository.FilteredModerationQueue(ctx, actor, team, kind, offset...)
+}

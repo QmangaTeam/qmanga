@@ -1,4 +1,5 @@
 <script lang="ts">
+ import {untrack} from 'svelte';
  import UnsavedChanges from '$lib/shared/presentation/ui/UnsavedChanges.svelte';
  import {fieldValidation} from '$lib/shared/presentation/form-validation';
  import {onMount} from 'svelte';
@@ -12,6 +13,8 @@
  const {locale}=useLocale();
  const roles=$derived<Record<string,string>>({reader:text($locale,'Оқырман','Читатель'),moderator:text($locale,'Модератор','Модератор'),admin:text($locale,'Әкімші','Администратор')});
  let query=$state(page.url.searchParams.get('q')||''),items=$state<ManagedAccount[]>([]),hasMore=$state(false),busy=$state(false),message=$state(''),selected=$state<ManagedAccount|null>(null),reason=$state(''),saved=$state(false);
+ let loadedAccount=untrack(()=>user?.id);
+ $effect(()=>{if(user?.id!==loadedAccount){loadedAccount=user?.id;selected=null;reason='';items=[];hasMore=false;}});
  let appliedQuery='';
  let guard:UnsavedChanges;
  let original=$state('');

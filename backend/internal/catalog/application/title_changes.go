@@ -53,7 +53,7 @@ type TitleChangeRepository interface {
 	ChangeExists(context.Context, string) (bool, error)
 	ChangeCoverPage(context.Context, string, string, string) (TitleChangeAsset, error)
 	ProjectChanges(context.Context, string, string, string) ([]TitleChange, error)
-	ChangeQueue(context.Context, string, string) ([]TitleChange, error)
+	ChangeQueue(context.Context, string, string, ...string) ([]TitleChange, error)
 	ChangeDetail(context.Context, string, string) (TitleChangeDetail, error)
 	ReviewChange(context.Context, string, string, string, string) error
 }
@@ -212,11 +212,11 @@ func (service *TitleChanges) ProjectList(ctx context.Context, actor, project, af
 	}
 	return service.repository.ProjectChanges(ctx, actor, project, after)
 }
-func (service *TitleChanges) Queue(ctx context.Context, actor, after string) ([]TitleChange, error) {
+func (service *TitleChanges) Queue(ctx context.Context, actor, after string, team ...string) ([]TitleChange, error) {
 	if len(after) > 36 {
 		return nil, domain.ErrInvalid
 	}
-	return service.repository.ChangeQueue(ctx, actor, after)
+	return service.repository.ChangeQueue(ctx, actor, after, team...)
 }
 func (service *TitleChanges) Detail(ctx context.Context, actor, id string) (TitleChangeDetail, error) {
 	if !validChangeID(id) {

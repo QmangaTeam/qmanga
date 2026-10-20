@@ -80,6 +80,9 @@ func (repository *Repository) ProjectRevisions(ctx context.Context, actor, proje
 	return repository.revisions(ctx, offset, "publication.project_id=$1", projectID)
 }
 func (repository *Repository) ModerationQueue(ctx context.Context, actor string, offset ...int) ([]application.StudioRevision, error) {
+	return repository.FilteredModerationQueue(ctx, actor, "", "", offset...)
+}
+func (repository *Repository) FilteredModerationQueue(ctx context.Context, actor, team, kind string, offset ...int) ([]application.StudioRevision, error) {
 	var allowed bool
 	if failure := repository.pool.QueryRow(ctx, "SELECT EXISTS(SELECT 1 FROM users WHERE id=$1 AND is_verified AND NOT is_blocked AND role IN('admin','moderator'))", actor).Scan(&allowed); failure != nil {
 		return nil, failure
@@ -87,7 +90,7 @@ func (repository *Repository) ModerationQueue(ctx context.Context, actor string,
 	if !allowed {
 		return nil, domain.ErrForbidden
 	}
-	return repository.revisions(ctx, offset, "revision.status='submitted'")
+	return repository.revisions(ctx, offset, "revision.status='submitted' AND ($1='' OR team.id=$1 OR team.name ILIKE '%'||$1||'%') AND ($2='' OR revision.preparation_method=$2)", team, kind)
 }
 func (repository *Repository) Manifest(ctx context.Context, actor, releaseID, previewID string) (application.Manifest, error) {
 	manifest := application.Manifest{Pages: []application.ManifestPage{}}

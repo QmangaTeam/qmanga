@@ -25,7 +25,7 @@ export interface PublishingGateway {
  remove(id: string, pageId: string,version:number): Promise<void>;
  attribution(id:string,version:number,source:string,credits:string,confirmed:boolean,preparationMethod?:string,humanReviewed?:boolean):Promise<void>;
  submit(id: string, version: number): Promise<void>;
- pending(offset?:number): Promise<Revision[]>;
+ pending(offset?:number,team?:string,kind?:string): Promise<Revision[]>;
  review(id: string, decision: 'publish' | 'reject', reason: string): Promise<void>;
  selectCover(projectId:string,pageId:string):Promise<void>;
  uploadCover(projectId:string,file:unknown):Promise<string>;

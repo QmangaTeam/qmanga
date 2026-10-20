@@ -113,6 +113,7 @@ type Repository interface {
 	CanUploadCover(context.Context, string, string) error
 	SaveCover(context.Context, string, string, CoverAsset) error
 	RetryPage(context.Context, string, string, string) error
+	FilteredModerationQueue(context.Context, string, string, string, ...int) ([]StudioRevision, error)
 	ModerationQueue(context.Context, string, ...int) ([]StudioRevision, error)
 	LeaseJob(context.Context, string) (Job, bool, error)
 	CompleteJob(context.Context, Job, []Variant) error

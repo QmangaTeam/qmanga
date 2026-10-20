@@ -15,7 +15,7 @@ export interface CommunityGateway {
  rating(accountId:string,titleId:string,score:number):Promise<void>;
  myRating(accountId:string,titleId:string):Promise<number>;
  report(accountId:string,input:Report):Promise<void>;
- reports(accountId:string,after?:string):Promise<{items:ModerationReport[];hasMore:boolean;next:string}>;
+ reports(accountId:string,after?:string,team?:string,kind?:string):Promise<{items:ModerationReport[];hasMore:boolean;next:string}>;
  resolve(accountId:string,id:string,status:string,reason:string):Promise<void>;
  visibility(accountId:string,id:string,hidden:boolean,reason:string):Promise<void>;
 }

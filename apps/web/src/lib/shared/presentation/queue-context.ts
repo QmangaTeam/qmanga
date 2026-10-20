@@ -1,0 +1,4 @@
+/** URL-only context: no protected queue records persist on this device. */
+export function queueDepth(url:URL):number {const value=Number(url.searchParams.get('loaded')||1);return Number.isInteger(value)?Math.max(1,Math.min(20,value)):1;}
+export function queueReturn(url:URL,depth:number,id:string):string {const copy=new URL(url);copy.searchParams.set('loaded',String(Math.max(1,Math.min(20,depth))));copy.hash='queue-'+id;return copy.pathname+copy.search+copy.hash;}
+export function safeQueueReturn(value:string|null,fallback:string):string {if(!value)return fallback;try{const url=new URL(value,'https://queue.invalid');return url.origin==='https://queue.invalid'&&['/moderation/title-changes','/admin/moderation','/moderation','/admin/reports','/moderation/reports'].includes(url.pathname)?url.pathname+url.search+url.hash:fallback;}catch{return fallback;}}

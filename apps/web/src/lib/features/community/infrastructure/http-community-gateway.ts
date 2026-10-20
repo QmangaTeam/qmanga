@@ -15,8 +15,8 @@ export class HttpCommunityGateway implements CommunityGateway {
  async myRating(accountId:string,titleId:string){return Number(object(await this.api.call('/api/v1/community/titles/'+encodeURIComponent(titleId)+'/rating','GET',undefined,accountId)).score);}
  async report(accountId:string,input:Report){await this.api.call('/api/v1/community/reports','POST',{title_id:input.titleId,release_id:input.releaseId,page_id:input.pageId,target_type:input.targetType,target_id:input.targetId,category:input.category,reason:input.reason},accountId);}
  async myReports(accountId:string,after=''){const result=object(await this.api.call('/api/v1/community/reports?after='+encodeURIComponent(after),'GET',undefined,accountId));if(!Array.isArray(result.items))throw new Error('Invalid reports');return {items:result.items.map(value=>{const item=object(value);return {id:String(item.id),category:String(item.category),reason:String(item.reason),status:String(item.status),resolution:String(item.resolution),createdAt:String(item.created_at)};}),hasMore:result.has_more===true};}
- async reports(accountId:string,after=''){
-  const result=object(await this.api.call('/api/v1/moderation/reports?after='+encodeURIComponent(after),'GET',undefined,accountId));
+ async reports(accountId:string,after='',team='',kind=''){
+  const result=object(await this.api.call('/api/v1/moderation/reports?after='+encodeURIComponent(after)+'&team='+encodeURIComponent(team)+'&kind='+encodeURIComponent(kind),'GET',undefined,accountId));
   if(!Array.isArray(result.items))throw new Error('Шағым деректері жарамсыз');
   const value=(item:Record<string,unknown>,key:string)=>typeof item[key]==='string'?item[key] as string:'';
   return {items:result.items.map(raw=>{const item=object(raw);return {

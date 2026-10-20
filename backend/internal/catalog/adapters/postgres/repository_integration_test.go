@@ -301,6 +301,10 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		testingTarget.Fatal("unpublished title in published-only filter", failure)
 	}
 	execute("INSERT INTO titles(id,slug,name_kk,type) SELECT 'extra-'||number,'extra-'||number,'Extra '||number,'manga' FROM generate_series(1,105)number")
+	searched, searchErr := repository.SearchAdminTitles(ctx, "admin", "Extra 105")
+	if searchErr != nil || len(searched) != 1 || searched[0].ID != "extra-105" {
+		testingTarget.Fatal("full admin search", searched, searchErr)
+	}
 	firstPage, failure := repository.AdminTitles(ctx, "admin")
 	if failure != nil || len(firstPage) != 100 {
 		testingTarget.Fatal("first admin page", len(firstPage), failure)

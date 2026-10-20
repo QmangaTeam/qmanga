@@ -1,4 +1,5 @@
 <script lang="ts">
+ import {untrack} from 'svelte';
  import UnsavedChanges from '$lib/shared/presentation/ui/UnsavedChanges.svelte';
  import {fieldValidation} from '$lib/shared/presentation/form-validation';
  import {ageRatings} from '../domain/catalog';
@@ -22,6 +23,8 @@
  let guard:UnsavedChanges;
  let savedMetadata=$state('');
  async function searchTitles(){if(busy)return;await operation(async()=>{const next=await gateway.titles(0,titleQuery);titles=next;moreTitles=next.length===100;appliedTitleQuery=titleQuery;});}
+ let loadedAccount=untrack(()=>user?.id);
+ $effect(()=>{if(user?.id!==loadedAccount){loadedAccount=user?.id;input=emptyMetadata();aliases='';authors='';categoryIds=[];selected='';detail=null;savedMetadata='';chapterLabel='';chapterName='';volume='';genreName='';genreSlug='';teamId='';titles=[];teams=[];}});
  let moreTitles=$state(false),moreTeams=$state(false);
  async function loadMoreTitles(){const next=await gateway.titles(titles.length,appliedTitleQuery);titles=[...titles,...next];moreTitles=next.length===100;}
  async function loadMoreTeams(){const next=await gateway.teams(teams.length);teams=[...teams,...next];moreTeams=next.length===100;}
@@ -34,7 +37,7 @@
  const dirty=$derived(savedMetadata!==''&&metadataSnapshot!==savedMetadata||chapterLabel!==''||chapterName!==''||volume!==''||genreName!==''||genreSlug!==''||teamId!=='');
  async function reload() { categories=(await gateway.taxonomy()).categories; [titles, genres, teams] = await Promise.all([gateway.titles(), gateway.genres(), gateway.teams()]);moreTitles=titles.length===100;moreTeams=teams.length===100; }
  async function operation(action: () => Promise<void>, success = '') { if (busy) return; busy = true; failure = ''; notice = ''; try { await action(); notice = success; } catch (error) { failure = failureCode(error); } finally { busy = false; } }
- async function choose(id: string) { const next = id ? await gateway.detail(id) : null; selected = id; detail = next;categoryIds=(next?.categories||[]).map(item=>item.id); input = detail ? editableMetadata(detail) : emptyMetadata(); input.publication??=emptyPublication(); aliases = input.aliases.join('\n'); authors=(input.authors||[]).join('\n'); savedMetadata=JSON.stringify({input,aliases,authors,categoryIds}); }
+ async function choose(id: string) { const next = id ? await gateway.detail(id) : null; selected = id; detail = next;chapterLabel='';chapterName='';volume='';teamId='';chapterOrder=1;categoryIds=(next?.categories||[]).map(item=>item.id); input = detail ? editableMetadata(detail) : emptyMetadata(); input.publication??=emptyPublication(); aliases = input.aliases.join('\n'); authors=(input.authors||[]).join('\n'); savedMetadata=JSON.stringify({input,aliases,authors,categoryIds}); }
  onMount(() => { if (user?.role === 'admin') operation(async () => { await reload(); await choose(initialTitleId); }); });
  async function save(event: SubmitEvent) { event.preventDefault(); notice = ''; input.authors=authors.split('\n').map(value=>value.trim()).filter(Boolean); input.aliases = aliases.split('\n').map(value => value.trim()).filter(Boolean); if (metadataError(input)) { failure = "metadata_invalid"; return; } await operation(async () => { const id = await gateway.save(input, selected || undefined); await gateway.setCategories(id,categoryIds); await reload(); await choose(id); }, 'saved'); }
 </script>

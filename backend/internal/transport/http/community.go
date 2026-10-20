@@ -146,7 +146,7 @@ func (handler *CommunityHandler) report(request *gin.Context) {
 }
 func (handler *CommunityHandler) reports(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.Reports(request.Request.Context(), account.ID, request.Query("after"))
+	items, failure := handler.service.Reports(request.Request.Context(), account.ID, request.Query("after"), request.Query("team"), request.Query("kind"))
 	if failure != nil {
 		communityError(request, failure)
 		return

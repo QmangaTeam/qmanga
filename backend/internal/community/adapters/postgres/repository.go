@@ -221,7 +221,14 @@ func (repository *Repository) Report(ctx context.Context, user string, input app
 	})
 	return input.ID, failure
 }
-func (repository *Repository) Reports(ctx context.Context, user, after string) ([]application.Report, error) {
+func (repository *Repository) Reports(ctx context.Context, user, after string, filters ...string) ([]application.Report, error) {
+	teamFilter, kind := "", ""
+	if len(filters) > 0 {
+		teamFilter = filters[0]
+	}
+	if len(filters) > 1 {
+		kind = filters[1]
+	}
 	items := []application.Report{}
 	failure := repository.write(ctx, user, true, func(transaction pgx.Tx) error {
 		rows, failure := transaction.Query(ctx, `SELECT report.id,COALESCE(report.user_id,''),COALESCE(report.title_id,''),COALESCE(report.release_id,''),COALESCE(report.page_id,''),report.target_type,report.target_id,report.category,report.reason,report.status,report.resolution_note,report.created_at,report.contact_email,
@@ -237,7 +244,7 @@ func (repository *Repository) Reports(ctx context.Context, user, after string) (
  LEFT JOIN teams team ON team.id=release.team_id
  LEFT JOIN pages page ON page.id=CASE WHEN report.target_type='page' THEN report.target_id ELSE report.page_id END
  LEFT JOIN comments comment ON report.target_type='comment' AND comment.id=report.target_id LEFT JOIN users author ON author.id=comment.user_id
- WHERE report.status='pending' AND ($1::varchar='' OR report.id>$1::varchar) ORDER BY report.id LIMIT 50`, after)
+ WHERE report.status='pending' AND ($1::varchar='' OR report.id>$1::varchar) AND ($2='' OR team.id=$2 OR team.name ILIKE '%'||$2||'%') AND ($3='' OR report.target_type=$3) ORDER BY report.id LIMIT 50`, after, teamFilter, kind)
 		if failure != nil {
 			return failure
 		}

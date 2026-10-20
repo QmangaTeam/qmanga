@@ -57,7 +57,7 @@ export class HttpPublishingGateway implements PublishingGateway {
  async remove(id: string, pageId: string,version:number) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/pages/' + encodeURIComponent(pageId)+'?version='+version, 'DELETE'); }
  async attribution(id:string,version:number,source:string,credits:string,confirmed:boolean,preparationMethod='unspecified',humanReviewed=false){await this.api.call('/api/v1/studio/revisions/'+encodeURIComponent(id)+'/attribution','PUT',{version,source_note:source,credits,rights_confirmed:confirmed,preparation_method:preparationMethod,human_reviewed:humanReviewed});}
  async submit(id: string, version: number) { await this.api.call('/api/v1/studio/revisions/' + encodeURIComponent(id) + '/submit', 'POST', { version }); }
- async pending(offset=0) { return this.items('/api/v1/moderation/revisions?offset='+offset, revision); }
+ async pending(offset=0,team='',kind='') { return this.items('/api/v1/moderation/revisions?offset='+offset+'&team='+encodeURIComponent(team)+'&kind='+encodeURIComponent(kind), revision); }
  async review(id: string, decision: 'publish' | 'reject', reason: string) { await this.api.call('/api/v1/moderation/revisions/' + encodeURIComponent(id) + '/review', 'POST', { decision, reason }); }
  async selectCover(projectId:string,pageId:string){await this.api.call('/api/v1/studio/projects/'+encodeURIComponent(projectId)+'/cover','PUT',{page_id:pageId});}
  async uploadCover(projectId:string,file:unknown):Promise<string>{

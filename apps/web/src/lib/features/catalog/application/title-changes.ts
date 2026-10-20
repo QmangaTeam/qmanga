@@ -15,7 +15,7 @@ export interface TitleChangesGateway {
  context(actor:string,project:string):Promise<TitleChangeContext>;
  taxonomy():Promise<Taxonomy>;
  list(actor:string,project:string,after?:string):Promise<{items:TitleChange[];has_more:boolean}>;
- queue(actor:string,after?:string):Promise<{items:TitleChange[];has_more:boolean}>;
+ queue(actor:string,after?:string,team?:string,kind?:string):Promise<{items:TitleChange[];has_more:boolean}>;
  detail(actor:string,id:string):Promise<TitleChangeDetail>;
  submit(actor:string,project:string,proposal:TitleChangeProposal,files:ChangeFiles):Promise<TitleChange>;
  review(actor:string,id:string,decision:'approve'|'reject',reason:string):Promise<void>;

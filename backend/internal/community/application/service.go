@@ -47,7 +47,7 @@ type Repository interface {
 	Rating(context.Context, string, string, int) error
 	MyRating(context.Context, string, string) (int, error)
 	Report(context.Context, string, Report) (string, error)
-	Reports(context.Context, string, string) ([]Report, error)
+	Reports(context.Context, string, string, ...string) ([]Report, error)
 	Resolve(context.Context, string, string, string, string) error
 	Visibility(context.Context, string, string, bool, string) error
 }
@@ -96,8 +96,8 @@ func (service *Service) Report(ctx context.Context, actor string, input Report) 
 	input.ID = service.newID()
 	return service.repository.Report(ctx, actor, input)
 }
-func (service *Service) Reports(ctx context.Context, actor, after string) ([]Report, error) {
-	return service.repository.Reports(ctx, actor, after)
+func (service *Service) Reports(ctx context.Context, actor, after string, filters ...string) ([]Report, error) {
+	return service.repository.Reports(ctx, actor, after, filters...)
 }
 func (service *Service) Resolve(ctx context.Context, actor, id, status, reason string) error {
 	if !domain.ValidReason(reason) || (status != "resolved" && status != "dismissed") {
