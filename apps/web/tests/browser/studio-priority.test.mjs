@@ -43,3 +43,26 @@ test('project without chapters keeps creation reachable without a false current 
   assert.equal(await page.getByRole('button',{name:'Добавить главу и открыть черновик',exact:true}).isVisible(),true);assert.equal(await page.locator('.draft-panel h2').count(),0);
  }finally{await context.close();}
 });
+
+
+test('studio shell keeps site navigation and returns focus without reader chrome',{timeout:45000},async()=>{
+ for(const locale of ['ru','kk'])for(const theme of ['dark','light']){
+  const context=await session(locale,theme);
+  try{
+   const page=await context.newPage();await page.goto('/studio/projects/'+fixture.project_id);await page.locator('.draft-panel h2').waitFor();
+   const header=page.locator('.studio-header');assert.equal(await header.count(),1,'studio has its own compact header');
+   assert.equal(await page.locator('.site-footer').count(),0);assert.equal(await page.getByRole('navigation',{name:locale==='ru'?'Мобильная навигация':'Мобильді навигация',exact:true}).count(),0);
+   const trigger=header.getByRole('button',{name:locale==='ru'?'Навигация сайта':'Сайт навигациясы',exact:true});
+   for(const width of [320,360,1280]){
+    await page.setViewportSize({width,height:800});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
+    assert.ok((await trigger.boundingBox()).height>=44);await trigger.press('Enter');
+    const dialog=page.getByRole('dialog',{name:locale==='ru'?'Навигация сайта':'Сайт навигациясы'});await dialog.waitFor();
+    assert.deepEqual(await dialog.getByRole('link').evaluateAll(links=>links.map(link=>link.getAttribute('href'))),['/','/catalog','/library','/notifications','/menu']);
+    await page.keyboard.press('Escape');assert.equal(await dialog.isVisible(),false);assert.equal(await trigger.evaluate(el=>el===document.activeElement),true);
+   }
+   await trigger.click();await page.getByRole('dialog').getByRole('link').filter({hasText:'Каталог'}).click();await page.waitForURL('**/catalog');
+   assert.equal(await page.locator('.studio-header').count(),0);assert.equal(await page.locator('.site-footer').count(),1);
+   await page.setViewportSize({width:360,height:800});assert.equal(await page.getByRole('navigation',{name:locale==='ru'?'Мобильная навигация':'Мобильді навигация',exact:true}).isVisible(),true);
+  }finally{await context.close();}
+ }
+});

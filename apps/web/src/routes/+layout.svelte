@@ -9,6 +9,7 @@
  import {changeLocale} from '$lib/features/preferences/application/locale';
  import {provideLocale,text} from '$lib/shared/presentation/locale';
  import AppHeader from '$lib/shared/presentation/ui/AppHeader.svelte';
+ import StudioHeader from '$lib/shared/presentation/ui/StudioHeader.svelte';
  import MobileNavigation from '$lib/shared/presentation/ui/MobileNavigation.svelte';
  import type {NavigationItem} from '$lib/shared/presentation/ui/types';
  import {goto,invalidateAll} from '$app/navigation';
@@ -37,6 +38,7 @@
  $effect(()=>{const id=data.user?.id;if(mounted){unreadCount=0;void refreshUnread();}});
  async function loggedOut(){await invalidateAll();await goto('/');}
  const unreadBadge=$derived(badgeText(data.user?.id||null,unreadCount));
+ const studioArea=$derived($page.url.pathname==='/studio'||$page.url.pathname.startsWith('/studio/'));
  const adminArea=$derived($page.url.pathname==='/admin'||$page.url.pathname.startsWith('/admin/'));
  const localeStore=createLocalePreferences();
  const {locale}=provideLocale(untrack(()=>data.locale),value=>changeLocale(localeStore,value));
@@ -64,7 +66,10 @@
 {:else if $page.url.pathname.startsWith('/read/') || $page.url.pathname==='/offline-reader'}
  <main id="content">{@render content()}</main>
 {:else}
- {#if adminArea}<main id="content" class="admin-container">{@render content()}</main>{:else}
+ {#if adminArea}<main id="content" class="admin-container">{@render content()}</main>{:else if studioArea}
+ <StudioHeader items={navigation} {unreadBadge} {unreadCount}>{#snippet account()}{#if data.user}<AccountMenu version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}{/snippet}</StudioHeader>
+ <main id="content" class="page-container studio-container">{@render content()}</main>
+ {:else}
  <AppHeader {unreadBadge} {unreadCount} items={navigation.slice(0,4)} currentPath={$page.url.pathname} accountHref={data.user?'/menu':'/login?returnTo='+encodeURIComponent(loginReturn)} accountLabel={data.user?'Аккаунт':text($locale,'Кіру','Войти')} homeLabel={text($locale,'Qmanga басты бет','Qmanga — главная')} navigationLabel={text($locale,'Негізгі','Основная навигация')}>{#snippet account()}{#if data.user}<AccountMenu version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}{/snippet}</AppHeader>
  <main id="content" class="page-container">{@render content()}</main>
  <SiteFooter version={data.buildVersion}/>
@@ -72,4 +77,4 @@
  {/if}
 {/if}
 
-<style>.admin-container{min-height:100dvh}.guest-login{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--text);font-size:14px}</style>
+<style>.studio-container{min-height:calc(100dvh - 61px);padding-bottom:32px}.admin-container{min-height:100dvh}.guest-login{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--text);font-size:14px}</style>
