@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-cbz'
 created_date: '2026-10-20 16:49'
-updated_date: '2026-10-20 17:27'
+updated_date: '2026-10-20 17:30'
 labels:
   - web
   - publishing
@@ -41,6 +41,8 @@ ordinal: 45001
 Реализованы CBZ адаптер и общий CBZ/PDF предпросмотр с явным принятием, отменой и существующей очередью. Лимиты: 100 MiB архив, 1000 записей, 300 изображений, 25 MiB/изображение, 250 MiB суммарно; проверяются центральные/локальные записи, CRC, шифрование, ссылки, пути, фактический deflate output. CRC вычисляется с уступкой event loop. bun CBZ tests: 6 pass; queue tests: 4 pass; svelte-check 0/0; архитектурные границы pass. Chromium реальный deflate/order/mid-import cancel pass; UI/HTTP browser regression подготовлен, ожидает общего stack build. Production не проверен.
 
 Chromium UI/HTTP regression 2/2 pass на disposable localhost:18080: реальный deflate, естественный порядок, до принятия нет PUT, отмена оставляет ноль страниц; обрыв второго PUT оставляет первую страницу, повтор завершает две страницы без дубликатов; повторный выбор архива не добавляет страницы. 320/360/1280 без горизонтального overflow. Субагент PDF независимо проверил CBZ/UI: исправлена привязка import preview к аккаунту/ревизии и отмена при смене аккаунта. Root проверил 12 сочетаний размеров/языков/тем. Последние изменения guard/help требуют общего rebuild/root acceptance. Осталось: независимый итоговый review пакета, общий CI и наблюдаемый выпуск того же SHA.
+
+Основная реализация SHA02fbab4. Дополнительная совместимость: принимаются стандартные deflate compression-hint flags1/2 без разрешения encryption; реальный Chromium fixture теперь flags2. Unit6pass и isolatedcodecpass. Общий старый bundle закономерно отвергает новый fixture: UI regression повторить после следующего rebuild. Это ограничение относится к последней правке parser, ранее UI/HTTP2pass.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

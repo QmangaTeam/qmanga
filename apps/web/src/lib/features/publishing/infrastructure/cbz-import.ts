@@ -19,7 +19,7 @@ export async function importCbz(file:File,options:ImportOptions={}):Promise<File
  for(let i=0;i<count;i++){
   cancelled(signal);if(cursor+46>end||view.getUint32(cursor,true)!==0x02014b50)throw invalid();
   const flags=view.getUint16(cursor+8,true),method=view.getUint16(cursor+10,true),packed=view.getUint32(cursor+20,true),size=view.getUint32(cursor+24,true),nameSize=view.getUint16(cursor+28,true),extra=view.getUint16(cursor+30,true),comment=view.getUint16(cursor+32,true),attributes=view.getUint32(cursor+38,true),offset=view.getUint32(cursor+42,true),next=cursor+46+nameSize+extra+comment;
-  if(next>end||view.getUint16(cursor+34,true)||(flags&~0x808)!==0||![0,8].includes(method)||(attributes>>>16&0xf000)===0xa000||size===0xffffffff||packed===0xffffffff||offset===0xffffffff)throw invalid();
+  if(next>end||view.getUint16(cursor+34,true)||(flags&~0x80e)!==0||![0,8].includes(method)||(attributes>>>16&0xf000)===0xa000||size===0xffffffff||packed===0xffffffff||offset===0xffffffff)throw invalid();
   let name:string;try{name=new TextDecoder('utf-8',{fatal:true}).decode(bytes.subarray(cursor+46,cursor+46+nameSize));}catch{throw invalid();}
   if(!name||name.includes('\\')||name.startsWith('/')||name.includes(':')||/[\x00-\x1f]/.test(name)||name.split('/').some(p=>p==='..'||p==='.')||seen.has(name))throw invalid();seen.add(name);
   total+=size;if(size>25*MiB||total>250*MiB||(size>MiB&&size>packed*200))throw new AppFailure('import_size');
