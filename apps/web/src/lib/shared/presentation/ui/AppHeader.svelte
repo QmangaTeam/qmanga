@@ -24,7 +24,7 @@
   </nav>
  </div>
 </header>
-<dialog bind:this={searchDialog} aria-labelledby="global-search-title">
+<dialog bind:this={searchDialog} aria-labelledby="global-search-title" onkeydown={event=>{if(event.key==='Escape'){event.preventDefault();searchDialog.close();}}}>
  <div class="search-heading"><h2 id="global-search-title">{text($locale,'Тайтл іздеу','Поиск тайтла')}</h2><button class="close-search" aria-label={text($locale,'Жабу','Закрыть')} onclick={()=>searchDialog.close()}><Icon name="close"/></button></div>
  <form action="/catalog" method="GET" role="search" onsubmit={()=>searchDialog.close()}>
   <label class="sr-only" for="global-query">{text($locale,'Тайтл іздеу','Поиск тайтла')}</label>
