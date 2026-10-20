@@ -105,4 +105,14 @@
   .title-tabs a{min-width:0;justify-content:center;flex-wrap:wrap;gap:4px;padding:8px 4px;font-size:12px;overflow-wrap:anywhere}
   .title-tabs :global(svg){display:none}
  }
+
+ /* Equal fact columns and shared label/value rows keep links and plain values aligned. */
+ .title-facts{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:16px;padding:16px;overflow:visible;scroll-snap-type:none}
+ .title-facts>div{display:grid;grid-template-columns:18px minmax(0,1fr);gap:8px;min-width:0;white-space:normal;align-items:end}
+ .title-facts>div>div{display:grid;grid-template-rows:minmax(34px,auto) minmax(44px,auto);gap:4px;min-width:0}
+ .title-facts>div>:global(svg){width:18px;height:18px;margin-bottom:13px}
+ .title-facts dt{margin:0;line-height:1.4}
+ .title-facts dd{display:flex;align-items:center;min-height:44px;line-height:1.4}
+ .title-facts a{margin:0;min-height:44px;max-width:100%}
+ @media(max-width:767px){.title-facts{grid-template-columns:repeat(2,minmax(0,1fr))}.title-facts>div:last-child{grid-column:auto}}
 </style>
