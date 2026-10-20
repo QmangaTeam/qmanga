@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-pdf'
 created_date: '2026-10-20 16:49'
-updated_date: '2026-10-20 17:33'
+updated_date: '2026-10-20 17:40'
 labels:
   - web
   - publishing
@@ -43,6 +43,8 @@ ordinal: 45002
 Commit реализации 049c929. Root проверил общий upload UI на actual Docker app: 12 сочетаний kk/ru × dark/light × 320/360/1280 прошли, screenshot tmp/task99/import-kk-dark-320.png просмотрен. Это viewport emulation, не физическое Android-устройство. Ожидается финальный rebuild с assets plugin и внешняя проверка выпуска.
 
 Root integrated production-build verification: added PDF UI→preview(noPUT)→confirm→two ordered authorized API uploads regression64b9915, cleanupd3cab1e, resource assertions0941728. Actual Docker build serves LICENSE, fallbackfont, CMap and OpenJPEGWASM HTTP200; PDF production bundle test1/1 PASS. Standalone real codec test1/1 PASS repeated by root. Root12 responsive locale/theme combinations PASS, screenshots inspected; full Go/PostgreSQL and157module/46UI/Svelte0/0/architecture/contrast/preview pass. Independent PDF-agent review of root regression no blocking findings. Production acceptance pending SSH TCP22 timeout; no release claim.
+
+Cold decoder chunk cancellation regression: delayed pdfjs-dist.js route proved old code constructed 1 worker after cancellation; added post-import abort guard, new Chromium test proves 0 workers. Browser codec suite now 2/2 PASS, previous error/cancel/encryption/order cases retained.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

@@ -74,3 +74,22 @@ test('real self-hosted PDF worker renders ordered PNG pages and closes on errors
  assert.ok(requests.every(url=>url.startsWith(base)||url.startsWith('data:')), 'PDF import makes no external requests');
  await page.close();
 });
+
+test('cancel while the PDF decoder chunk loads never constructs a worker', {timeout:30000}, async () => {
+ const page=await browser.newPage();
+ try{
+  await page.goto(base+'/__pdf_import_test');
+  await page.evaluate(async()=>{window.pdfImport=(await import('/src/lib/features/publishing/infrastructure/pdf-import.ts')).importPdf;});
+  let release;const delayed=new Promise(resolve=>{release=resolve;});
+  let arrived;const requested=new Promise(resolve=>{arrived=resolve;});
+  await page.route(/pdfjs-dist\.js(?:\?|$)/,async route=>{arrived();await delayed;await route.continue();});
+  await page.evaluate(source=>{
+   const OriginalWorker=window.Worker;window.workerCount=0;window.Worker=class extends OriginalWorker{constructor(...args){super(...args);window.workerCount++;}};
+   window.pdfAbort=new AbortController();window.pdfResult=window.pdfImport(new File([source],'cold.pdf'),{signal:window.pdfAbort.signal}).then(()=>null,error=>error.code);
+  },pdf());
+  await requested;
+  await page.evaluate(()=>window.pdfAbort.abort());release();
+  assert.equal(await page.evaluate(()=>window.pdfResult),'upload_cancelled');
+  assert.equal(await page.evaluate(()=>window.workerCount),0);
+ }finally{await page.close();}
+});

@@ -27,6 +27,7 @@ export async function importPdf(file: File, options: { signal?: AbortSignal; onP
   const [pdfjs, { default: workerUrl }] = await Promise.all([
     import('pdfjs-dist'), import('pdfjs-dist/build/pdf.worker.min.mjs?url')
   ]);
+  if (options.signal?.aborted) throw new AppFailure('upload_cancelled');
   const worker = new Worker(workerUrl, { type: 'module' });
   const pdfWorker = pdfjs.PDFWorker.create({ port: worker });
   let task: ReturnType<typeof pdfjs.getDocument> | undefined;
