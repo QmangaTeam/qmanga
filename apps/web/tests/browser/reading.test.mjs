@@ -122,7 +122,9 @@ test('library and project filters find matches beyond 100 and reset pagination',
   await page.goto('/studio/projects');
   await page.getByLabel('Команда', { exact: true }).selectOption(otherTeam);
   await page.getByText('Найдено: 1', { exact: true }).waitFor();
-  await page.locator(`a[href="/studio/projects/${titles[109].project}"]`).first().waitFor();
+  const projectLink=page.locator(`a[href^="/studio/projects/${titles[109].project}"]`).first();await projectLink.waitFor();
+  const projectURL=new URL(await projectLink.getAttribute('href'),fixture.app_url);assert.equal(projectURL.pathname,'/studio/projects/'+titles[109].project);
+  assert.equal(new URL(projectURL.searchParams.get('projectsReturn'),fixture.app_url).searchParams.get('team'),otherTeam,'project link retains the applied team context');
  } finally { await page.close(); }
 });
 

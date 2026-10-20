@@ -29,7 +29,7 @@ test('taxonomy admin CRUD, title assignment and public combined URL filters',{ti
   await taxonomyForm.getByRole('combobox',{name:'Выбрать',exact:true}).selectOption(category.id);
   await taxonomyForm.getByRole('textbox',{name:'Название',exact:true}).fill(name+' revised');
   await taxonomyForm.getByRole('button',{name:'Сохранить',exact:true}).click();
-  await page.waitForFunction(value=>Array.from(document.querySelectorAll('option')).some(option=>option.textContent===value),name+' revised');
+  await page.waitForFunction(({id,value})=>Array.from(document.querySelectorAll('option')).some(option=>option.value===id&&option.textContent.startsWith(value+' ·')),{id:category.id,value:name+' revised'});
   let response=await context.request.post('/api/v1/admin/genres',{headers,data:{name,slug}});assert.equal(response.status(),201);genre=await response.json();
   titleData={name,slug,kind:'manga',original_status:'ongoing',translation_status:'ongoing',description:'Synthetic taxonomy fixture',direction:'ltr',aliases:[],authors:[],genre_ids:[genre.id],listed:true,demo:true,age_rating:18};
   response=await context.request.post('/api/v1/admin/titles',{headers,data:titleData});assert.equal(response.status(),201);title=await response.json();
