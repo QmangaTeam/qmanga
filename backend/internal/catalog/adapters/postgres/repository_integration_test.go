@@ -343,6 +343,17 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		if _, failure = service.ReviewProjectRequest(ctx, "reader", request.ID, "approve", "", ""); !errors.Is(failure, domain.ErrForbidden) {
 			testingTarget.Fatal("self approval allowed", failure)
 		}
+		execute("INSERT INTO teams(id,slug,name,is_approved) SELECT 'queue-team-'||n,'queue-team-'||n,'Noise group '||n,true FROM generate_series(1,52)n")
+		execute("INSERT INTO project_requests(id,team_id,requested_by,target_key,name_kk,note,created_at) SELECT 'queue-request-'||n,'queue-team-'||n,'reader','noise-'||n,'Noise','Synthetic queue request',now()+interval '1 hour' FROM generate_series(1,52)n")
+		firstQueue, firstFailure := service.ProjectRequests(ctx, "admin", true, "")
+		if firstFailure != nil || len(firstQueue) != 50 {
+			testingTarget.Fatal("queue paging fixture invalid", firstFailure)
+		}
+		for _, row := range firstQueue {
+			if row.ID == request.ID {
+				testingTarget.Fatal("target must be beyond first queue page")
+			}
+		}
 		filtered, filterFailure := service.ProjectRequests(ctx, "admin", true, "", application.ProjectRequestFilter{Team: "team", Kind: "new"})
 		if filterFailure != nil || len(filtered) != 1 || filtered[0].ID != request.ID {
 			testingTarget.Fatal("server request filter lost matching row", filterFailure)
