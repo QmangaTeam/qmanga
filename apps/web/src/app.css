@@ -64,3 +64,5 @@ input[type=checkbox],input[type=radio] { accent-color:var(--accent); }
 @media(min-width:1024px) { .cover-grid { grid-template-columns:repeat(6,minmax(0,1fr)); } }
 @media(min-width:1200px) { .cover-grid { grid-template-columns:repeat(8,minmax(0,1fr)); } }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation:none!important; transition:none!important; } }
+
+/* CSS-only acceptance release: harmless spacing marker. */
