@@ -339,6 +339,18 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		if _, failure = service.ReviewProjectRequest(ctx, "reader", request.ID, "approve", "", ""); !errors.Is(failure, domain.ErrForbidden) {
 			testingTarget.Fatal("self approval allowed", failure)
 		}
+		filtered, filterFailure := service.ProjectRequests(ctx, "admin", true, "", application.ProjectRequestFilter{Team: "team", Kind: "new"})
+		if filterFailure != nil || len(filtered) != 1 || filtered[0].ID != request.ID {
+			testingTarget.Fatal("server request filter lost matching row", filterFailure)
+		}
+		filtered, filterFailure = service.ProjectRequests(ctx, "admin", true, "", application.ProjectRequestFilter{Kind: "existing"})
+		if filterFailure != nil || len(filtered) != 0 {
+			testingTarget.Fatal("request type filter is not server-wide", filterFailure)
+		}
+		filtered, filterFailure = service.ProjectRequests(ctx, "admin", true, "", application.ProjectRequestFilter{Team: "not-matching"})
+		if filterFailure != nil || len(filtered) != 0 {
+			testingTarget.Fatal("request team filter ignored", filterFailure)
+		}
 		accepted, failure := service.ReviewProjectRequest(ctx, "admin", request.ID, "approve", "", "")
 		if failure != nil || accepted.ProjectID == "" || accepted.Status != "approved" {
 			testingTarget.Fatal("approval did not create project", accepted, failure)
@@ -426,7 +438,7 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		}
 	})
 	testingTarget.Run("project next work comes from scoped revisions and preserves unknown as absent", func(testingTarget *testing.T) {
-		execute(`INSERT INTO revisions(id,release_id,status) VALUES('card-ready','card-release','ready'),('card-changes','card-release','changes_requested')`)
+		execute(`INSERT INTO revisions(id,release_id,status,revision_num) VALUES('card-ready','card-release','ready',1),('card-changes','card-release','changes_requested',2)`)
 		page, failure := service.StudioProjectPage(ctx, "reader", application.ProjectFilter{TeamID: "page-team"})
 		if failure != nil || len(page.Items) != 1 || page.Items[0].NextRevisionID != "card-changes" || page.Items[0].NextRevisionState != "changes_requested" {
 			testingTarget.Fatalf("next work: %+v %v", page, failure)
@@ -435,7 +447,7 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 		if failure != nil || len(hidden.Items) != 0 {
 			testingTarget.Fatalf("foreign work leaked: %+v %v", hidden, failure)
 		}
-		execute(`UPDATE revisions SET status='published' WHERE id IN ('card-ready','card-changes')`)
+		execute(`INSERT INTO revisions(id,release_id,status,revision_num) VALUES('card-published','card-release','published',3)`)
 		page, failure = service.StudioProjectPage(ctx, "reader", application.ProjectFilter{TeamID: "page-team"})
 		if failure != nil || len(page.Items) != 1 || page.Items[0].NextRevisionID != "" || page.Items[0].NextRevisionState != "" {
 			testingTarget.Fatalf("no pending work: %+v %v", page, failure)
