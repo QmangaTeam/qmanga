@@ -13,7 +13,7 @@ type Repository struct{ pool *pgxpool.Pool }
 func New(pool *pgxpool.Pool) *Repository { return &Repository{pool} }
 func (repository *Repository) List(ctx context.Context, user, after string, unread ...bool) ([]application.Notification, error) {
 	unreadOnly := len(unread) > 0 && unread[0]
-	rows, failure := repository.pool.Query(ctx, `SELECT id,type,title_kk,body_kk,COALESCE(data->>'release_id',''),COALESCE(data->>'title_slug',''),COALESCE(data->>'project_id',''),COALESCE(data->>'comment_id',''),is_read,created_at FROM notifications WHERE user_id=$1 AND (NOT $3::boolean OR NOT is_read) AND ($2::varchar='' OR (created_at,id)<(SELECT created_at,id FROM notifications WHERE id=$2::varchar AND user_id=$1)) ORDER BY created_at DESC,id DESC LIMIT 50`, user, after, unreadOnly)
+	rows, failure := repository.pool.Query(ctx, `SELECT id,type,title_kk,body_kk,COALESCE(data->>'release_id',''),COALESCE(data->>'title_slug',''),COALESCE(data->>'project_id',''),COALESCE(NULLIF(data->>'comment_id',''),CASE WHEN type='comment_reply' AND dedupe_key LIKE 'reply:%' THEN substring(dedupe_key from 7) ELSE '' END),is_read,created_at FROM notifications WHERE user_id=$1 AND (NOT $3::boolean OR NOT is_read) AND ($2::varchar='' OR (created_at,id)<(SELECT created_at,id FROM notifications WHERE id=$2::varchar AND user_id=$1)) ORDER BY created_at DESC,id DESC LIMIT 50`, user, after, unreadOnly)
 	if failure != nil {
 		return nil, failure
 	}

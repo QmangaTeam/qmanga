@@ -45,6 +45,9 @@ func TestUnreadCountIsolationAndRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if _, err = database.Pool().Exec(ctx, `UPDATE notifications SET dedupe_key='reply:legacy-comment' WHERE id='n1'; UPDATE notifications SET data=jsonb_build_object('comment_id','new-comment') WHERE id='n2'`); err != nil {
+		t.Fatal(err)
+	}
 	repository := New(database.Pool())
 	allUnread := []application.Notification{}
 	after := ""
@@ -63,6 +66,13 @@ func TestUnreadCountIsolationAndRead(t *testing.T) {
 			break
 		}
 		after = items[len(items)-1].ID
+	}
+	comments := map[string]string{}
+	for _, item := range allUnread {
+		comments[item.ID] = item.CommentID
+	}
+	if comments["n1"] != "legacy-comment" || comments["n2"] != "new-comment" {
+		t.Fatalf("comment destinations: %v", comments)
 	}
 	if len(allUnread) != 105 {
 		t.Fatalf("unread server pagination=%d", len(allUnread))
