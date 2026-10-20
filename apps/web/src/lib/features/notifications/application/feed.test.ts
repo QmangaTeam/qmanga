@@ -10,3 +10,20 @@ test('delayed old-account list response cannot replace a reset/new-account feed'
 test('account change after the response but before commit discards private data',async()=>{const f=fixture();f.gateway.list=async()=>{f.setAccount('B');return{items:[item('A')],hasMore:true};};const feed=new NotificationFeed(f.gateway);await feed.load();expect(feed.items).toEqual([]);expect(feed.account).toBeNull();expect(feed.error).toBe('account_changed');});
 test('a read result arriving after account change cannot be presented as success',async()=>{const f=fixture(),feed=new NotificationFeed(f.gateway);await feed.load();f.gateway.read=async()=>{f.setAccount('B');};await feed.read(feed.items[0]);expect(feed.items).toEqual([]);expect(feed.error).toBe('account_changed');});
 test('opening a notification may finish its authorized read after route unmount',async()=>{const f=fixture(),feed=new NotificationFeed(f.gateway);await feed.load();const pending=feed.read(feed.items[0]);feed.close();await pending;expect(f.reads).toEqual(['A:A']);expect(feed.items).toEqual([]);});
+test('unread mode restarts server pagination and removes successfully read rows without losing the loaded cursor',async()=>{
+ const f=fixture(),calls:{after:string;unread:boolean}[]=[];
+ f.gateway.list=async(account,after='',unread=false)=>{calls.push({after,unread});return{items:[item(after?'older':'newer')],hasMore:true};};
+ const feed=new NotificationFeed(f.gateway);await feed.load();await feed.setUnread(true);
+ expect(calls).toEqual([{after:'',unread:false},{after:'',unread:true}]);
+ await feed.load('newer');await feed.read(feed.items[1]);
+ expect(feed.items.map(row=>row.id)).toEqual(['newer']);
+ expect(feed.cursor).toBe('older');
+ await feed.load(feed.cursor);expect(calls.at(-1)).toEqual({after:'older',unread:true});
+});
+test('changing unread mode discards delayed history responses and shows honest failures',async()=>{
+ const f=fixture();let finish!:(value:{items:Notification[];hasMore:boolean})=>void;
+ f.gateway.list=async(_account,_after,unread)=>unread?Promise.reject(new Error('offline')):new Promise(done=>finish=done);
+ const feed=new NotificationFeed(f.gateway),pending=feed.load();await Promise.resolve();await Promise.resolve();
+ await feed.setUnread(true);finish({items:[item('history')],hasMore:true});await pending;
+ expect(feed.items).toEqual([]);expect(feed.error).toBe('notification_failed');expect(feed.unreadOnly).toBe(true);
+});

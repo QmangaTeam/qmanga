@@ -5,6 +5,7 @@ import (
 	"github.com/google/uuid"
 	"net/url"
 	"os"
+	"qmanga/internal/notifications/application"
 	platform "qmanga/internal/platform/postgres"
 	"strings"
 	"testing"
@@ -45,6 +46,28 @@ func TestUnreadCountIsolationAndRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	repository := New(database.Pool())
+	allUnread := []application.Notification{}
+	after := ""
+	for {
+		items, failure := repository.List(ctx, "one", after, true)
+		if failure != nil {
+			t.Fatal(failure)
+		}
+		for _, item := range items {
+			if item.Read {
+				t.Fatal("read item in unread query")
+			}
+		}
+		allUnread = append(allUnread, items...)
+		if len(items) < 50 {
+			break
+		}
+		after = items[len(items)-1].ID
+	}
+	if len(allUnread) != 105 {
+		t.Fatalf("unread server pagination=%d", len(allUnread))
+	}
+
 	count, err := repository.Unread(ctx, "one")
 	if err != nil || count != 105 {
 		t.Fatalf("real count=%d err=%v", count, err)

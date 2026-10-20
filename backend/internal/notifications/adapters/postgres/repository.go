@@ -11,8 +11,9 @@ import (
 type Repository struct{ pool *pgxpool.Pool }
 
 func New(pool *pgxpool.Pool) *Repository { return &Repository{pool} }
-func (repository *Repository) List(ctx context.Context, user, after string) ([]application.Notification, error) {
-	rows, failure := repository.pool.Query(ctx, `SELECT id,type,title_kk,body_kk,COALESCE(data->>'release_id',''),COALESCE(data->>'title_slug',''),COALESCE(data->>'project_id',''),is_read,created_at FROM notifications WHERE user_id=$1 AND ($2::varchar='' OR (created_at,id)<(SELECT created_at,id FROM notifications WHERE id=$2::varchar AND user_id=$1)) ORDER BY created_at DESC,id DESC LIMIT 50`, user, after)
+func (repository *Repository) List(ctx context.Context, user, after string, unread ...bool) ([]application.Notification, error) {
+	unreadOnly := len(unread) > 0 && unread[0]
+	rows, failure := repository.pool.Query(ctx, `SELECT id,type,title_kk,body_kk,COALESCE(data->>'release_id',''),COALESCE(data->>'title_slug',''),COALESCE(data->>'project_id',''),COALESCE(data->>'comment_id',''),is_read,created_at FROM notifications WHERE user_id=$1 AND (NOT $3::boolean OR NOT is_read) AND ($2::varchar='' OR (created_at,id)<(SELECT created_at,id FROM notifications WHERE id=$2::varchar AND user_id=$1)) ORDER BY created_at DESC,id DESC LIMIT 50`, user, after, unreadOnly)
 	if failure != nil {
 		return nil, failure
 	}
@@ -20,7 +21,7 @@ func (repository *Repository) List(ctx context.Context, user, after string) ([]a
 	items := []application.Notification{}
 	for rows.Next() {
 		var item application.Notification
-		if failure = rows.Scan(&item.ID, &item.Kind, &item.Title, &item.Body, &item.ReleaseID, &item.TitleSlug, &item.ProjectID, &item.Read, &item.CreatedAt); failure != nil {
+		if failure = rows.Scan(&item.ID, &item.Kind, &item.Title, &item.Body, &item.ReleaseID, &item.TitleSlug, &item.ProjectID, &item.CommentID, &item.Read, &item.CreatedAt); failure != nil {
 			return nil, failure
 		}
 		items = append(items, item)
@@ -54,7 +55,7 @@ func (repository *Repository) Deliver(ctx context.Context) (bool, error) {
  FROM outbox_events event JOIN revisions revision ON revision.id=event.payload->>'revision_id' JOIN releases publication ON publication.id=revision.release_id JOIN chapters chapter ON chapter.id=publication.chapter_id JOIN titles title ON title.id=chapter.title_id JOIN team_memberships member ON member.team_id=publication.team_id
  WHERE event.id=$1 ON CONFLICT(user_id,dedupe_key)DO NOTHING`, id)
 	} else {
-		_, failure = transaction.Exec(ctx, `INSERT INTO notifications(id,user_id,type,title_kk,body_kk,data,event_id,dedupe_key)SELECT gen_random_uuid()::varchar,recipient.id,'comment_reply','Пікіріңізге жауап берілді',title.name_kk,jsonb_build_object('release_id',COALESCE(event.payload->>'release_id',''),'title_slug',title.slug),event.id,'reply:'||(event.payload->>'comment_id') FROM outbox_events event JOIN users recipient ON recipient.id=event.payload->>'user_id' JOIN titles title ON title.id=event.payload->>'title_id' JOIN comments comment ON comment.id=event.payload->>'comment_id' AND NOT comment.is_hidden AND comment.deleted_at IS NULL WHERE event.id=$1 ON CONFLICT(user_id,dedupe_key)DO NOTHING`, id)
+		_, failure = transaction.Exec(ctx, `INSERT INTO notifications(id,user_id,type,title_kk,body_kk,data,event_id,dedupe_key)SELECT gen_random_uuid()::varchar,recipient.id,'comment_reply','Пікіріңізге жауап берілді',title.name_kk,jsonb_build_object('release_id',COALESCE(event.payload->>'release_id',''),'title_slug',title.slug,'comment_id',comment.id),event.id,'reply:'||(event.payload->>'comment_id') FROM outbox_events event JOIN users recipient ON recipient.id=event.payload->>'user_id' JOIN titles title ON title.id=event.payload->>'title_id' JOIN comments comment ON comment.id=event.payload->>'comment_id' AND NOT comment.is_hidden AND comment.deleted_at IS NULL WHERE event.id=$1 ON CONFLICT(user_id,dedupe_key)DO NOTHING`, id)
 	}
 	if failure != nil {
 		return false, failure

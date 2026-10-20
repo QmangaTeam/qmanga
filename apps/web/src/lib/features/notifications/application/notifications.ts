@@ -1,2 +1,2 @@
-export interface Notification {id:string;kind:string;title:string;body:string;releaseId:string;titleSlug:string;projectId?:string;read:boolean;createdAt:string}
-export interface NotificationsGateway{watchAccountChange?(changed:()=>void):()=>void;account():Promise<string|null>;unread(accountId:string):Promise<number>;list(accountId:string,after?:string):Promise<{items:Notification[];hasMore:boolean}>;read(accountId:string,id:string):Promise<void>}
+export interface Notification {id:string;kind:string;title:string;body:string;releaseId:string;titleSlug:string;projectId?:string;commentId?:string;read:boolean;createdAt:string}
+export interface NotificationsGateway{watchAccountChange?(changed:()=>void):()=>void;account():Promise<string|null>;unread(accountId:string):Promise<number>;list(accountId:string,after?:string,unreadOnly?:boolean):Promise<{items:Notification[];hasMore:boolean}>;read(accountId:string,id:string):Promise<void>}

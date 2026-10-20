@@ -18,14 +18,14 @@ func (handler *NotificationHandler) Register(api *gin.RouterGroup, identity *Ide
 }
 func (handler *NotificationHandler) list(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.List(request.Request.Context(), account.ID, request.Query("after"))
+	items, failure := handler.service.List(request.Request.Context(), account.ID, request.Query("after"), request.Query("unread") == "true")
 	if failure != nil {
 		Error(request, 503, "unavailable", "Хабарлар уақытша қолжетімсіз")
 		return
 	}
 	result := []gin.H{}
 	for _, item := range items {
-		result = append(result, gin.H{"id": item.ID, "kind": item.Kind, "title": item.Title, "body": item.Body, "release_id": item.ReleaseID, "title_slug": item.TitleSlug, "project_id": item.ProjectID, "read": item.Read, "created_at": item.CreatedAt})
+		result = append(result, gin.H{"id": item.ID, "kind": item.Kind, "title": item.Title, "body": item.Body, "release_id": item.ReleaseID, "title_slug": item.TitleSlug, "project_id": item.ProjectID, "comment_id": item.CommentID, "read": item.Read, "created_at": item.CreatedAt})
 	}
 	request.JSON(200, gin.H{"items": result, "has_more": len(items) == 50})
 }
