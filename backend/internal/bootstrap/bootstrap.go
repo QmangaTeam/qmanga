@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	metadataSource "qmanga/internal/catalog/adapters/metadatasource"
 	catalogPostgres "qmanga/internal/catalog/adapters/postgres"
 	catalogApp "qmanga/internal/catalog/application"
 	communityPostgres "qmanga/internal/community/adapters/postgres"
@@ -122,6 +123,7 @@ func Initialize(parentContext context.Context) (*Application, error) {
 	transport.NewAvatarHandler(avatarService, identityHandler).Register(httpRouter)
 	transport.NewMetricsHandler(metricsApplication.New(metricsPostgres.New(postgresClient.Pool()))).Register(httpRouter.Group("/api/v1"), identityHandler)
 	catalogService := catalogApp.New(catalogPostgres.New(postgresClient.Pool()), uuid.NewString)
+	transport.NewMetadataImportsHandler(catalogApp.NewMetadataImports(catalogPostgres.New(postgresClient.Pool()), map[string]catalogApp.MetadataSource{"shikimori": metadataSource.New("shikimori"), "anilist": metadataSource.New("anilist")}, titleArtwork{imagemagick.New()})).Register(httpRouter.Group("/api/v1"), identityHandler)
 	transport.NewCatalogHandler(catalogService).Register(httpRouter.Group("/api/v1"), identityHandler)
 	transport.NewTitleChangesHandler(catalogApp.NewTitleChanges(catalogPostgres.New(postgresClient.Pool()), storageClient, titleArtwork{imagemagick.New()}, uuid.NewString)).Register(httpRouter.Group("/api/v1"), identityHandler)
 	publicationRepository := publicationPostgres.New(postgresClient.Pool())
