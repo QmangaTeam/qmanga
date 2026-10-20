@@ -3,7 +3,8 @@ set -euo pipefail
 
 QMANGA_REPO_ROOT=${QMANGA_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 QMANGA_HOST_ROOT=${QMANGA_HOST_ROOT:-/opt/qmanga}
-export QMANGA_HOST_ROOT
+IMAGE_PREFIX=${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}
+export QMANGA_HOST_ROOT IMAGE_PREFIX
 
 target_config() {
   DEPLOY_TARGET=${1:?staging or production required}
@@ -33,13 +34,57 @@ data_compose() {
     -p "qmanga-$DEPLOY_TARGET-data" "$@"
 }
 
+manifest_path() {
+  printf '%s\n' "$QMANGA_HOST_ROOT/state/manifests/$DEPLOY_TARGET-${1:?sha required}"
+}
+
+# A release may reuse an unchanged component's immutable image from its
+# predecessor. The manifest records the exact tag per component; tagged
+# releases before manifests existed fall back to their release SHA.
+read_manifest() {
+  local sha=${1:?sha required} file gateway api web
+  file=$(manifest_path "$sha")
+  if test -f "$file"; then
+    gateway=$(awk '$1 == "gateway" {print $2; exit}' "$file")
+    api=$(awk '$1 == "api" {print $2; exit}' "$file")
+    web=$(awk '$1 == "web" {print $2; exit}' "$file")
+    if valid_sha "$gateway" && valid_sha "$api" && valid_sha "$web"; then
+      printf '%s %s %s\n' "$gateway" "$api" "$web"
+      return
+    fi
+  fi
+  printf '%s %s %s\n' "$sha" "$sha" "$sha"
+}
+
+image_present() { # component sha
+  docker image inspect "$IMAGE_PREFIX-${1:?component required}:${2:?sha required}" >/dev/null 2>&1
+}
+
 app_compose() {
   local color=${1:?color required} sha=${2:?SHA required}
   shift 2
   valid_sha "$sha" || { echo 'Release SHA must be 40 lowercase hex characters' >&2; return 2; }
+  if test -z "${IMAGE_TAG_GATEWAY:-}" || test -z "${IMAGE_TAG_API:-}" || test -z "${IMAGE_TAG_WEB:-}"; then
+    read -r IMAGE_TAG_GATEWAY IMAGE_TAG_API IMAGE_TAG_WEB < <(read_manifest "$sha")
+    export IMAGE_TAG_GATEWAY IMAGE_TAG_API IMAGE_TAG_WEB
+  fi
   RELEASE_SHA=$sha GATEWAY_PORT=$(port_for_color "$color") \
     docker compose --env-file "$CONFIG_FILE" -f "$QMANGA_REPO_ROOT/deploy/compose.app.yaml" \
       -p "qmanga-$DEPLOY_TARGET-$color" "$@"
+}
+
+# Skip the full MinIO/PostgreSQL snapshot on the critical path only while the
+# regularly scheduled verified backup is fresh. Migrations always force a new
+# snapshot; missing or stale markers conservatively force one too.
+backup_fresh() {
+  local newest now age limit
+  newest=$(find "$QMANGA_HOST_ROOT/backups/$DEPLOY_TARGET" -type f -name COMPLETE \
+    -printf '%T@ %p\n' 2>/dev/null | sort -n | tail -n 1 | cut -d' ' -f2-)
+  test -n "$newest" || return 1
+  now=$(date +%s)
+  age=$((now - $(stat -c %Y "$newest")))
+  limit=$(( ${QMANGA_MAX_BACKUP_AGE_H:-30} * 3600 ))
+  test "$age" -le "$limit"
 }
 
 front_compose() {
@@ -69,6 +114,17 @@ target_health() {
     local_health "$port"
   else
     public_health
+  fi
+}
+
+served_homepage() {
+  local port=${1:?port required}
+  if test "$DEPLOY_TARGET" = staging; then
+    curl --fail --silent --show-error --max-time 15 -H "Host: $DOMAIN" \
+      "http://127.0.0.1:$port/"
+  else
+    curl --fail --silent --show-error --max-time 15 \
+      --resolve "$DOMAIN:443:127.0.0.1" "$APP_ORIGIN/"
   fi
 }
 

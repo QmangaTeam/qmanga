@@ -1,9 +1,11 @@
 [Unit]
-Description=Check Qmanga staging releases every five minutes
+Description=Deploy the ready Qmanga release to staging, smoke it, then production
 
 [Timer]
-OnBootSec=2min
-OnUnitInactiveSec=5min
+# refs/deploy-ready is cheap to poll over git; a 20s interval keeps the
+# push-to-production path well below its five-minute budget.
+OnBootSec=1min
+OnUnitInactiveSec=20s
 Persistent=true
 Unit=qmanga-staging-poll.service
 

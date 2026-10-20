@@ -1,6 +1,6 @@
 services:
   gateway:
-    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-gateway:${RELEASE_SHA:?set RELEASE_SHA}
+    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-gateway:${IMAGE_TAG_GATEWAY:?set IMAGE_TAG_GATEWAY}
     pull_policy: missing
     ports:
       - "127.0.0.1:${GATEWAY_PORT:?set GATEWAY_PORT}:8080"
@@ -13,7 +13,7 @@ services:
     stop_grace_period: 20s
     networks: [default]
   api:
-    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-api:${RELEASE_SHA:?set RELEASE_SHA}
+    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-api:${IMAGE_TAG_API:?set IMAGE_TAG_API}
     pull_policy: missing
     environment: &api-environment
       APP_ENV: production
@@ -48,12 +48,12 @@ services:
     stop_grace_period: 20s
     networks: [default, data]
   web:
-    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-web:${RELEASE_SHA:?set RELEASE_SHA}
+    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-web:${IMAGE_TAG_WEB:?set IMAGE_TAG_WEB}
     pull_policy: missing
     environment:
       ORIGIN: ${APP_ORIGIN:?set APP_ORIGIN}
       API_INTERNAL_URL: http://api:8080
-      BUILD_VERSION: ${RELEASE_SHA}
+      BUILD_VERSION: ${RELEASE_SHA:?set RELEASE_SHA}
     depends_on:
       api: {condition: service_healthy}
     healthcheck:
@@ -65,7 +65,7 @@ services:
     networks: [default]
   worker:
     profiles: [worker]
-    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-api:${RELEASE_SHA:?set RELEASE_SHA}
+    image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-api:${IMAGE_TAG_API:?set IMAGE_TAG_API}
     pull_policy: missing
     environment: *api-environment
     entrypoint: ["/usr/local/bin/qmanga-worker"]

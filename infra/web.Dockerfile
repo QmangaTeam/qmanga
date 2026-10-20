@@ -4,7 +4,7 @@ COPY apps/web/package.json apps/web/bun.lock ./
 RUN bun install --frozen-lockfile
 FROM dependencies AS build
 COPY apps/web/ .
-RUN bun run check && bun run check:architecture && bun run check:ui-contrast && bun test src/lib/features src/lib/shared src/lib/server && bun run test:ui && bun run check:ui-preview && bun run build
+RUN bun run build
 FROM oven/bun@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373
 WORKDIR /app
 COPY --from=build --chown=bun:bun /app/build ./build

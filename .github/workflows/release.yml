@@ -1,0 +1,139 @@
+name: Fast Release
+
+# Blocking release path: push to main → changed component images in GHCR →
+# refs/deploy-ready → VM poller deploys staging, smokes it, then production.
+# Full Verification (verify.yml) runs separately and does not gate this path
+# unless the change touches migrations or deployment infrastructure.
+on:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+  packages: write
+  actions: read
+concurrency:
+  group: fast-release-main
+  cancel-in-progress: true
+
+jobs:
+  classify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    outputs:
+      matrix: ${{ steps.classify.outputs.matrix }}
+      slow: ${{ steps.classify.outputs.slow }}
+      deploy: ${{ steps.classify.outputs.deploy }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Detect changed components since the last released SHA
+        id: classify
+        run: |
+          set -euo pipefail
+          git fetch --quiet origin '+refs/deploy-ready:refs/remotes/origin/deploy-ready' || true
+          base=$(git rev-parse --verify --quiet refs/remotes/origin/deploy-ready || true)
+          if test -z "$base"; then
+            changed=$(git diff-tree --no-commit-id --name-only -r HEAD)
+          else
+            changed=$(git diff --name-only "$base" HEAD)
+          fi
+          echo "Changed files since $base:"
+          printf '%s\n' "$changed"
+          components=()
+          grep -qE '^apps/web/|^infra/web\.Dockerfile$' <<<"$changed" && components+=(web)
+          grep -qE '^backend/|^infra/(api\.Dockerfile|imagemagick-policy\.xml)$' <<<"$changed" && components+=(api)
+          grep -qE '^infra/(nginx\.conf|gateway\.Dockerfile)$|^deploy/Caddyfile$' <<<"$changed" && components+=(gateway)
+          slow=false
+          if grep -qE '^(backend/migrations/|deploy/|infra/|\.github/)' <<<"$changed"; then
+            slow=true
+          fi
+          if test "$slow" = true; then
+            matrix='[]'
+            deploy=true
+          else
+            if test ${#components[@]} -eq 0; then
+              matrix='[]'
+              deploy=false
+            else
+              matrix=$(printf '%s\n' "${components[@]}" | sort -u | sed 's/.*/"&"/' | paste -sd, - | sed 's/^/[/;s/$/]/')
+              deploy=true
+            fi
+          fi
+          echo "matrix=$matrix" >> "$GITHUB_OUTPUT"
+          echo "slow=$slow" >> "$GITHUB_OUTPUT"
+          echo "deploy=$deploy" >> "$GITHUB_OUTPUT"
+
+  build:
+    needs: classify
+    if: needs.classify.outputs.matrix != '[]' && !cancelled()
+    runs-on: ubuntu-24.04-arm
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        component: ${{ fromJSON(needs.classify.outputs.matrix) }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: infra/${{ matrix.component }}.Dockerfile
+          platforms: linux/arm64
+          push: true
+          tags: ghcr.io/${{ github.repository }}-${{ matrix.component }}:${{ github.sha }}
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
+
+  verify-gate:
+    needs: classify
+    if: needs.classify.outputs.slow == 'true' && !cancelled()
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - name: Wait for Full Verification of this exact SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          for _ in $(seq 1 90); do
+            run=$(gh api "repos/$REPOSITORY/actions/workflows/verify.yml/runs?head_sha=$SHA&event=push&per_page=20" \
+              | jq -c --arg sha "$SHA" '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.created_at) | last // {}')
+            status=$(jq -r '.status // "missing"' <<<"$run")
+            conclusion=$(jq -r '.conclusion // ""' <<<"$run")
+            if test "$status" = completed; then
+              test "$conclusion" = success || {
+                echo "Full Verification concluded $conclusion for $SHA" >&2; exit 1;
+              }
+              echo "Full Verification passed for $SHA"
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "Timed out waiting for Full Verification of $SHA" >&2
+          exit 1
+
+  advance:
+    needs: [classify, build, verify-gate]
+    if: >-
+      needs.classify.outputs.deploy == 'true' && !cancelled() &&
+      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
+      (needs.verify-gate.result == 'success' || needs.verify-gate.result == 'skipped')
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: Advance deploy-ready
+        run: bash scripts/advance-deploy-ready.sh "${{ github.sha }}"

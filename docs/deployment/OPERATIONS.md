@@ -66,23 +66,31 @@ docker ps --format 'table {{.Names}}\t{{.Status}}'
 5. Проверить diff, сделать небольшой коммит; push только при авторизации владельца. В этой сессии выпуск был явно запрошен, это не постоянное разрешение всем будущим задачам.
 6. Для нетривиального завершения запросить независимый review субагентом и исправить существенные находки. Review подтверждает код, а не факт выпуска.
 
-## CI → staging → production
+## CI → staging → production (автоматический быстрый путь)
 
-Push `main` запускает Verify Qmanga. Только после acceptance публикуются `ghcr.io/maqsatto/qmanga-{api,web,gateway}:<40sha>` для linux/arm64. Проверить успешный run именно нужного SHA и все три publication jobs. Отдельный GitHub SSH deploy intentionally skipped: используется исходящий poller VM, обычно каждые5минут. Не включать второй способ деплоя.
+С 2026-10-20 обычный `git push origin main` доходит до production без ручных команд. Работают два независимых workflow:
 
-После CI staging обновляется автоматически. При необходимости штатный ручной выпуск на VM:
+1. **Fast Release** (`.github/workflows/release.yml`, блокирующий). Сравнивает файлы с последним выпущенным SHA (`refs/deploy-ready`), собирает только изменённые компоненты (`web` — `apps/web/`; `api`+worker — `backend/`; `gateway` — nginx/Caddy) с GHA Docker cache, пушит immutable arm64 теги и двигает `refs/deploy-ready`. Push только с документацией ничего не выпускает. Изменения `backend/migrations/`, `deploy/`, `infra/`, `.github/` — медленный путь: workflow ждёт успешный `Verify Qmanga` этого же SHA и только затем двигает ref.
+2. **Full Verification** (`verify.yml`) — полный Go/PostgreSQL/codec/browser acceptance и публикация всех трёх arm64 images. Он больше не блокирует обычный релиз; его результат виден в Actions.
+
+VM-poller (`qmanga-staging-poll.timer`, каждые 20 с) читает `refs/deploy-ready` через `git fetch` (без GitHub API/token) и вызывает `release.sh staging`, затем автоматически `release.sh production` того же SHA. `release.sh`:
+
+- переиспользует неизменённые компоненты предыдущего релиза (manifest в `/opt/qmanga/state/manifests/`), поэтому CSS-изменение не пересобирает и не перезапускает API/gateway;
+- пропускает полный backup, если есть проверенная копия моложе 30 ч (`QMANGA_MAX_BACKUP_AGE_H`) и нет изменений в `backend/migrations/`; при миграциях полный backup с off-host hook обязателен;
+- сохраняет blue-green, deployment lock, staging gate, restore gate, короткие health checks и автоматический возврат маршрута/worker при ошибке; схема БД автоматически не откатывается;
+- проверяет, что публичная главная действительно отдаёт выпущенный SHA (footer `BUILD_VERSION`), а не кэш прошлого цвета.
+
+Проверка состояния и таймингов:
 
 ```sh
-bash /opt/qmanga/repo/deploy/release.sh staging <tested-40-character-sha>
+cat /opt/qmanga/state/staging.active /opt/qmanga/state/production.active
+ls -l /opt/qmanga/state/manifests/
+journalctl -u qmanga-staging-poll.service -n 80 --no-pager
+curl -fsS https://qmanga.maqsatto.dev/api/v1/health
+curl -fsS https://qmanga.maqsatto.dev/ | grep -o <40-sha>
 ```
 
-Проверить `staging.active`, локальные API и главную по активному порту с заголовком `Host: qmanga-dev.maqsatto.dev`; при необходимости открыть сценарии через SSH-туннель. Публичного dev-сайта и маршрута Caddy больше нет. Затем **тот же SHA**:
-
-```sh
-bash /opt/qmanga/repo/deploy/release.sh production <same-tested-40-character-sha>
-```
-
-Скрипт сам проверяет ancestry main, staging SHA, restore gate, делает свежий backup с проверкой вне VM, поднимает второй цвет, переключает Caddy, проверяет здоровье и оставляет прошлый stack для rollback. Не обходить lock/gates и не заменять это ручным `compose up`. Если deployment lock занят, дождаться текущего запуска и перечитать state.
+Ручной `release.sh` остаётся для согласованных случаев, когда автоматический путь осознанно приостановлен. Не включать второй (SSH) способ деплоя. Fail-fast: повторный выпуск уже упавшего SHA не выполняется 30 минут, чтобы timer не штормил; исправление выпускается новым коммитом.
 
 Одинаковый уже активный SHA — no-op: **не применит новые env**. Секреты/конфигурация требуют согласованного нового выпуска; не считать запись env фактом включения сервиса.
 

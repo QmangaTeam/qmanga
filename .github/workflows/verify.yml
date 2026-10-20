@@ -6,9 +6,12 @@ on:
   workflow_dispatch:
 permissions:
   contents: read
+# Full Verification: complete acceptance suite, always available, does not
+# gate the fast release path. Deployments go through release.yml →
+# refs/deploy-ready → the outbound VM poller; there is no SSH deploy path.
 concurrency:
   group: verify-${{ github.ref }}
-  cancel-in-progress: false
+  cancel-in-progress: ${{ github.event_name == 'push' }}
 jobs:
   local-acceptance:
     runs-on: ubuntu-latest
@@ -47,6 +50,7 @@ jobs:
           bash scripts/test-internal-staging-route.sh
           bash scripts/test-offsite-oci.sh
           export RELEASE_SHA=0123456789abcdef0123456789abcdef01234567 GATEWAY_PORT=18280 DEPLOY_TARGET=staging
+          export IMAGE_TAG_GATEWAY=$RELEASE_SHA IMAGE_TAG_API=$RELEASE_SHA IMAGE_TAG_WEB=$RELEASE_SHA
           docker compose --env-file deploy/host.env.example -f deploy/compose.data.yaml config --quiet
           docker compose --env-file deploy/host.env.example -f deploy/compose.app.yaml config --quiet
           docker compose -f deploy/compose.front.yaml config --quiet
@@ -142,30 +146,5 @@ jobs:
           platforms: linux/arm64
           push: true
           tags: ghcr.io/${{ github.repository }}-${{ matrix.component }}:${{ github.sha }}
-
-  deploy-staging:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.QMANGA_STAGING_ENABLED == 'true'
-    needs: publish-images
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
-    environment: staging
-    concurrency:
-      group: qmanga-staging-deploy
-      cancel-in-progress: false
-    steps:
-      - name: Deploy tested images to staging
-        env:
-          DEPLOY_HOST: ${{ vars.QMANGA_DEPLOY_HOST }}
-          DEPLOY_USER: ${{ vars.QMANGA_DEPLOY_USER }}
-          DEPLOY_KEY: ${{ secrets.QMANGA_DEPLOY_KEY }}
-          KNOWN_HOSTS: ${{ secrets.QMANGA_SSH_KNOWN_HOSTS }}
-          RELEASE_SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          test -n "$DEPLOY_HOST" && test -n "$DEPLOY_USER" && test -n "$DEPLOY_KEY" && test -n "$KNOWN_HOSTS"
-          install -d -m 700 "$HOME/.ssh"
-          printf '%s\n' "$DEPLOY_KEY" > "$HOME/.ssh/qmanga_deploy"
-          printf '%s\n' "$KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
-          chmod 600 "$HOME/.ssh/qmanga_deploy" "$HOME/.ssh/known_hosts"
-          ssh -o BatchMode=yes -o StrictHostKeyChecking=yes -i "$HOME/.ssh/qmanga_deploy" \
-            "$DEPLOY_USER@$DEPLOY_HOST" "bash /opt/qmanga/repo/deploy/release.sh staging $RELEASE_SHA"
+          cache-from: type=gha,scope=${{ matrix.component }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.component }}
