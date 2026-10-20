@@ -38,7 +38,7 @@ func (handler *IdentityHandler) manageAccount(request *gin.Context) {
 func (handler *IdentityHandler) audit(request *gin.Context) {
 	request.Header("Cache-Control", "no-store")
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.Audit(request.Request.Context(), account.ID, request.Query("after"))
+	items, failure := handler.service.Audit(request.Request.Context(), account.ID, request.Query("after"), application.AuditFilter{Actor: request.Query("actor"), Object: request.Query("object"), Action: request.Query("action"), From: request.Query("from"), To: request.Query("to")})
 	if failure != nil {
 		handler.respondError(request, failure)
 		return

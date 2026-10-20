@@ -21,3 +21,5 @@ test('cover selection and removal preserve safe asset IDs through audit mapping'
  expect(result.items[1].before).toEqual({cover_asset_id:'cover-1'});
  expect(result.items[1].after).toEqual({cover_asset_id:''});
 });
+
+test('audit forwards all applied filters and cursor to the server',async()=>{let requested='';const gateway=new HttpManagementGateway(new ApiClient((async(input)=>{requested=String(input);return Response.json({items:[]});}) as typeof fetch),{currentId:async()=> 'admin'});await gateway.audit('admin','cursor',{actor:'Ерлан',object:'title',action:'update',from:'2026-10-20T00:00:00Z',to:''});const url=new URL(requested,'https://local.test');expect(url.searchParams.get('actor')).toBe('Ерлан');expect(url.searchParams.get('after')).toBe('cursor');expect(url.searchParams.get('action')).toBe('update');expect(url.searchParams.get('from')).toBe('2026-10-20T00:00:00Z');});

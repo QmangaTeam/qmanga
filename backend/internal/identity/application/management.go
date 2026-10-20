@@ -40,9 +40,26 @@ func (service *Service) ManageAccount(ctx context.Context, actor, id string, inp
 	}
 	return service.repository.ManageAccount(ctx, actor, id, input)
 }
-func (service *Service) Audit(ctx context.Context, actor, after string) ([]AuditEntry, error) {
+
+type AuditFilter struct{ Actor, Object, Action, From, To string }
+
+func (service *Service) Audit(ctx context.Context, actor, after string, filters ...AuditFilter) ([]AuditEntry, error) {
 	if len(after) > 36 {
 		return nil, domain.ErrInvalid
 	}
-	return service.repository.Audit(ctx, actor, after)
+	var filter AuditFilter
+	if len(filters) > 0 {
+		filter = filters[0]
+	}
+	if len(filter.Actor) > 160 || len(filter.Object) > 160 || len(filter.Action) > 80 {
+		return nil, domain.ErrInvalid
+	}
+	for _, value := range []string{filter.From, filter.To} {
+		if value != "" {
+			if _, err := time.Parse(time.RFC3339, value); err != nil {
+				return nil, domain.ErrInvalid
+			}
+		}
+	}
+	return service.repository.Audit(ctx, actor, after, filter)
 }

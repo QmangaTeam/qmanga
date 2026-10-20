@@ -90,10 +90,14 @@ func (repository *Repository) ManageAccount(ctx context.Context, actor, id strin
 	}
 	return transaction.Commit(ctx)
 }
-func (repository *Repository) Audit(ctx context.Context, actor, after string) ([]application.AuditEntry, error) {
+func (repository *Repository) Audit(ctx context.Context, actor, after string, filters ...application.AuditFilter) ([]application.AuditEntry, error) {
 	role, failure := repository.staff(ctx, actor)
 	if failure != nil || role != "admin" {
 		return nil, domain.ErrForbidden
+	}
+	var filter application.AuditFilter
+	if len(filters) > 0 {
+		filter = filters[0]
 	}
 	rows, failure := repository.pool.Query(ctx, `SELECT audit.id,coalesce(audit.user_id,''),audit.action,audit.entity_type,audit.entity_id,coalesce(audit.metadata->>'reason',''),audit.created_at,
  coalesce(actor.display_name,''),coalesce(target_user.display_name,title.name_kk,team.name,''),audit.metadata,
@@ -108,7 +112,12 @@ func (repository *Repository) Audit(ctx context.Context, actor, after string) ([
  LEFT JOIN chapters chapter ON chapter.id=CASE WHEN audit.entity_type='chapter' THEN audit.entity_id ELSE release.chapter_id END
  LEFT JOIN teams team ON team.id=CASE WHEN audit.entity_type='team' THEN audit.entity_id ELSE coalesce(release.team_id,project.team_id) END
  LEFT JOIN titles title ON title.id=CASE WHEN audit.entity_type='title' THEN audit.entity_id ELSE coalesce(chapter.title_id,project.title_id,comment.title_id,report.title_id) END
- WHERE ($1='' OR (audit.created_at,audit.id)<(SELECT created_at,id FROM audit_logs WHERE id=$1)) ORDER BY audit.created_at DESC,audit.id DESC LIMIT 50`, after)
+ WHERE ($1='' OR (audit.created_at,audit.id)<(SELECT created_at,id FROM audit_logs WHERE id=$1)) AND ($2='' OR audit.user_id=$2 OR actor.display_name ILIKE '%'||$2||'%')
+ AND ($3='' OR audit.entity_id=$3 OR coalesce(target_user.display_name,title.name_kk,team.name,'') ILIKE '%'||$3||'%')
+ AND ($4='' OR audit.action=$4)
+ AND ($5='' OR audit.created_at>=NULLIF($5,'')::timestamptz)
+ AND ($6='' OR audit.created_at<=NULLIF($6,'')::timestamptz)
+ ORDER BY audit.created_at DESC,audit.id DESC LIMIT 50`, after, filter.Actor, filter.Object, filter.Action, filter.From, filter.To)
 	if failure != nil {
 		return nil, failure
 	}

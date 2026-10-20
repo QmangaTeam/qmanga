@@ -79,6 +79,14 @@ func TestAccountManagement(tester *testing.T) {
 	if failure != nil || len(history) != 1 {
 		tester.Fatal("missing management audit", history, failure)
 	}
+	filtered, err := repository.Audit(ctx, "admin", "", application.AuditFilter{Actor: "Moderator", Object: "reader", Action: "manage_account"})
+	if err != nil || len(filtered) != 1 {
+		tester.Fatal("applied audit filters", filtered, err)
+	}
+	filtered, err = repository.Audit(ctx, "admin", "", application.AuditFilter{Action: "publish"})
+	if err != nil || len(filtered) != 0 {
+		tester.Fatal("audit filter mismatch", filtered, err)
+	}
 	encoded, _ := json.Marshal(history[0])
 	var view map[string]any
 	json.Unmarshal(encoded, &view)
