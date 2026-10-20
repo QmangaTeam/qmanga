@@ -41,9 +41,9 @@ jobs:
           echo "Changed files since $base:"
           printf '%s\n' "$changed"
           components=()
-          grep -qE '^apps/web/|^infra/web\.Dockerfile$' <<<"$changed" && components+=(web)
-          grep -qE '^backend/|^infra/(api\.Dockerfile|imagemagick-policy\.xml)$' <<<"$changed" && components+=(api)
-          grep -qE '^infra/(nginx\.conf|gateway\.Dockerfile)$|^deploy/Caddyfile$' <<<"$changed" && components+=(gateway)
+          if grep -qE '^apps/web/|^infra/web\.Dockerfile$' <<<"$changed"; then components+=(web); fi
+          if grep -qE '^backend/|^infra/(api\.Dockerfile|imagemagick-policy\.xml)$' <<<"$changed"; then components+=(api); fi
+          if grep -qE '^infra/(nginx\.conf|gateway\.Dockerfile)$|^deploy/Caddyfile$' <<<"$changed"; then components+=(gateway); fi
           slow=false
           if grep -qE '^(backend/migrations/|deploy/|infra/|\.github/)' <<<"$changed"; then
             slow=true
