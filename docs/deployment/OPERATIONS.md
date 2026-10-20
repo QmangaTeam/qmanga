@@ -26,7 +26,7 @@
 | Deploy SSH user | `qmanga` |
 | Основной приватный ключ | `/home/maqsatto/.ssh/qmanga_deploy` (0600) |
 | Дополнительный Oracle ключ | `/home/maqsatto/.ssh/qmanga_oracle` (0600); не подменять им проверенный deploy-доступ |
-| Проверенные host keys | `/home/maqsatto/.ssh/qmanga_known_hosts` (0644) |
+| Проверенные host keys | `/home/maqsatto/.ssh/known_hosts` (0644) |
 | Каталог ключей | `/home/maqsatto/.ssh` (0700) |
 
 Ключи перенесены из Downloads; оригиналы удалены по просьбе владельца. Не ищи их снова в Downloads, не выводи содержимое, не коммить и не отключай проверку host key. Эти пути относятся к компьютеру владельца; в другом окружении нужен доступ к тем же защищённым файлам.
@@ -34,11 +34,11 @@
 ```sh
 ssh -o BatchMode=yes -o IdentitiesOnly=yes \
   -o StrictHostKeyChecking=yes \
-  -o UserKnownHostsFile=/home/maqsatto/.ssh/qmanga_known_hosts \
+  -o UserKnownHostsFile=/home/maqsatto/.ssh/known_hosts \
   -i /home/maqsatto/.ssh/qmanga_deploy qmanga@138.3.254.185
 ```
 
-Deploy-доступ проверен. Не открывать SSH всему интернету, не создавать Bastion и не менять OCI/firewall ради обычного выпуска. Docker-доступ на сервере даёт фактически root-права.
+На 2026-10-20 в текущем окружении ключ `qmanga_deploy` присутствует с правами `0600`, а проверенные записи VM находятся в `known_hosts`; отдельного `qmanga_known_hosts` нет. TCP 443 доступен, но TCP 22 завершается таймаутом до SSH-аутентификации, поэтому исторические записи успешного доступа не подтверждает текущую доступность. До восстановления доступа состояние poller-а и выпуск нового SHA нельзя подтвердить по SSH. Не открывать SSH всему интернету, не создавать Bastion и не менять OCI/firewall ради обычного выпуска. Docker-доступ на сервере даёт фактически root-права.
 
 ## Что находится на сервере
 
