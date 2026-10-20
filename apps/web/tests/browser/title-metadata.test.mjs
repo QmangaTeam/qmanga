@@ -13,7 +13,7 @@ test('title counts match the API, combined information reflows and icon sorting 
    try{
     await context.addCookies([{name:'qmanga_locale',value:locale,url:fixture.app_url}]);await context.addInitScript(value=>localStorage.setItem('qmanga.theme',value),theme);
     const data=await (await context.request.get('/api/v1/titles/'+(fixture.title_slug||fixture.title_id))).json();assert.equal(typeof data.comment_count,'number');
-    const page=await context.newPage();page.setDefaultTimeout(7000);await page.goto('/titles/'+data.slug);
+    const page=await context.newPage();page.setDefaultTimeout(7000);await page.goto('/titles/'+data.slug);await page.waitForLoadState('networkidle');
     assert.equal(await page.locator('.title-tabs a[href*="tab=chapters"] .tab-count').textContent(),String(data.chapter_count));
     assert.equal(await page.locator('.title-tabs a[href*="tab=comments"] .tab-count').textContent(),String(data.comment_count));
     for(const width of [320,360,1280]){

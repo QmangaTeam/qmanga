@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-branding'
 created_date: '2026-10-20 21:42'
-updated_date: '2026-10-20 21:45'
+updated_date: '2026-10-20 21:52'
 labels: []
 dependencies: []
 type: enhancement
@@ -34,4 +34,6 @@ Inspect sharedauth/navigationcomponents, implement boundedpresentation changes,m
 
 <!-- SECTION:NOTES:BEGIN -->
 Implemented shared auth wordmark using existing single-Q favicon and theme text/accent tokens. MobileNavigation centers unique Home as third of five destinations using Q mark; catalogue/library/notifications/menu and badge/current-link/focus preserved. No auth request/returnTo logic or desktop navigation order changed. Verified: branding UI SSR 2/2 tests (17 assertions); bun run check 0 errors/warnings; Chromium read-only auth-branding browser test 1/1 covering login/register at 320/360/1280, kk/ru, dark/light, navigation order/targets/focus/centering; git diff --check clean. Visually inspected 320px login/catalog screenshots in tmp/task-106. Local review only; no push/release. Root coordinates commit SHA, independent review and production acceptance.
+
+Committed source/tests as7905513. Independent reviewer reran auth-branding anddensity tests2pass; centeredHome,all5destinations,44pxtargets andauthbrand bothlocales/themes verified. Rootcombinedbuild/type/UI/contrast/boundary checks pass. Localacceptanceonly,Reviewpendingowner; notproductionrelease.
 <!-- SECTION:NOTES:END -->

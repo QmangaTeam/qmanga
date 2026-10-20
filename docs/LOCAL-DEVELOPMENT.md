@@ -98,6 +98,16 @@ This runs Vite with the source directory mounted into the web container and forw
 
 Run this from the repository root. Keep the same Compose project and credentials; do not use `down -v` or volume pruning. This environment contains persistent user content and must not be used as a disposable browser-test fixture. Create a separate test project for automated seeding/cleanup. The old `tmp/task68/fixture.json` was moved to the private local review configuration to prevent accidental reuse; generated local account credentials are not stored in Git or this document.
 
+## Isolated comment/reply preview
+
+For presentation review without signing in or writing to the local manga library:
+
+```sh
+bun --cwd apps/web ./node_modules/vite/bin/vite.js --config tests/community-preview/community-preview.config.ts
+```
+
+Open <http://localhost:3002/?locale=ru> or use `locale=kk`; add `theme=light` for the light palette. This fixture mounts the real discussion component with synthetic comments and an in-memory gateway. Submit/edit/remove/report actions affect only the preview state and reset on reload. The browser regression starts and cleans up its own random-port instance; the manual preview can remain running separately.
+
 ## Stop, resume and inspect
 
 ```powershell

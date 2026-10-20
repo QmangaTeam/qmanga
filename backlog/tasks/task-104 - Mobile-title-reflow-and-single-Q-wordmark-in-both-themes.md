@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 19:50'
-updated_date: '2026-10-20 21:46'
+updated_date: '2026-10-20 21:52'
 labels: []
 dependencies: []
 priority: high
@@ -70,4 +70,6 @@ Owner compact-tabs/credits follow-up implemented locally: tablinks no fragment +
 Owner icons/avatar/dense-data follow-up: removed chapter fact only (tab/stats retained); all8populated fieldlabels haveicons, original/translationstatuses showdecorativecoloreddots withtext includingpaused/stopped enums. Teamchips use existing/media/avatars/team/id withlazyimage,errorfallback andtitle-resetstate. Horizontal scrollbar hidden inFirefox/WebKit whilekeyboard/swipe preserved. Dense data exposed absolute sr-onlyexternal-link text escapingrail; positionrelative onlinks fixespageoverflow. Longaliaslist nowhorizontalmobile, preservingallnames with~136pxrail. Checks finalSvelte0errors0warnings,49UItests789assertions, frontendbuild/architecture/contrast pass;3genericbrowserregressions pluslocaldenseacceptance pass onfullfixture, targeted dense rerunafteraliascompactness passes kk/ru dark/light widths320/360/730/960/1280, actualavatar+fallback,hiddenbarArrowRight,longtextexpansion. Independentreview confirmed nooverflow320/730/1280,allfields/statusdots/avatar andcompactrail. Denseverification script/assets/screenshots ignoredtmp/task104/dense-demo; sourceSSR regressions retained inCI. Localdevlive, no push/productionchange. Await ownervisualacceptance.
 
 Owner dense-spacing follow-up: intrinsic metadata/creditheight withcaps only; mobilefacts max88px/nativeoverflow, desktoprail clamp280px/42dvh/380px; contributors compact2columnmobile/1columndesktop max144–192px nativescroll. Allfields preserved,hiddenhorizontalbar unchanged,44pxcontrols. LocalSvelte0/0 andUI51tests pass atinterim withbranding included. New title-density browserregression passes dark/light320/360/730/960/1440. Independentreview reran density/auth tests2pass andchecked dense/sparse320/360/960/1440: sparsemobilefacts69px andcreditsnatural81–103px, densecreditscap192px/content282–360px; final contributor keyboardfocus scrollsfullyintoview. Awaitownerlocalacceptance; no productionrelease.
+
+Source result committed as c6a0254. Latercombinedchecks use same productcode: Svelte0/0,51UItests806assertions,build/boundary/contrast pass. Finalbrowser readiness stabilization waits for hydration/networkidle beforechapter-form interactions; initialbuild-overlap timing failure passedisolatedrerun. Ownerlocalreviewstillpending; no releaseclaim.
 <!-- SECTION:NOTES:END -->
