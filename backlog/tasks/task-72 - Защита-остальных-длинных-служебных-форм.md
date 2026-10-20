@@ -1,9 +1,11 @@
 ---
 id: TASK-72
 title: Защита остальных длинных служебных форм
-status: To Do
-assignee: []
+status: Review
+assignee:
+  - '@codex'
 created_date: '2026-10-20 15:13'
+updated_date: '2026-10-20 16:52'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -27,6 +29,40 @@ ordinal: 44004
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Перечень грязных форм команд, заявок и админки подтверждён текущим кодом; выход/смена объекта требуют явного согласия на потерю несохранённого.
-- [ ] #2 Отмена сохраняет текст и файлы; успешное сохранение снимает предупреждение; смена аккаунта не переносит черновик другому пользователю.
+- [x] #1 Перечень грязных форм команд, заявок и админки подтверждён текущим кодом; выход/смена объекта требуют явного согласия на потерю несохранённого.
+- [x] #2 Отмена сохраняет текст и файлы; успешное сохранение снимает предупреждение; смена аккаунта не переносит черновик другому пользователю.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Сверить фактические формы/контракт; воспроизвести недостающий сценарий; выполнить ограниченную реализацию, проверить локали/узкие экраны/ошибки и сохранить результат с SHA.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Подключена защита несохранённого в Studio команд (профиль/приглашение), ProjectRequests (новая/повторная заявка/причина решения), AdminCatalogue/Taxonomy/AccountManagement, TeamApprovals, Moderation (возврат/доступность), Reports (причины по объектам), TitleChangeDetail (причина, включая refresh после ошибки). Metadata TitleChangeForm сохраняет прежнюю защиту текстов/файлов. Browser form-workflow 3/3 pass: отмена close/navigation/switch сохраняет ввод, админская причина остаётся, независимый review исправил bypass повторного load. Успешные операции снимают соответствующий dirty baseline, root identity key изолирует аккаунты. Реализация 9edb620/3c9248e/f04921a +531a2c4/604cf77. Локальная приёмка; выпуск ещё не подтверждён.
+
+Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
+<!-- SECTION:NOTES:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-10-20 16:23
+
+---
+
+Admin contribution: 531a2c4/e66ae39/6359b65 добавляют UnsavedChanges в AdminTaxonomy, AdminCatalogue и AccountManagement; смена выбранного объекта требует согласия, cancel не меняет drafts, сохранение сбрасывает baseline; user prop change очищает account/catalog drafts. Финальная browser проверка у root.
+
+---
+
+created: 2026-10-20 16:31
+
+---
+
+Независимый review:604cf77 создание проекта обновляет только detail.projects и не вызывает choose(selected), сохраняя input, aliases, authors, categoryIds и dirty baseline. Browser регрессия draft→createProject→preserve добавлена в admin.test.mjs, общий запуск выполняет root.
+
+---
+<!-- COMMENTS:END -->

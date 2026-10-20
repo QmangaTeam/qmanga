@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 15:26'
+updated_date: '2026-10-20 16:52'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -48,4 +48,6 @@ ordinal: 44003
 Реализовано: группы по chapterId, имя главы при наличии, состояние и текстовая отметка Открыта/Ашық. Количество страниц показано только у открытой версии из полных active.pages: list DTO намеренно содержит pages=[], недостоверный ноль не выводится. GET-переключение синхронизирует chapterId, сохраняет прежнюю версию при 500 и позволяет повтор. Сохранены upload/order/attribution guards, добавлена защита незавершённого ввода новой главы. Дозагрузка и fallback глав вне chapters page сохранены. Browser-regressions включены в CI через tests/browser/*.test.mjs. Итог: studio-priority/publishing-steps/publishing-cover/workspace 11/11 pass, включая 101 synthetic revision, 500/retry, без создающего POST, dirty guard, kk/ru/light/dark/320/360/1280. Svelte 0 errors/0 warnings, architecture, contrast, ui-preview pass; 127 module и 41 UI pass; Docker production web build/health pass. Независимый review diff и повтор после уточнения счётчика: новых замечаний нет; reviewer browser не запускал. Физический Android не проверен (TASK-97). Не выпущено, Review. Следующий шаг очереди TASK-72; для выпуска нужен авторизованный push и наблюдаемый тот же SHA.
 
 SHA результата и локально проверенного пакета: 05725000545f23f1ad1d9eaa063cd514aa9ca2b9. Внешняя проверка 20.10.2026: production health 200, фактический SHA 36b3a5f455eb37830408af44c2e2f00b48eabd51. Пакет TASK-69–71 не запушен и не выпущен. Следующий шаг реализации: TASK-72 (To Do); выпуск требует push и подтверждения production SHA.
+
+Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
 <!-- SECTION:NOTES:END -->

@@ -1,9 +1,11 @@
 ---
 id: TASK-98
 title: Повтор каталога без сброса условий
-status: To Do
-assignee: []
+status: Review
+assignee:
+  - '@reader-agent'
 created_date: '2026-10-20 15:13'
+updated_date: '2026-10-20 16:52'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -27,6 +29,20 @@ ordinal: 44030
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Retry после ошибки повторяет исходную выдачу с q, фильтрами, сортировкой и cursor.
-- [ ] #2 Browser-регрессия воспроизводит сбой/восстановление; пустой результат, история и локаль остаются корректными.
+- [x] #1 Retry после ошибки повторяет исходную выдачу с q, фильтрами, сортировкой и cursor.
+- [x] #2 Browser-регрессия воспроизводит сбой/восстановление; пустой результат, история и локаль остаются корректными.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Сверить контракт и добавить регрессию. 2. Узкое изменение с account scope и локалями. 3. Unit/UI/browser проверки и SHA; выпуск отдельно.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+18e11b4: SSR load сохраняет точный pathname+search для retry включая cursor. SSR regression pass. Browser сбой/восстановление на актуальном runtime pending root; не выдаётся за пройденный. Локально текущие svelte-check 0 errors/warnings, frontend boundaries pass, UI45 pass; выпуска не подтверждают. Следующий шаг: root serial browser/runtime, independent review и authorised release acceptance.
+
+Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
+<!-- SECTION:NOTES:END -->

@@ -1,11 +1,11 @@
 ---
 id: TASK-75
 title: Сводка обработки страниц после загрузки
-status: In Progress
+status: Review
 assignee:
   - '@studio-agent'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 16:20'
+updated_date: '2026-10-20 16:52'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -29,8 +29,8 @@ ordinal: 44007
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Количество готовых, обрабатываемых и ошибочных страниц согласовано с фактическими данными версии.
-- [ ] #2 Ошибки ведут к конкретным страницам и существующему retry; успешная передача не называется завершённой обработкой.
+- [x] #1 Количество готовых, обрабатываемых и ошибочных страниц согласовано с фактическими данными версии.
+- [x] #2 Ошибки ведут к конкретным страницам и существующему retry; успешная передача не называется завершённой обработкой.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -43,4 +43,8 @@ ordinal: 44007
 
 <!-- SECTION:NOTES:BEGIN -->
 9c3bac5: фактические ready/processing/failed/unknown количества, переход и focus к ошибочному ID, существующий retry и обновление состояния. Локально: svelte-check 0 ошибок/0 предупреждений; test:ui 46 pass; 9 domain/application тестов pass; frontend architecture pass; node --check studio-workflow.test.mjs pass. Browser studio-workflow.test.mjs/publishing-steps.test.mjs/project-cards.test.mjs и PostgreSQL integration на итоговом image ещё не выполнены; выпуск/независимая приёмка не подтверждены. Следующий шаг: общий rebuild и реальные browser/Go проверки координатором, затем Review; production SHA проверяет координатор.
+
+Локальная общая приёмка 20.10: полный Go/PostgreSQL -p1 ./... PASS (tmp/task72/go-final.log), 146 module +46UI PASS, Svelte0/0, architecture/contrast/ui-preview PASS. Browser studio-priority/studio-workflow/tag-search9/9 и publishing/cover/project-cards6/6 PASS; восстановление списка/скролла, preview→версия/шаг, reload, processing/grid/preflight подтверждены. Повторное независимое review3P2context исправлено, новых замечаний нет. Выпуск до push не подтверждён.
+
+Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
 <!-- SECTION:NOTES:END -->

@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 15:26'
+updated_date: '2026-10-20 16:52'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -48,4 +48,6 @@ ordinal: 44001
 Локально: текущая версия и шаги стоят первыми в DOM на мобильном, выбор главы ниже с явной кнопкой и переносом фокуса; данные тайтла после работы. Пустой проект открывает создание. Svelte 0 errors/0 warnings, architecture pass, Docker web build/health pass, browser studio-priority + publishing-steps 5/5 pass (320/360/1280, kk/ru, обе темы, keyboard, empty, save failure/dirty guards). Выпуск не подтверждён; карточка остаётся Review. Независимый review будет выполнен по завершении пакета.
 
 Результат: a07cb40; итоговый проверенный пакет 05725000545f23f1ad1d9eaa063cd514aa9ca2b9. Независимый review и повторная сверка: новых замечаний нет. Связанные publishing-cover тесты адаптированы к явному раскрытию выбора главы. Итоговые browser 11/11, module 127/127, UI 41/41, Svelte/architecture/contrast/ui-preview и Docker web pass. Review до выпуска. Следующий шаг очереди TASK-72.
+
+Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
 <!-- SECTION:NOTES:END -->

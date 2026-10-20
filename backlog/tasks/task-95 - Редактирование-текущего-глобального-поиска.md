@@ -1,9 +1,11 @@
 ---
 id: TASK-95
 title: Редактирование текущего глобального поиска
-status: To Do
-assignee: []
+status: Review
+assignee:
+  - '@reader-agent'
 created_date: '2026-10-20 15:13'
+updated_date: '2026-10-20 16:52'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -27,6 +29,24 @@ ordinal: 44027
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Открытие глобального поиска подставляет актуальный q из URL каталога.
-- [ ] #2 Изменение/очистка/повторное открытие и Escape работают предсказуемо без сброса локали и без устаревшего запроса.
+- [x] #1 Открытие глобального поиска подставляет актуальный q из URL каталога.
+- [x] #2 Изменение/очистка/повторное открытие и Escape работают предсказуемо без сброса локали и без устаревшего запроса.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Сверить контракт и добавить регрессию. 2. Узкое изменение с account scope и локалями. 3. Unit/UI/browser проверки и SHA; выпуск отдельно.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+4b8499b: каждое открытие global search берёт актуальный q из каталога URL; Escape discards unsubmitted values on next open. Browser regression authored, runtime pending root. Локально текущие svelte-check 0 errors/warnings, frontend boundaries pass, UI45 pass; выпуска не подтверждают. Следующий шаг: root serial browser/runtime, independent review и authorised release acceptance.
+
+83af48a исправляет найденный browser-регрессией настоящий дефект: native input type=search перехватывал первый Escape, очищая ввод и оставляя модальный поиск открытым. Явный Escape handler закрывает dialog с preventDefault. RED browser reproduced; svelte-check 0 errors/warnings. GREEN browser требует обновлённого image, root выполняет rebuild+rerun.
+
+Локальная общая приёмка: notifications/offline/navigation8/8, avatar/library/metrics4/4, reader-improvements3/3 PASS; global Escape исправлен83af48a, EXIF JPEG891f3c9 и PNG bce8ee8 согласованы с фактическим Chrome. Полный Go/PostgreSQL PASS, identity/HTTP послеPNG PASS;146module+46UI,Svelte0/0,architecture/contrast/preview PASS. Повторное independent review без замечаний; physicalAndroid не проводился. Выпуск ещё не подтверждён.
+
+Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
+<!-- SECTION:NOTES:END -->

@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 15:26'
+updated_date: '2026-10-20 16:52'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -48,4 +48,6 @@ ordinal: 44002
 Локально: отдельный StudioHeader с аккаунтом/возвратом, пять направлений в native dialog; public chrome остаётся на публичных маршрутах. Svelte 0 errors/0 warnings, architecture pass, UI 41/41, Docker web build/health pass, browser studio-priority/workspace/notification-isolation 6/6 (kk/ru, темы, 320/360/1280, keyboard/Escape/focus, переход в каталог, account isolation). Визуально проверены synthetic 360/1280. Не выпущено, независимый review по завершении пакета.
 
 Результат: 5dd3ace; итоговый проверенный пакет 05725000545f23f1ad1d9eaa063cd514aa9ca2b9. Независимый review: новых замечаний нет. Дополнительно browser notification-isolation pass; итоговые browser publishing/workspace 11/11 и Svelte/architecture/UI/contrast/ui-preview/Docker web pass. Review до выпуска. Следующий шаг очереди TASK-72.
+
+Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
 <!-- SECTION:NOTES:END -->
