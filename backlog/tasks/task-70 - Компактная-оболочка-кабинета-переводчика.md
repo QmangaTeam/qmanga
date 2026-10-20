@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 17:55'
+updated_date: '2026-10-20 18:04'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -54,4 +54,6 @@ CI hydration regression: reproduce delayed application JS and lost sidebar keybo
 Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
 
 CI regression 39468803806: deterministic delayed /_app JS reproduced enabled SSR disclosure swallowing Enter (navigation stayed closed after hydration; second Enter opened it). WorkspaceNavigation now disables native sidebar button until onMount attaches handlers; keyboard test waits enabled, new held-JS regression verifies SSR disabled then hydrated Enter opens navigation. Root rebuilt actual local Docker bundle: workspace browser 3/3 PASS (tmp/task99/navigation-browser-green.log), UI46/46 PASS, Svelte0 errors/0 warnings; frontend boundaries PASS. Independent CBZ agent review: no blockers. Review remains pending observed release of this SHA.
+
+Remote release readiness 2026-10-20: tested product SHA842a23f2c9bd55da1ad9447def70f428bda0b3b1. Verify Qmanga https://github.com/maqsatto/qmanga/actions/runs/39470308246 SUCCESS: both acceptance shards,88 browser scenarios (42+46),0 failures, full Go/PostgreSQL/codecs, frontend and all3 ARM64 images. Fast Release https://github.com/maqsatto/qmanga/actions/runs/39470308114 SUCCESS; refs/deploy-ready confirmed842a23f. Prior39468803806 failure was a real pre-hydration sidebar lost-Enter race, reproduced and fixed with native disabled-until-mounted control plus cold-JS regression; independent review passed, local workspace3/3/UI46/Svelte0/0 and repeated full CI green. Live Shikimori/AniList DTO→mapper→merge→metadataError/validPublication also validated (no titles created/changed). Public production still reports36b3a5f455eb37830408af44c2e2f00b48eabd51, health200; strict SSH with existing key and trusted known_hosts still times out before authentication. Rollout/production acceptance remains unconfirmed; keep Review. Next step: restore authorized SSH network access and inspect existing poller journal/state, preserve locks/backup/restore gates and release the ready immutable SHA through the single standard path.
 <!-- SECTION:NOTES:END -->

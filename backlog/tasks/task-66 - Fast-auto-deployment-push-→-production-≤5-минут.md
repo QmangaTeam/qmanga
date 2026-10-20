@@ -4,7 +4,7 @@ title: 'Fast auto deployment: push → production ≤5 минут'
 status: Review
 assignee: []
 created_date: '2026-10-20 01:19'
-updated_date: '2026-10-20 17:23'
+updated_date: '2026-10-20 18:04'
 labels:
   - CI
   - deployment
@@ -34,4 +34,6 @@ ordinal: 41026
 Блокер: SSH к VM из окружения агента не проходит (Connection timed out), поэтому 20-секундный таймер не установлен — сейчас действует старый 5-минутный, из-за чего замеры 300–1012s. После установки юнита ожидается ~130–260s. Push выполняется через SSH-агент.
 
 2026-10-20: owner explicitly requested immediate production rollout. Rechecked refs/deploy-ready = 4145910eb7bc649aaca2a2e890a44fbfa5f75575 with successful Fast Release and full Verify. Public DNS resolves VM 138.3.254.185; TCP443 connects, TCP22 times out before authentication. qmanga_deploy exists mode0600; trusted VM host entries exist in ~/.ssh/known_hosts (old documented qmanga_known_hosts absent), OPERATIONS corrected. Repeated strict SSH with the actual known_hosts also times out. Production public SHA remains 36b3a5f455eb37830408af44c2e2f00b48eabd51. No firewall/permissions/lock/hold changes or alternate deployment path used. Next: restore existing authorized SSH network access, inspect poller journal/state and allow the tested SHA through standard staging/production gates.
+
+Remote release readiness 2026-10-20: tested product SHA842a23f2c9bd55da1ad9447def70f428bda0b3b1. Verify Qmanga https://github.com/maqsatto/qmanga/actions/runs/39470308246 SUCCESS: both acceptance shards,88 browser scenarios (42+46),0 failures, full Go/PostgreSQL/codecs, frontend and all3 ARM64 images. Fast Release https://github.com/maqsatto/qmanga/actions/runs/39470308114 SUCCESS; refs/deploy-ready confirmed842a23f. Prior39468803806 failure was a real pre-hydration sidebar lost-Enter race, reproduced and fixed with native disabled-until-mounted control plus cold-JS regression; independent review passed, local workspace3/3/UI46/Svelte0/0 and repeated full CI green. Live Shikimori/AniList DTO→mapper→merge→metadataError/validPublication also validated (no titles created/changed). Public production still reports36b3a5f455eb37830408af44c2e2f00b48eabd51, health200; strict SSH with existing key and trusted known_hosts still times out before authentication. Rollout/production acceptance remains unconfirmed; keep Review. Next step: restore authorized SSH network access and inspect existing poller journal/state, preserve locks/backup/restore gates and release the ready immutable SHA through the single standard path.
 <!-- SECTION:NOTES:END -->
