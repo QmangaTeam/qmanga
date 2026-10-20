@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 19:50'
-updated_date: '2026-10-20 20:17'
+updated_date: '2026-10-20 20:29'
 labels: []
 dependencies: []
 priority: high
@@ -40,4 +40,8 @@ Implemented mobile title heading→large centered cover→full-width Read/librar
 Owner follow-up: equal column spacing and aligned labels/values in title facts at885px; inspect row heights/negative link margins and ensure320/360/885/1280 both themes.
 
 Follow-up: equal five-column facts grid with shared label/value rows; two equal columns on phones. Local Svelte check0errors0warnings;46UItests pass; Docker webbuild passes; read-only browser regression passes kk/ru × dark/light/system-dark/system-light at320/360/487 plus885/1280 spacing assertions. Independent review confirms alignment at320/360/768/885/960/1024/1280. Awaiting owner local acceptance, no push/release.
+
+Owner follow-up: compact visible label/value spacing to4px while preserving44px link/button targets and equal columns. Scope presentation only, both themes and phone/885/desktop checks.
+
+Compact follow-up verified: visible label/value CSSgap4px, label baselines aligned, links/statistics targets retain44px. Sveltecheck0errors0warnings,46UItests pass, Dockerwebbuild healthy; browser regression kk/ru × explicit/system dark/light at320/360/487/885/960/1280 passes. Independent review raised960px boundary coverage, now included and passing. Local browser screenshot tmp/task104/compact-facts.png. Await owner local review; no push/production release.
 <!-- SECTION:NOTES:END -->

@@ -22,10 +22,10 @@ test('mobile title reflows and the single-Q wordmark follows explicit and system
     const actions=await page.locator('.title-actions').boundingBox(),read=await page.locator('.read-button').boundingBox();assert.ok(read.width>=actions.width-1,'Read spans phone width');
     if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:process.env.QMANGA_SCREENSHOT_DIR+`/title-${locale}-${mode}-${width}.png`,fullPage:true});}
    }
-   for(const width of [885,1280]){
+   for(const width of [885,960,1280]){
     await page.setViewportSize({width,height:900});
-    const cells=await page.locator('.title-facts>div').evaluateAll(items=>items.map(item=>({width:item.getBoundingClientRect().width,label:item.querySelector('dt').getBoundingClientRect().top,value:item.querySelector('dd').getBoundingClientRect().top})));
-    for(const cell of cells){assert.ok(Math.abs(cell.width-cells[0].width)<1,'equal fact column widths');assert.ok(Math.abs(cell.label-cells[0].label)<1,'aligned fact labels');assert.ok(Math.abs(cell.value-cells[0].value)<1,'aligned fact values');}
+    const cells=await page.locator('.title-facts>div').evaluateAll(items=>items.map(item=>({width:item.getBoundingClientRect().width,label:item.querySelector('dt').getBoundingClientRect().bottom,value:item.querySelector('dd').getBoundingClientRect().top})));
+    for(const cell of cells){assert.ok(Math.abs(cell.value-cell.label-4)<1,'compact four-pixel label/value gap');assert.ok(Math.abs(cell.width-cells[0].width)<1,'equal fact column widths');assert.ok(Math.abs(cell.label-cells[0].label)<1,'aligned fact label baselines');assert.ok(Math.abs(cell.value-cells[0].value)<1,'aligned fact values');}
    }
    await page.setViewportSize({width:1280,height:900});const mark=page.locator('header a.wordmark');
    assert.equal(await mark.locator('img').count(),1);assert.equal(await mark.locator('.brand-name').innerText(),'manga.');assert.equal(await mark.locator('img').getAttribute('src'),'/favicon.png');
