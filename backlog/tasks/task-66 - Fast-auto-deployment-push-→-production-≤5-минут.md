@@ -4,7 +4,7 @@ title: 'Fast auto deployment: push → production ≤5 минут'
 status: Review
 assignee: []
 created_date: '2026-10-20 01:19'
-updated_date: '2026-10-20 03:43'
+updated_date: '2026-10-20 17:23'
 labels:
   - CI
   - deployment
@@ -32,4 +32,6 @@ ordinal: 41026
 
 <!-- SECTION:NOTES:BEGIN -->
 Блокер: SSH к VM из окружения агента не проходит (Connection timed out), поэтому 20-секундный таймер не установлен — сейчас действует старый 5-минутный, из-за чего замеры 300–1012s. После установки юнита ожидается ~130–260s. Push выполняется через SSH-агент.
+
+2026-10-20: owner explicitly requested immediate production rollout. Rechecked refs/deploy-ready = 4145910eb7bc649aaca2a2e890a44fbfa5f75575 with successful Fast Release and full Verify. Public DNS resolves VM 138.3.254.185; TCP443 connects, TCP22 times out before authentication. qmanga_deploy exists mode0600; trusted VM host entries exist in ~/.ssh/known_hosts (old documented qmanga_known_hosts absent), OPERATIONS corrected. Repeated strict SSH with the actual known_hosts also times out. Production public SHA remains 36b3a5f455eb37830408af44c2e2f00b48eabd51. No firewall/permissions/lock/hold changes or alternate deployment path used. Next: restore existing authorized SSH network access, inspect poller journal/state and allow the tested SHA through standard staging/production gates.
 <!-- SECTION:NOTES:END -->
