@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-pdf'
 created_date: '2026-10-20 16:49'
-updated_date: '2026-10-20 17:40'
+updated_date: '2026-10-20 17:45'
 labels:
   - web
   - publishing
@@ -45,6 +45,8 @@ Commit реализации 049c929. Root проверил общий upload UI 
 Root integrated production-build verification: added PDF UI→preview(noPUT)→confirm→two ordered authorized API uploads regression64b9915, cleanupd3cab1e, resource assertions0941728. Actual Docker build serves LICENSE, fallbackfont, CMap and OpenJPEGWASM HTTP200; PDF production bundle test1/1 PASS. Standalone real codec test1/1 PASS repeated by root. Root12 responsive locale/theme combinations PASS, screenshots inspected; full Go/PostgreSQL and157module/46UI/Svelte0/0/architecture/contrast/preview pass. Independent PDF-agent review of root regression no blocking findings. Production acceptance pending SSH TCP22 timeout; no release claim.
 
 Cold decoder chunk cancellation regression: delayed pdfjs-dist.js route proved old code constructed 1 worker after cancellation; added post-import abort guard, new Chromium test proves 0 workers. Browser codec suite now 2/2 PASS, previous error/cancel/encryption/order cases retained.
+
+Final integration 2026-10-20 at833f606: Docker API/web/gateway rebuilt and healthy. 158 frontend module +46 UI PASS; Svelte0errors/0warnings; architecture, both-theme contrast and preview checks PASS; Backlog doctor clean. Full Go/PostgreSQL -p1 ./... passed, latest catalog/source/HTTP/bootstrap real-DB checks repeated after endpoint/pacing changes PASS. Latest CBZ/PDF browser7/7 (including immediate cold decoder cancellation); metadata browser5/5. Root additionally verified12 responsive kk/ru x themes x320/360/1280 combinations for import forms and44px targets, and actual local API→live Shikimori.io/AniList search/detail/reprocessed WebPcover. Independent CBZ/PDF/metadata and root docs/test reviews have no remaining blocking findings. All12 new browser scenarios enter existing CI glob. Product tasks remain Review until full remote Verify and observed release of the same SHA. Production access blocker remains TCP22 timeout before authentication; no lock/hold/firewall/deployment bypass used.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

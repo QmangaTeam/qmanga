@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 16:49'
-updated_date: '2026-10-20 17:44'
+updated_date: '2026-10-20 17:45'
 labels:
   - web
   - publishing
@@ -44,6 +44,8 @@ Implemented common server/application import port and Shikimori adapter, private
 Final implementation SHAs: 3f7ae72, f96809e, ec8e34f, d3fb15f, 6be46e4. Independent metadata review by cbz_import reported no remaining blocking findings after the context/busy/keyboard and candidate-editor fixes. Real rebuilt local API -> live Shikimori search (10 results) -> selection external 13 -> source authors/tags mapping -> metadata receipt -> reprocessed WebP cover all returned HTTP 200; 1 author, 4 canonical genres, 0 unresolved tags, cover 27066 bytes, provenance host shikimori.io. Live AniList same pipeline also passed. Final browser cases cover admin explicit confirmation and real metadata save, studio cover preview/provenance retention and moderated multipart retry, cover-fetch failure truthfulness, pending import field/context locks, and one-editor candidate keyboard mapping. Source fixture tests, latest targeted Go checks, Svelte 0/0 and frontend boundaries pass. Local implementation is ready for integration review; authorized push, full Verify gate for migration 000035, observed staging/production release and production SHA confirmation remain coordinator-owned.
 
 Migration 000035 is additive: new metadata_tag_mappings and metadata_import_receipts tables/index only; existing title metadata, taxonomy IDs, publication data, revisions and offline storage schemas are not rewritten. Application rollback can leave these new tables in place; no production volume/data deletion or down migration is required. The migration requires the full Verify gate before deploy-ready under the existing release contract.
+
+Final integration 2026-10-20 at833f606: Docker API/web/gateway rebuilt and healthy. 158 frontend module +46 UI PASS; Svelte0errors/0warnings; architecture, both-theme contrast and preview checks PASS; Backlog doctor clean. Full Go/PostgreSQL -p1 ./... passed, latest catalog/source/HTTP/bootstrap real-DB checks repeated after endpoint/pacing changes PASS. Latest CBZ/PDF browser7/7 (including immediate cold decoder cancellation); metadata browser5/5. Root additionally verified12 responsive kk/ru x themes x320/360/1280 combinations for import forms and44px targets, and actual local API→live Shikimori.io/AniList search/detail/reprocessed WebPcover. Independent CBZ/PDF/metadata and root docs/test reviews have no remaining blocking findings. All12 new browser scenarios enter existing CI glob. Product tasks remain Review until full remote Verify and observed release of the same SHA. Production access blocker remains TCP22 timeout before authentication; no lock/hold/firewall/deployment bypass used.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

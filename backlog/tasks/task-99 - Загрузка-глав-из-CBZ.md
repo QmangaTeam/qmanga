@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-cbz'
 created_date: '2026-10-20 16:49'
-updated_date: '2026-10-20 17:39'
+updated_date: '2026-10-20 17:45'
 labels:
   - web
   - publishing
@@ -47,6 +47,8 @@ Chromium UI/HTTP regression 2/2 pass на disposable localhost:18080: реаль
 Root integration verification 2026-10-20: rebuilt Docker API/web/gateway healthy; latest CBZ compression flags48e1802 accepted in real browser. cbz-import.test.mjs 2/2 PASS (compressed CRC/order/cancel and real upload preview/partial failure/resume/dedup); PDF shared upload regression also PASS. Root layout 12 kk/ru x dark/light x 320/360/1280 combinations PASS; mobile/desktop screenshots inspected under ignored tmp/task99. Full frontend157 module +46UI, Svelte0/0, architecture/contrast/preview PASS; full Go/PostgreSQL -p1 ./... PASS. Independent PDF-agent review of CBZ/shared UI found account-binding issue, fixed and re-reviewed no remaining blockers. Release remains unconfirmed due TCP22 access timeout; Review.
 
 Дополнительно исправлена отмена во время холодной загрузки JS декодера: ChapterImportTask.done немедленно завершается upload_cancelled через abort race; фоновая работа сверяет signal до декодера/после подготовки/хеширования. Новый Chromium delayed-module regression сначала воспроизвёл timeout, после правки pass; unit10pass, svelte-check0/0, architecturepass. Actual UI delayed-chunk regression добавлен в pdf-upload.test.mjs: сохранение существующей страницы, отсутствие PUT/preview и разблокировка ввода до завершения JS запроса; ожидает root rebuild/прогона.
+
+Final integration 2026-10-20 at833f606: Docker API/web/gateway rebuilt and healthy. 158 frontend module +46 UI PASS; Svelte0errors/0warnings; architecture, both-theme contrast and preview checks PASS; Backlog doctor clean. Full Go/PostgreSQL -p1 ./... passed, latest catalog/source/HTTP/bootstrap real-DB checks repeated after endpoint/pacing changes PASS. Latest CBZ/PDF browser7/7 (including immediate cold decoder cancellation); metadata browser5/5. Root additionally verified12 responsive kk/ru x themes x320/360/1280 combinations for import forms and44px targets, and actual local API→live Shikimori.io/AniList search/detail/reprocessed WebPcover. Independent CBZ/PDF/metadata and root docs/test reviews have no remaining blocking findings. All12 new browser scenarios enter existing CI glob. Product tasks remain Review until full remote Verify and observed release of the same SHA. Production access blocker remains TCP22 timeout before authentication; no lock/hold/firewall/deployment bypass used.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 16:49'
-updated_date: '2026-10-20 17:43'
+updated_date: '2026-10-20 17:45'
 labels:
   - web
   - publishing
@@ -42,6 +42,8 @@ ordinal: 45004
 Canonical matching uses stable source IDs, normalized exact taxonomy Kazakh/Russian names and slugs (English slug aliases), explicit admin-reviewed mappings and deduplication. Unknown and ambiguous tags are persisted in metadata_tag_mappings; ambiguity never picks an arbitrary canonical ID. Admin taxonomy page offers one active candidate editor with explicit canonical genre/category selection, preserving taxonomy groups and existing IDs. Browser account/context changes invalidate pending results. Genre/category caps preserve existing selected tags and display omitted imported-tag counts instead of claiming a complete import. Added real PostgreSQL regression for repeated imports, changed source labels, unmapped/ambiguous candidates, permissions, explicit review and selection provenance; coordinator reports full PostgreSQL suite passed. Merge unit cases cover missing fields, repeats, caps and retained manual source links. Final browser candidate keyboard/save test awaits rebuilt bundle; independent review and production release remain with coordinator.
 
 Final local acceptance: coordinator real-PostgreSQL suite passed the canonical mapping/candidate/review/provenance regression; source fixtures and 3 merge-policy tests pass. Rebuilt browser verifies canonical tags persisted through the actual admin save API and 100 candidates render no eager taxonomy selects, keyboard opens exactly one editor (<800 options), explicit canonical mapping is sent and the candidate leaves the queue. Actual Shikimori selection matched 4 canonical genres; actual AniList selection matched 62 and persisted 24 unresolved candidates. The existing 12-genre/24-category form limits remain authoritative: existing choices are retained and omitted imported-tag counts are visible. No duplicate taxonomy rows are auto-created. Independent review has no blocking findings. Code SHAs through 6be46e4; production acceptance remains pending coordinator release.
+
+Final integration 2026-10-20 at833f606: Docker API/web/gateway rebuilt and healthy. 158 frontend module +46 UI PASS; Svelte0errors/0warnings; architecture, both-theme contrast and preview checks PASS; Backlog doctor clean. Full Go/PostgreSQL -p1 ./... passed, latest catalog/source/HTTP/bootstrap real-DB checks repeated after endpoint/pacing changes PASS. Latest CBZ/PDF browser7/7 (including immediate cold decoder cancellation); metadata browser5/5. Root additionally verified12 responsive kk/ru x themes x320/360/1280 combinations for import forms and44px targets, and actual local API→live Shikimori.io/AniList search/detail/reprocessed WebPcover. Independent CBZ/PDF/metadata and root docs/test reviews have no remaining blocking findings. All12 new browser scenarios enter existing CI glob. Product tasks remain Review until full remote Verify and observed release of the same SHA. Production access blocker remains TCP22 timeout before authentication; no lock/hold/firewall/deployment bypass used.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
