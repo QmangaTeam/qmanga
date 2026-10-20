@@ -4,7 +4,7 @@
  import {useLocale,text} from '$lib/shared/presentation/locale';
  let {item,returnTo=''}:{item:ProjectListItem;returnTo?:string}=$props();const {locale}=useLocale();
  const href=$derived('/studio/projects/'+encodeURIComponent(item.id)+(item.nextRevisionId?'?revision='+encodeURIComponent(item.nextRevisionId):'')+(returnTo?(item.nextRevisionId?'&':'?')+'projectsReturn='+encodeURIComponent(returnTo):''));
- const work=$derived(({draft:text($locale,'Нобайды жалғастыру','Продолжить черновик'),processing:text($locale,'Өңделуде','Обработка страниц'),ready:text($locale,'Тексеруге жіберу','Отправить на проверку'),submitted:text($locale,'Шешімді күту','Ожидает решения'),changes_requested:text($locale,'Түзетулерді ашу','Открыть замечания')} as Record<string,string>)[item.nextRevisionState||'']);
+ const work=$derived(({draft:text($locale,'Нобайды жалғастыру','Продолжить черновик'),processing:text($locale,'Өңделуде','Обработка страниц'),ready:text($locale,'Тексеруге дайын','Готово к проверке'),submitted:text($locale,'Шешімді күту','Ожидает решения'),changes_requested:text($locale,'Түзетулерді ашу','Открыть замечания')} as Record<string,string>)[item.nextRevisionState||'']);
 </script>
 <article class="project-card">
  <a class="cover-link" href={href} aria-label={item.titleName}><ProjectCover url={item.coverURL} name={item.titleName}/></a>
