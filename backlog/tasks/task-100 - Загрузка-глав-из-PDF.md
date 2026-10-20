@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-pdf'
 created_date: '2026-10-20 16:49'
-updated_date: '2026-10-20 17:27'
+updated_date: '2026-10-20 17:33'
 labels:
   - web
   - publishing
@@ -41,6 +41,8 @@ ordinal: 45002
 Локально реализован PDF.js 6.4.299 decoder с отдельным self-hosted Worker, PNG в порядке документа, 50MiB/100 страниц/1600px/7500px/120M суммарных пикселей/250MiB output/60s; cancel завершает worker и render, очищает canvas. Шифрованные/повреждённые документы отклоняются; исходный PDF не отправляется. Локальные fonts/cmaps/wasm и их лицензии поставляет Vite plugin, QuickJS/fallback JS исключены. Проверено: 3 unit (15 asserts), реальный Chromium codec (2 цветные страницы и порядок, generated Standard R2 password PDF, corrupt, pre-abort, cancel после 1 страницы, forced timeout, retry, локальные assets/license/no external requests); frontend boundaries pass. CBZ agent independently reviewed adapter/assets; shared UI account-binding review finding исправлен. Ограничения: браузер не даёт hard OS memory cap; mobile physical device, полный shared UI/release и фактический production SHA ожидаются от root.
 
 Commit реализации 049c929. Root проверил общий upload UI на actual Docker app: 12 сочетаний kk/ru × dark/light × 320/360/1280 прошли, screenshot tmp/task99/import-kk-dark-320.png просмотрен. Это viewport emulation, не физическое Android-устройство. Ожидается финальный rebuild с assets plugin и внешняя проверка выпуска.
+
+Root integrated production-build verification: added PDF UI→preview(noPUT)→confirm→two ordered authorized API uploads regression64b9915, cleanupd3cab1e, resource assertions0941728. Actual Docker build serves LICENSE, fallbackfont, CMap and OpenJPEGWASM HTTP200; PDF production bundle test1/1 PASS. Standalone real codec test1/1 PASS repeated by root. Root12 responsive locale/theme combinations PASS, screenshots inspected; full Go/PostgreSQL and157module/46UI/Svelte0/0/architecture/contrast/preview pass. Independent PDF-agent review of root regression no blocking findings. Production acceptance pending SSH TCP22 timeout; no release claim.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
