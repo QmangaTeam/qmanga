@@ -94,6 +94,44 @@ INSERT INTO titles(id,slug,name_kk,is_listed) VALUES('title','title','Title',tru
 	if err != nil || len(page.Comments) != 2 {
 		t.Fatalf("reply page: %#v %v", page, err)
 	}
+	// A focused reply beyond the first contiguous batch must not advance paging.
+	if _, err = database.Pool().Exec(ctx, `INSERT INTO comments(id,user_id,title_id,body,created_at) VALUES('paged-root','one','title','Paging root',now()-interval '1 hour');
+ INSERT INTO comments(id,user_id,title_id,parent_id,root_id,body,created_at) SELECT 'paged-reply-'||lpad(n::text,2,'0'),'one','title','paged-root','paged-root','Reply '||n,now()-interval '30 minutes'+n*interval '1 second' FROM generate_series(1,30)n`); err != nil {
+		t.Fatal(err)
+	}
+	focusedPage, err := repository.Discussion(ctx, "title", "", "", "paged-reply-25")
+	if err != nil {
+		t.Fatal(err)
+	}
+	seen := map[string]bool{}
+	cursor := ""
+	for _, item := range focusedPage.Comments {
+		if item.ParentID != "" {
+			seen[item.ID] = true
+		}
+		if item.ID == "paged-root" {
+			cursor = item.ReplyCursor
+		}
+	}
+	if cursor != "paged-reply-10" {
+		t.Fatalf("focused reply advanced contiguous cursor: %q", cursor)
+	}
+	for step := 0; step < 3; step++ {
+		page, err := repository.Replies(ctx, "paged-root", cursor)
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, item := range page.Comments {
+			seen[item.ID] = true
+		}
+		if page.Next == "" {
+			break
+		}
+		cursor = page.Next
+	}
+	if len(seen) != 30 {
+		t.Fatalf("focused thread lost replies: %d", len(seen))
+	}
 	if _, err = create("two", "other", nested, "Wrong title"); !errors.Is(err, domain.ErrInvalid) {
 		t.Fatalf("cross-title reply: %v", err)
 	}

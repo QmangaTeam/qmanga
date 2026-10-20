@@ -2,7 +2,7 @@ import type {CommunityGateway,Comment,Discussion,Report,ModerationReport} from '
 import {ApiClient} from '$lib/shared/infrastructure/api-client';
 import type {AccountScope} from '../../identity/application/account-scope';
 function object(value:unknown){if(!value||typeof value!=='object')throw new Error('Деректер жарамсыз');return value as Record<string,unknown>;}
-function commentFrom(value:unknown):Comment{const item=object(value);return {displayName:typeof item.display_name==='string'?item.display_name:'',id:String(item.id),userId:String(item.user_id),parentId:String(item.parent_id),rootId:typeof item.root_id==='string'?item.root_id:String(item.parent_id||''),body:String(item.body),spoiler:item.spoiler===true,hidden:item.hidden===true,createdAt:String(item.created_at),replies:Number(item.replies)};}
+function commentFrom(value:unknown):Comment{const item=object(value);return {replyCursor:typeof item.reply_cursor==='string'?item.reply_cursor:undefined,displayName:typeof item.display_name==='string'?item.display_name:'',id:String(item.id),userId:String(item.user_id),parentId:String(item.parent_id),rootId:typeof item.root_id==='string'?item.root_id:String(item.parent_id||''),body:String(item.body),spoiler:item.spoiler===true,hidden:item.hidden===true,createdAt:String(item.created_at),replies:Number(item.replies)};}
 export class HttpCommunityGateway implements CommunityGateway {
  constructor(private api:ApiClient,private scope:AccountScope){}
  account(){return this.scope.currentId();}

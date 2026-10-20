@@ -82,7 +82,8 @@ func (repository *Repository) Discussion(ctx context.Context, title, release, af
 	 SELECT comment.id,comment.user_id,comment.title_id,COALESCE(comment.release_id,''),COALESCE(comment.parent_id,''),COALESCE(comment.root_id,comment.parent_id,''),
 	CASE WHEN comment.is_hidden OR comment.deleted_at IS NOT NULL THEN '' ELSE comment.body END,
 	comment.is_spoiler,comment.is_hidden OR comment.deleted_at IS NOT NULL,comment.created_at,
-	(SELECT count(*) FROM comments reply WHERE reply.root_id=comment.id OR (reply.root_id IS NULL AND reply.parent_id=comment.id)),(SELECT display_name FROM users WHERE id=comment.user_id)
+	(SELECT count(*) FROM comments reply WHERE reply.root_id=comment.id OR (reply.root_id IS NULL AND reply.parent_id=comment.id)),(SELECT display_name FROM users WHERE id=comment.user_id),
+ COALESCE((SELECT id FROM (SELECT id,created_at FROM comments reply WHERE reply.root_id=comment.id OR (reply.root_id IS NULL AND reply.parent_id=comment.id) ORDER BY created_at,id LIMIT 10) contiguous ORDER BY created_at DESC,id DESC LIMIT 1),'')
 	FROM comments comment WHERE comment.id IN(SELECT id FROM selected) ORDER BY comment.created_at,comment.id`, title, release, after, focus)
 	if failure != nil {
 		return result, failure
@@ -92,7 +93,7 @@ func (repository *Repository) Discussion(ctx context.Context, title, release, af
 	var oldest application.Comment
 	for rows.Next() {
 		var item application.Comment
-		if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.ParentID, &item.RootID, &item.Body, &item.Spoiler, &item.Hidden, &item.CreatedAt, &item.Replies, &item.DisplayName); failure != nil {
+		if failure = rows.Scan(&item.ID, &item.UserID, &item.TitleID, &item.ReleaseID, &item.ParentID, &item.RootID, &item.Body, &item.Spoiler, &item.Hidden, &item.CreatedAt, &item.Replies, &item.DisplayName, &item.ReplyCursor); failure != nil {
 			return result, failure
 		}
 		result.Comments = append(result.Comments, item)

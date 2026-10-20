@@ -1,0 +1,3 @@
+import type {Comment} from './community';
+export function replyCursor(root:Comment,comments:Comment[]):string|undefined {if(root.replyCursor!==undefined)return root.replyCursor;const replies=comments.filter(item=>item.rootId===root.id);return replies.at(-1)?.id;}
+export function mergeReplyPage(comments:Comment[],root:Comment,page:Comment[]):Comment[]{const ids=new Set(comments.map(item=>item.id));return [...comments.map(item=>item.id===root.id?{...item,replyCursor:page.at(-1)?.id||item.replyCursor}:item),...page.filter(item=>!ids.has(item.id))].sort((left,right)=>left.createdAt.localeCompare(right.createdAt)||left.id.localeCompare(right.id));}

@@ -8,6 +8,7 @@ import (
 
 type Comment struct {
 	DisplayName string
+	ReplyCursor string
 	domain.Comment
 	CreatedAt time.Time
 	Replies   int
