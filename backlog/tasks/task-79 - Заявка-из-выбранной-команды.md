@@ -1,11 +1,11 @@
 ---
 id: TASK-79
 title: Заявка из выбранной команды
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 16:52'
+updated_date: '2026-10-20 19:01'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -45,4 +45,12 @@ ordinal: 44011
 Реализовано 3c9248e: ссылка из команды передаёт team ID, ProjectRequests ищет выбранную команду по всей пагинации; выбирает только approved owner/editor. При недоступности — явное объяснение и пустой выбор без подмены первой командой. Browser подтвердил ID за первой сотней, недоступный team и сохранение текста после ошибки/отмены. form-workflow 3/3 pass, Svelte/architecture pass. Сервер авторитетен; не выпущено.
 
 Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
+
+Приёмка и выпуск 21.10.2026: фактический production SHA e2c9c8910d6dedbe74eddbafa028b8bb67180340 повторно наблюдён во внешней HTTPS главной; /api/v1/health =200, postgres/s3 ok. Verify Qmanga https://github.com/maqsatto/qmanga/actions/runs/39474894775 SUCCESS на этом SHA: обе acceptance-половины,88 браузерных сценариев без failures, frontend/Go/PostgreSQL и ARM64 images. Актуальные CI-логи сверены с относящимися browser-регрессиями; независимый review и исправления описаны выше. Прежние записи «не запушено/не выпущено» исторические и заменены этим наблюдаемым выпуском. Критерии этой карточки выполнены; физический Android отдельно TASK-97 и здесь не заявляется.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Реализация и регрессии проверены, выпущены в production e2c9c89; фактический SHA/health и полный CI подтверждены. Физическая Android-приёмка отслеживается отдельно TASK-97.
+<!-- SECTION:FINAL_SUMMARY:END -->

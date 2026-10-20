@@ -1,11 +1,11 @@
 ---
 id: TASK-98
 title: Повтор каталога без сброса условий
-status: Review
+status: Done
 assignee:
   - '@reader-agent'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 17:18'
+updated_date: '2026-10-20 19:01'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -49,4 +49,12 @@ ordinal: 44030
 CI6e2fa97 выявил зависимость теста от названия baseline-тайтла. Тест теперь создаёт два своих listed manga с search_text, получает действительный cursor и удаляет оба в finally. Изолированный API pause→unpause→retry21s local PASS. Продукт не менялся; independent review без замечаний. SHA тестовых исправлений dd66757cb766a5f5809e018b85314174f0af2730. Требуется повторный Verify Qmanga; статус Review, выпуск не подтверждён.
 
 Final remote verification 2026-10-20: SHA 4145910eb7bc649aaca2a2e890a44fbfa5f75575, Verify Qmanga https://github.com/maqsatto/qmanga/actions/runs/39463685921 SUCCESS (both acceptance/browser shards, Go/PostgreSQL/codecs and frontend checks); Fast Release https://github.com/maqsatto/qmanga/actions/runs/39463685942 SUCCESS. Earlier CI follow-up failures are resolved. External production still reports 36b3a5f455eb37830408af44c2e2f00b48eabd51; deployment of this package is not confirmed, status remains Review. Physical Android TASK-97 remains not_run; new imports TASK-99–103 are queued only.
+
+Приёмка и выпуск 21.10.2026: фактический production SHA e2c9c8910d6dedbe74eddbafa028b8bb67180340 повторно наблюдён во внешней HTTPS главной; /api/v1/health =200, postgres/s3 ok. Verify Qmanga https://github.com/maqsatto/qmanga/actions/runs/39474894775 SUCCESS на этом SHA: обе acceptance-половины,88 браузерных сценариев без failures, frontend/Go/PostgreSQL и ARM64 images. Актуальные CI-логи сверены с относящимися browser-регрессиями; независимый review и исправления описаны выше. Прежние записи «не запушено/не выпущено» исторические и заменены этим наблюдаемым выпуском. Критерии этой карточки выполнены; физический Android отдельно TASK-97 и здесь не заявляется.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Реализация и регрессии проверены, выпущены в production e2c9c89; фактический SHA/health и полный CI подтверждены. Физическая Android-приёмка отслеживается отдельно TASK-97.
+<!-- SECTION:FINAL_SUMMARY:END -->

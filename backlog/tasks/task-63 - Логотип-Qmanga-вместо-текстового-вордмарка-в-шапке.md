@@ -1,11 +1,11 @@
 ---
 id: TASK-63
 title: Логотип Qmanga вместо текстового вордмарка в шапке
-status: In Progress
+status: Done
 assignee:
   - codex
 created_date: '2026-10-19 04:58'
-updated_date: '2026-10-19 05:39'
+updated_date: '2026-10-20 19:01'
 labels:
   - owner-feedback-2026-10-19
 dependencies: []
@@ -44,4 +44,12 @@ svelte-check 0/0; discovery-тесты 9/9 (новая регрессия зел
 Дополнение владельца 19.10.2026, дословно: «да я зашел через гугл но не мог бы ты увеличить лого а то слишком мелки, и favicon поставь вот [изображение Q-пузыря]». Также подтверждён реальный вход через Google (закрывает проверку TASK-62). Работа: высота вордмарка 30→40px; favicon.png 96x96 и apple-touch-icon.png 180x180 из пузыря (фон #111112 снят в прозрачность, magick fuzz 12% -transparent, trim); link rel=icon и apple-touch-icon в head app.html. TDD: RED-проверки favicon-ссылок и высоты 40px в navigation-account браузерном тесте.
 
 Реализация дополнения: favicon.png 96x96 и apple-touch-icon.png 180x180 (Q-пузырь на прозрачном фоне, apple-версия на #111112), link rel=icon + apple-touch-icon в head app.html; высота вордмарка 40px. Отладка браузерного теста: после гидрации атрибуты href head-ссылок нормализуются в абсолютные, а после width-лупа вьюпорт мобильный (логотип скрыт) — проверки переписаны на rel-селекторы + regex href + снятие высоты при 1280x800. GREEN: navigation-account 5/0 на стенде; favicon.png и apple-touch-icon.png 200 на стенде. Скриншоты шапки light/dark 1280: tmp/logo-header-*-v3.png.
+
+Приёмка и выпуск 21.10.2026: фактический production SHA e2c9c8910d6dedbe74eddbafa028b8bb67180340 повторно наблюдён во внешней HTTPS главной; /api/v1/health =200, postgres/s3 ok. Verify Qmanga https://github.com/maqsatto/qmanga/actions/runs/39474894775 SUCCESS на этом SHA: обе acceptance-половины,88 браузерных сценариев без failures, frontend/Go/PostgreSQL и ARM64 images. Актуальные CI-логи сверены с относящимися browser-регрессиями; независимый review и исправления описаны выше. Прежние записи «не запушено/не выпущено» исторические и заменены этим наблюдаемым выпуском. Критерии этой карточки выполнены; физический Android отдельно TASK-97 и здесь не заявляется. Логотип40px и favicon проверяются navigation-account на выпущенном SHA; /favicon.png и /apple-touch-icon.png внешне200. Дополнение владельца выполнено.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Реализация и регрессии проверены, выпущены в production e2c9c89; фактический SHA/health и полный CI подтверждены. Физическая Android-приёмка отслеживается отдельно TASK-97.
+<!-- SECTION:FINAL_SUMMARY:END -->
