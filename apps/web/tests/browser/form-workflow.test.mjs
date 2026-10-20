@@ -7,9 +7,9 @@ if(!['localhost','127.0.0.1'].includes(new URL(fixture.app_url).hostname)||!/^qm
 let browser;
 before(async()=>{browser=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});});
 after(async()=>{await browser?.close();});
-async function session(locale='ru'){
+async function session(locale='ru',role='owner'){
  const context=await browser.newContext({baseURL:fixture.app_url,viewport:{width:360,height:800},reducedMotion:'reduce'});await context.addCookies([{name:'qmanga_locale',value:locale,url:fixture.app_url}]);
- assert.equal((await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.owner_email,password:fixture.owner_password}})).status(),200);return context;
+ assert.equal((await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture[role+'_email'],password:fixture[role+'_password']}})).status(),200);return context;
 }
 test('team edit cancellation preserves fields and selected-team application link',{timeout:30000},async()=>{
  const context=await session();try{
@@ -35,5 +35,15 @@ test('request resolves selected team beyond first page and inline errors preserv
  for(const width of [320,360,1280]){await page.setViewportSize({width,height:800});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);}
  const discard=page.waitForEvent('dialog').then(d=>d.accept());await Promise.all([discard,page.locator('.request-form').getByRole('button',{name:'Закрыть',exact:true}).click()]);
  await page.goto('/studio/requests?new=1&team=unavailable');await page.locator('.request-form form').waitFor();assert.equal(await page.locator('.request-form select').first().inputValue(),'');await page.getByText(/Для выбранной команды нельзя подать заявку/).waitFor();
+ }finally{await context.close();}
+});
+
+test('administrative decision draft survives switching and navigation cancellation',{timeout:30000},async()=>{
+ const context=await session('ru','admin');try{
+ const page=await context.newPage();page.setDefaultTimeout(5000);await page.setViewportSize({width:1280,height:900});
+ await page.route('**/api/v1/admin/teams/pending?*',route=>route.fulfill({json:{items:[1,2].map(n=>({id:'pending-'+n,name:'Pending '+n,slug:'pending-'+n,description:'Synthetic pending team',approved:false}))}}));
+ await page.goto('/admin/teams');await page.getByRole('button',{name:'Вернуть на исправление',exact:true}).first().click();const reason=page.getByRole('textbox',{name:'Что нужно исправить?',exact:true});await reason.fill('Unsaved moderation reason');
+ let cancel=page.waitForEvent('dialog').then(d=>d.dismiss());await Promise.all([cancel,page.getByRole('button',{name:'Вернуть на исправление',exact:true}).nth(1).click()]);assert.equal(await reason.inputValue(),'Unsaved moderation reason');assert.equal(await page.locator('article').first().locator('textarea').count(),1);
+ cancel=page.waitForEvent('dialog').then(d=>d.dismiss());await Promise.all([cancel,page.locator('a[href="/admin"]').first().click()]);assert.equal(new URL(page.url()).pathname,'/admin/teams');assert.equal(await reason.inputValue(),'Unsaved moderation reason');
  }finally{await context.close();}
 });

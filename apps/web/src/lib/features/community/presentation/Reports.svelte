@@ -1,4 +1,5 @@
 <script lang="ts">
+ import UnsavedChanges from '$lib/shared/presentation/ui/UnsavedChanges.svelte';
  import {queueDepth,queueReturn} from '$lib/shared/presentation/queue-context';
  import {tick} from 'svelte';
  import {page} from '$app/state';
@@ -15,11 +16,13 @@
  let {gateway}:{gateway:CommunityGateway}=$props();
  let account=$state<string|null>(null),queue=$state<ReportQueue>({items:[],next:'',hasMore:false}),reasons=$state<Record<string,string>>({}),busy=$state(false),message=$state(''),loadError=$state(''),retryAfter='';
  let depth=$state(1);
+ const dirty=$derived(Object.values(reasons).some(reason=>reason.trim()!==''));
  async function load(after=''){busy=true;loadError='';message='';retryAfter=after;try{account=await gateway.account();if(!account){loadError="login_required";return;}const result=await gateway.reports(account,after,page.url.searchParams.get('team')||'',page.url.searchParams.get('kind')||'');queue=receiveReports(queue,result,!!after);if(after)depth++;else depth=1;}catch(failure){loadError=failureCode(failure);}finally{busy=false;}}
  onMount(()=>{void (async()=>{await load();const wanted=queueDepth(page.url);for(let step=1;step<wanted&&queue.hasMore&&!loadError;step++)await load(queue.next);await tick();if(page.url.hash)document.getElementById(page.url.hash.slice(1))?.scrollIntoView();})();});
- async function decide(item:ModerationReport,status:string){if(!account||!validReport(reasons[item.id]||'')){message="decision_reason";return;}busy=true;try{await gateway.resolve(account,item.id,status,reasons[item.id]);queue=resolveReport(queue,item.id);message="decision_saved";}catch(failure){message=failureCode(failure);}finally{busy=false;}}
+ async function decide(item:ModerationReport,status:string){if(!account||!validReport(reasons[item.id]||'')){message="decision_reason";return;}busy=true;try{await gateway.resolve(account,item.id,status,reasons[item.id]);queue=resolveReport(queue,item.id);delete reasons[item.id];message="decision_saved";}catch(failure){message=failureCode(failure);}finally{busy=false;}}
  async function visibility(item:ModerationReport,hidden:boolean){if(!account||!validReport(reasons[item.id]||'')){message="action_reason";return;}busy=true;try{await gateway.visibility(account,item.targetId,hidden,reasons[item.id]);queue={...queue,items:queue.items.map(report=>report.targetType==='comment'&&report.targetId===item.targetId?{...report,commentHidden:hidden}:report)};message=hidden?"comment_hidden":"comment_restored";}catch(failure){message=failureCode(failure);}finally{busy=false;}}
 </script>
+<UnsavedChanges {dirty}/>
 <svelte:head><title>{copy($locale,"Шағымдар — Qmanga")}</title><meta name="robots" content="noindex"/></svelte:head>
 <a class="auth-link" href="/moderation">{copy($locale,"Жарияланымдарды тексеру")}</a><h1>{copy($locale,"Шағымдар")}</h1>{#if message}<p class="form-message" role="status">{noticeText($locale,message)}</p>{/if}
 <QueueFilters kinds={[{value:'title',kk:'Тайтл',ru:'Тайтл'},{value:'release',kk:'Тарау',ru:'Глава'},{value:'page',kk:'Бет',ru:'Страница'},{value:'comment',kk:'Пікір',ru:'Комментарий'}]}/>

@@ -1,4 +1,5 @@
 <script lang="ts">
+ import UnsavedChanges from '$lib/shared/presentation/ui/UnsavedChanges.svelte';
  import {page} from '$app/state';
  import {safeQueueReturn} from '$lib/shared/presentation/queue-context';
  import {textDiff} from '../domain/text-diff';
@@ -11,6 +12,9 @@
  let {gateway,id}:{gateway:TitleChangesGateway;id:string}=$props();
  const {locale}=useLocale();const names=$derived(catalogNames($locale));
  let actor=$state(''),detail=$state<TitleChangeDetail|null>(null),taxonomy=$state<Taxonomy>({genres:[],categories:[],collections:[]}),loading=$state(true),busy=$state(false),error=$state(''),reason=$state('');let generation=0;
+ const dirty=$derived(reason.trim()!=='');
+ let guard=$state<{confirmDiscard():boolean}>();
+ async function refreshDetail(){if(guard&&!guard.confirmDiscard())return;await load();}
  const status=$derived({pending:text($locale,'Қаралуда','На рассмотрении'),approved:text($locale,'Мақұлданды','Одобрено'),rejected:text($locale,'Қайтарылды','Возвращено')});
  const labels=$derived<Record<keyof ProposedTitleData,string>>({name:text($locale,'Атауы','Название'),original_name:text($locale,'Түпнұсқа атауы','Оригинальное название'),aliases:text($locale,'Басқа атаулар','Другие названия'),authors:text($locale,'Авторлар','Авторы'),kind:text($locale,'Түрі','Тип'),original_status:text($locale,'Тайтл күйі','Статус тайтла'),translation_status:text($locale,'Аударма күйі','Статус перевода'),description:text($locale,'Сипаттама','Описание'),direction:text($locale,'Оқу бағыты','Направление чтения'),age_rating:text($locale,'Жас шектеуі','Возрастная маркировка'),publication:text($locale,'Басылым','Издание'),genre_ids:text($locale,'Жанрлар','Жанры'),category_ids:text($locale,'Санаттар','Категории')});
  const changed=$derived(detail?(Object.keys(labels) as (keyof ProposedTitleData)[]).filter(key=>JSON.stringify(detail!.request.before.data[key])!==JSON.stringify(detail!.request.proposed[key])):[]);
@@ -19,11 +23,12 @@
  async function review(decision:'approve'|'reject'){if(!detail||busy)return;busy=true;error='';const run=generation;try{await gateway.review(actor,id,decision,reason);if(run===generation)await load();}catch(e){if(run===generation)error=failureCode(e);}finally{if(run===generation)busy=false;}}
  onMount(()=>{void load();const stop=gateway.watchAccount(()=>{busy=false;void load();});return()=>{generation++;stop();};});
 </script>
+<UnsavedChanges {dirty} bind:this={guard}/>
 <svelte:head><title>{text($locale,'Тайтл өзгерістері','Изменения тайтла')} — Qmanga</title></svelte:head>
 <a class="button subtle" href={safeQueueReturn(page.url.searchParams.get('returnTo'),'/moderation/title-changes')}>{text($locale,'Кезекке оралу','Вернуться в очередь')}</a>
 <h1>{text($locale,'Тайтл өзгерістері','Изменения тайтла')}</h1>
 {#if loading}<p role="status">{text($locale,'Жүктелуде…','Загрузка…')}</p>{/if}
-{#if error}<p class="notice" role="alert">{noticeText($locale,error)}</p><button class="button subtle" onclick={load}>{text($locale,'Қайта жүктеу','Обновить')}</button>{/if}
+{#if error}<p class="notice" role="alert">{noticeText($locale,error)}</p><button class="button subtle" onclick={refreshDetail}>{text($locale,'Қайта жүктеу','Обновить')}</button>{/if}
 {#if detail}
  <header><h2>{detail.request.title_name}</h2><p>{detail.request.team_name} · {detail.request.requested_name}</p><strong>{status[detail.request.status]}</strong></header>
  <section class="panel"><h2>{text($locale,'Негіздеме','Обоснование')}</h2><p class="preserve">{detail.request.reason}</p>
