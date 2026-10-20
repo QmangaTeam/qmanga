@@ -1,9 +1,11 @@
 ---
 id: TASK-77
 title: Следующее действие на карточке проекта
-status: To Do
-assignee: []
+status: In Progress
+assignee:
+  - '@studio-agent'
 created_date: '2026-10-20 15:13'
+updated_date: '2026-10-20 16:20'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -30,3 +32,15 @@ ordinal: 44009
 - [ ] #1 Состояние рабочей версии или ожидающее решения действие получено из авторизованного API-контракта.
 - [ ] #2 Карточка ведёт к нужной работе; неизвестное состояние не изображается как готовое, текущие данные карточки сохранены.
 <!-- AC:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+1. Проверить контракт и добавить регрессии. 2. Реализовать согласованное изменение без новых правил и прав. 3. Выполнить проверки, записать SHA и ограничения приёмки.
+<!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+c1a491a,20f1853: авторизованный StudioProjectPage выбирает рабочую ревизию в той же scoped SQL/repeatable-read выборке; аддитивные next_revision_id/state и карточка с deep-link. Ready подпись не обещает право отправки. Добавлен PostgreSQL integration сценарий scoped next work/foreign/no work. Локально: svelte-check 0 ошибок/0 предупреждений; test:ui 46 pass; 9 domain/application тестов pass; frontend architecture pass; node --check studio-workflow.test.mjs pass. Browser studio-workflow.test.mjs/publishing-steps.test.mjs/project-cards.test.mjs и PostgreSQL integration на итоговом image ещё не выполнены; выпуск/независимая приёмка не подтверждены. Следующий шаг: общий rebuild и реальные browser/Go проверки координатором, затем Review; production SHA проверяет координатор.
+<!-- SECTION:NOTES:END -->
