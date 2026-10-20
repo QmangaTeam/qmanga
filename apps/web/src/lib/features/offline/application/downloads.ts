@@ -20,6 +20,8 @@ export class Downloads {
   for(const entry of entries){const verified=await this.reconcile(entry);if(verified.status==='ready')return verified;}
   return null;
  }
+ available(){return this.storage.available();}
+ async removeSelected(ids:readonly string[]){const allowed=new Set((await this.storage.list()).map(item=>item.id));const removed:string[]=[],failed:string[]=[];for(const id of new Set(ids)){if(!allowed.has(id))continue;try{await this.storage.remove(id);removed.push(id);}catch{failed.push(id);}}return{removed,failed};}
  remove(id:string){return this.storage.remove(id);}
  async save(manifest:Manifest,tier:Tier,signal:AbortSignal,changed:(download:Download)=>void):Promise<Download> {
   const files=expectedFiles(manifest,tier),id=[manifest.releaseId,manifest.revisionId,tier].join(':'),total=files.reduce((sum,file)=>sum+file.bytes,0),existing=await this.storage.list(),current=existing.find(item=>item.id===id);

@@ -1,4 +1,5 @@
 <script lang="ts">
+ import {page} from '$app/state';
  import type {Snippet} from 'svelte';
  import type {NavigationItem} from './types';
  import Icon from './Icon.svelte';
@@ -7,7 +8,7 @@
  const {locale}=useLocale();
  let searchDialog:HTMLDialogElement;
  let searchInput:HTMLInputElement;
- function openSearch(){searchDialog.showModal();searchInput.focus();}
+ function openSearch(){searchInput.value=page.url.pathname==='/catalog'?(page.url.searchParams.get('q')||''):'';searchDialog.showModal();searchInput.focus();}
 </script>
 <header>
  <div class="header-inner">

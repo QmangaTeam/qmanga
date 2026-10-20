@@ -27,7 +27,7 @@ test('team avatar fallback and pending upload remain scoped to the selected team
  await selector.selectOption(teams[0]);await page.locator('.avatar-editor img').waitFor({state:'detached'});
  let observed;const requestObserved=new Promise(resolve=>{observed=resolve;});const delayed=new Promise(resolve=>{releaseUpload=resolve;});
  await page.route('**/api/v1/avatars/team/'+teams[0],async route=>{observed();await delayed;await route.continue();});
- await page.locator('.avatar-editor input').setInputFiles({name:'team.png',mimeType:'image/png',buffer:png});await requestObserved;await selector.selectOption(teams[1]);
+ await page.locator('.avatar-editor input').setInputFiles({name:'team.png',mimeType:'image/png',buffer:png});await page.getByRole('button',{name:'Сохранить',exact:true}).click();await requestObserved;await selector.selectOption(teams[1]);
  const completed=page.waitForResponse(response=>response.url().endsWith('/avatars/team/'+teams[0])&&response.request().method()==='POST');releaseUpload();assert.equal((await completed).status(),200);
  await page.waitForFunction(id=>{const img=document.querySelector('.avatar-editor img');return img?.src.includes(id)&&img.naturalWidth===256;},teams[1]);assert.equal(await page.getByRole('status').filter({hasText:'Аватар сохранён.'}).count(),0,'old upload must not announce success for a different team');
  assert.equal(await page.locator('.avatar-editor input').isDisabled(),false);

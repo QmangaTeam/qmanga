@@ -37,5 +37,16 @@ test('cold offline entry reads saved bytes; eviction and retry recover without c
   await page.getByRole('button',{name:'Тексеру',exact:true}).click();
   await page.getByRole('link',{name:'Желісіз оқу',exact:true}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Жүктеуді жалғастыру',exact:true}).count(),0);
+  await page.locator('.storage-overview').waitFor();
+  assert.match(await page.locator('.storage-overview').innerText(),/Көшірмелер көлемі/);
+  await page.locator('.select-copy input').first().check();
+  await page.getByRole('button',{name:/Таңдалғанын өшіру/}).click();
+  await page.getByRole('button',{name:'Бас тарту',exact:true}).click();
+  assert.equal(await page.locator('.select-copy input:checked').count(),1);
+  await page.getByRole('button',{name:/Таңдалғанын өшіру/}).click();
+  await page.getByRole('button',{name:'Өшіруді растау',exact:true}).click();
+  await page.getByText('Сақталған тарау жоқ',{exact:true}).waitFor();
+  assert.match(await page.getByRole('status').innerText(),/Өшірілді: 1; қате: 0/);
+
  }finally{await context.close();await browser.close();}
 });

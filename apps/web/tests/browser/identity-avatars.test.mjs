@@ -19,7 +19,7 @@ test('nickname registration and sanitized avatars use the Qmanga origin',{timeou
   const page=await context.newPage();await context.addCookies([{name:'qmanga_locale',value:'ru',url:baseURL}]);
   await page.goto('/settings');const png=await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=480;canvas.height=240;const ctx=canvas.getContext('2d');ctx.fillStyle='#ff873d';ctx.fillRect(0,0,480,240);return canvas.toDataURL('image/png').split(',')[1];});
   const imageRequests=[];page.on('request',request=>{if(request.resourceType()==='image')imageRequests.push(request.url());});
-  await page.locator('.avatar-editor input[type=file]').setInputFiles({name:'avatar.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await page.getByRole('status').filter({hasText:'Аватар сохранён.'}).waitFor();
+  await page.locator('.avatar-editor input[type=file]').setInputFiles({name:'avatar.png',mimeType:'image/png',buffer:Buffer.from(png,'base64')});await page.getByRole('button',{name:'Сохранить',exact:true}).click();await page.getByRole('status').filter({hasText:'Аватар сохранён.'}).waitFor();
   const avatarURL='/media/avatars/user/'+user.id;const result=await context.request.get(avatarURL);assert.equal(result.status(),200);assert.equal(result.headers()['content-type'],'image/jpeg');assert.ok(result.headers()['x-content-type-options'].split(',').every(value=>value.trim()==='nosniff'));assert.equal((await context.request.head(avatarURL)).status(),200);
   const range=await context.request.get(avatarURL,{headers:{Range:'bytes=0-9'}});assert.equal(range.status(),206);assert.equal((await range.body()).length,10);
   assert.equal((await context.request.get(avatarURL,{headers:{Range:'bytes=0-1,4-5'}})).status(),416);

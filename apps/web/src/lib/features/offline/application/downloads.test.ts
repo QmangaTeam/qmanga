@@ -47,3 +47,11 @@ test('a file evicted while another downloads prevents a ready result',async()=>{
  await expect(manager.save(entry.manifest,'eco',new AbortController().signal,()=>{})).rejects.toThrow();
  expect((await manager.list())[0].status).not.toBe('ready');
 });
+
+ test('bulk cleanup deduplicates exact selected copies and reports failures without touching unselected entries',async()=>{
+ const rows=[saved('one',['a']),saved('two',['b']),saved('three',['c'])],storage=memory(rows,new Set(['a','b','c'])),removed:string[]=[];
+ storage.remove=async id=>{if(id==='two')throw Error('unavailable');removed.push(id);};
+ const manager=new Downloads(storage,()=>2);
+ expect(await manager.removeSelected(['one','one','two','foreign'])).toEqual({removed:['one'],failed:['two']});
+ expect(removed).toEqual(['one']);expect(await manager.available()).toBeNull();
+ });
