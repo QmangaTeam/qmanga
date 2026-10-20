@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex-cbz'
 created_date: '2026-10-20 16:49'
-updated_date: '2026-10-20 17:33'
+updated_date: '2026-10-20 17:39'
 labels:
   - web
   - publishing
@@ -45,6 +45,8 @@ Chromium UI/HTTP regression 2/2 pass на disposable localhost:18080: реаль
 Основная реализация SHA02fbab4. Дополнительная совместимость: принимаются стандартные deflate compression-hint flags1/2 без разрешения encryption; реальный Chromium fixture теперь flags2. Unit6pass и isolatedcodecpass. Общий старый bundle закономерно отвергает новый fixture: UI regression повторить после следующего rebuild. Это ограничение относится к последней правке parser, ранее UI/HTTP2pass.
 
 Root integration verification 2026-10-20: rebuilt Docker API/web/gateway healthy; latest CBZ compression flags48e1802 accepted in real browser. cbz-import.test.mjs 2/2 PASS (compressed CRC/order/cancel and real upload preview/partial failure/resume/dedup); PDF shared upload regression also PASS. Root layout 12 kk/ru x dark/light x 320/360/1280 combinations PASS; mobile/desktop screenshots inspected under ignored tmp/task99. Full frontend157 module +46UI, Svelte0/0, architecture/contrast/preview PASS; full Go/PostgreSQL -p1 ./... PASS. Independent PDF-agent review of CBZ/shared UI found account-binding issue, fixed and re-reviewed no remaining blockers. Release remains unconfirmed due TCP22 access timeout; Review.
+
+Дополнительно исправлена отмена во время холодной загрузки JS декодера: ChapterImportTask.done немедленно завершается upload_cancelled через abort race; фоновая работа сверяет signal до декодера/после подготовки/хеширования. Новый Chromium delayed-module regression сначала воспроизвёл timeout, после правки pass; unit10pass, svelte-check0/0, architecturepass. Actual UI delayed-chunk regression добавлен в pdf-upload.test.mjs: сохранение существующей страницы, отсутствие PUT/preview и разблокировка ввода до завершения JS запроса; ожидает root rebuild/прогона.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

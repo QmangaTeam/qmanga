@@ -1,6 +1,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
+import {dirname,join} from 'node:path';
 import {chromium} from 'playwright';
 
 function syntheticPdf(){
@@ -52,4 +53,26 @@ test('production PDF bundle previews locally and uploads ordered images through 
    if(revision){const current=await(await context.request.get('/api/v1/studio/revisions/'+revision)).json();await context.request.delete('/api/v1/studio/revisions/'+revision+'?version='+current.version,{headers});}
   }finally{await context.close();await browser.close();}
  }
+});
+
+test('cold PDF decoder download can be cancelled before chunks finish without changing the draft',{skip:!process.env.QMANGA_FIXTURE_FILE,timeout:60000},async()=>{
+ const fixture=JSON.parse(await readFile(process.env.QMANGA_FIXTURE_FILE,'utf8'));assert.ok(['localhost','127.0.0.1'].includes(new URL(fixture.app_url).hostname));
+ const browser=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});const context=await browser.newContext({baseURL:fixture.app_url,viewport:{width:360,height:850}});let revision,headers,release=()=>{};
+ try{
+  await context.addCookies([{name:'qmanga_locale',value:'ru',url:fixture.app_url}]);assert.equal((await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.owner_email,password:fixture.owner_password}})).status(),200);
+  headers={Origin:fixture.app_url,'X-CSRF-Token':(await(await context.request.get('/api/v1/auth/csrf')).json()).csrf_token};
+  const chapter=await context.request.post('/api/v1/studio/projects/'+fixture.project_id+'/chapters',{headers,data:{label:'PDF-cancel-'+Date.now(),volume:'',name:'',order:0}});assert.equal(chapter.status(),201);
+  const created=await context.request.post('/api/v1/studio/projects/'+fixture.project_id+'/revisions',{headers,data:{chapter_id:(await chapter.json()).id}});assert.equal(created.status(),201);revision=(await created.json()).id;
+  const image=await readFile(join(dirname(process.env.QMANGA_FIXTURE_FILE),'pages','page-01.png'));
+  assert.equal((await context.request.put('/api/v1/studio/revisions/'+revision+'/pages?key=cold-cancel-existing&position=1&name=existing.png',{headers:{...headers,'Content-Type':'application/octet-stream'},data:image})).status(),201);
+  const before=await(await context.request.get('/api/v1/studio/revisions/'+revision)).json();assert.equal(before.pages.length,1);
+  const page=await context.newPage();await page.goto('/studio/projects/'+fixture.project_id+'?revision='+revision);const input=page.locator('input[accept*=".pdf"]');await input.waitFor();
+  let hit;const requested=new Promise(resolve=>hit=resolve),held=new Promise(resolve=>release=resolve);let uploads=0;page.on('request',r=>{if(r.method()==='PUT'&&r.url().includes('/pages?'))uploads++;});
+  await page.route('**/_app/immutable/chunks/*.js',async route=>{hit();await held;await route.continue().catch(()=>{});});
+  await input.setInputFiles({name:'cold.pdf',mimeType:'application/pdf',buffer:syntheticPdf()});await requested;
+  await page.getByRole('button',{name:'Остановить',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('input[accept*=".pdf"]').disabled,{},{timeout:2000});
+  assert.equal(await page.getByText('Подготовка страниц',{exact:false}).count(),0);assert.equal(await page.locator('.import-preview').count(),0);assert.equal(uploads,0);
+  const current=await(await context.request.get('/api/v1/studio/revisions/'+revision)).json();assert.deepEqual(current.pages.map(p=>p.id),before.pages.map(p=>p.id));
+  release();await page.waitForTimeout(300);assert.equal(await page.locator('.import-preview').count(),0);assert.equal(uploads,0);
+ }finally{release();try{if(revision){const current=await(await context.request.get('/api/v1/studio/revisions/'+revision)).json();await context.request.delete('/api/v1/studio/revisions/'+revision+'?version='+current.version,{headers});}}finally{await context.close();await browser.close();}}
 });

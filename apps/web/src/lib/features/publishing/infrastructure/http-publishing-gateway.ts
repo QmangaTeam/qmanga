@@ -23,19 +23,26 @@ export class HttpPublishingGateway implements PublishingGateway {
  async discard(id:string,version:number) { await this.api.call('/api/v1/studio/revisions/'+encodeURIComponent(id)+'?version='+version,'DELETE'); }
  importChapter(file:unknown,progress:(done:number,total:number)=>void){
   const controller=new AbortController();
-  const done=(async()=>{
+  let abort!:()=>void;
+  const stopped=new Promise<never>((_,reject)=>{abort=()=>reject(new AppFailure('upload_cancelled'));controller.signal.addEventListener('abort',abort,{once:true});});
+  const importing=(async()=>{
    if(!(file instanceof File))throw new AppFailure('upload_file');
    const options={signal:controller.signal,onProgress:progress};
-   const files=/\.pdf$/i.test(file.name)?await (await import('./pdf-import')).importPdf(file,options):await (await import('./cbz-import')).importCbz(file,options);
+   const importer=/\.pdf$/i.test(file.name)?(await import('./pdf-import')).importPdf:(await import('./cbz-import')).importCbz;
+   if(controller.signal.aborted)throw new AppFailure('upload_cancelled');
+   const files=await importer(file,options);
    if(controller.signal.aborted)throw new AppFailure('upload_cancelled');
    const sources=await this.prepare(files);
+   if(controller.signal.aborted)throw new AppFailure('upload_cancelled');
    for(let i=0;i<sources.length;i++){
     if(controller.signal.aborted)throw new AppFailure('upload_cancelled');
     const digest=await crypto.subtle.digest('SHA-256',await files[i].arrayBuffer());
+    if(controller.signal.aborted)throw new AppFailure('upload_cancelled');
     sources[i].key='import:'+Array.from(new Uint8Array(digest),byte=>byte.toString(16).padStart(2,'0')).join('')+':'+sources[i].key.slice(0,32);
    }
    return sources;
   })();
+  const done=Promise.race([importing,stopped]).finally(()=>controller.signal.removeEventListener('abort',abort));
   return {done,cancel:()=>controller.abort()};
  }
  async prepare(files: unknown[]): Promise<UploadSource[]> {
