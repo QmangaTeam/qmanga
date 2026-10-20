@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 19:50'
-updated_date: '2026-10-20 21:52'
+updated_date: '2026-10-20 21:53'
 labels: []
 dependencies: []
 priority: high
@@ -72,4 +72,6 @@ Owner icons/avatar/dense-data follow-up: removed chapter fact only (tab/stats re
 Owner dense-spacing follow-up: intrinsic metadata/creditheight withcaps only; mobilefacts max88px/nativeoverflow, desktoprail clamp280px/42dvh/380px; contributors compact2columnmobile/1columndesktop max144–192px nativescroll. Allfields preserved,hiddenhorizontalbar unchanged,44pxcontrols. LocalSvelte0/0 andUI51tests pass atinterim withbranding included. New title-density browserregression passes dark/light320/360/730/960/1440. Independentreview reran density/auth tests2pass andchecked dense/sparse320/360/960/1440: sparsemobilefacts69px andcreditsnatural81–103px, densecreditscap192px/content282–360px; final contributor keyboardfocus scrollsfullyintoview. Awaitownerlocalacceptance; no productionrelease.
 
 Source result committed as c6a0254. Latercombinedchecks use same productcode: Svelte0/0,51UItests806assertions,build/boundary/contrast pass. Finalbrowser readiness stabilization waits for hydration/networkidle beforechapter-form interactions; initialbuild-overlap timing failure passedisolatedrerun. Ownerlocalreviewstillpending; no releaseclaim.
+
+Final combined verification:10/10 browser tests pass,0skips;51UItests806assertions pass;Svelte0errors0warnings;frontendbuild,boundaries andboth-themecontrast pass. Independentreviews no blockers. Productcommits c6a0254/7905513/be7491c; a37952a recorded docs/readiness beforethisfinalnote. MainfrontendHMR18080 andsyntheticreplypreview3002 remainrunning. Awaitownerlocalacceptance; no productionrelease.
 <!-- SECTION:NOTES:END -->
