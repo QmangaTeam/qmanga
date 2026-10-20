@@ -11,9 +11,9 @@ test('catalogue retry recovers exact search filters sort and cursor after API ou
  const context=await browser.newContext({baseURL,viewport:{width:360,height:800}});let paused=false;
  try{
   await context.addCookies([{name:'qmanga_locale',value:'ru',url:baseURL}]);
-  // Empty cursor is deliberately explicit: it is a valid first-page cursor and
-  // still detects a retry that discards the original query string.
-  const exact='/catalog?q='+encodeURIComponent(fixture.title_slug)+'&kind=manga&sort=name&cursor=';
+  const source=await context.request.get('/api/v1/titles?sort=name&limit=1');assert.equal(source.status(),200);
+  const cursor=(await source.json()).next_cursor;assert.ok(cursor,'fixture must have enough public titles to supply a real cursor');
+  const exact='/catalog?q='+encodeURIComponent(fixture.title_slug)+'&kind=manga&sort=name&cursor='+encodeURIComponent(cursor);
   const page=await context.newPage();page.setDefaultTimeout(10000);
   await page.goto(exact);await page.locator('.catalogue-content').count();
   api('pause');paused=true;
