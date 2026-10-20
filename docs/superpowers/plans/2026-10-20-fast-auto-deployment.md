@@ -180,7 +180,7 @@
 - No doc; measurements into cards/logs (ignored `tmp/` allowed), report in final answer + OPERATIONS.md
 
 - [ ] Step 1: SSH deploy of new repo code + timer reload (one-time) — blocked: SSH to the VM times out from this environment; owner runs the `install`/`daemon-reload`/`restart` command from OPERATIONS.md.
-- [x] Step 2: Release #1 — docs-only (words) → expect no deploy of nothing (ref unchanged, production unchanged). Checked by the final docs-only push: `release.yml` ignores `docs/**` and `refs/deploy-ready` stays put.
+- [x] Step 2: Release #1 — docs-only (words) → expect no deploy of nothing (ref unchanged, production unchanged). Verified with `5dacbbd` (OPERATIONS/RUNBOOK/plan/TASK-66): push to `main` created zero `release.yml`/`verify.yml` runs and `refs/deploy-ready` stayed on `a06546e`.
 - [x] Step 3: Release #2 — CSS-only under apps/web → web-only build (`f7b0ffb`), measured below; ref advanced, public health/home page OK.
 - [x] Step 4: Release #3 — Go-only backend no-migration change (`8d7d2dd`), api-only build; staging+production smoke OK.
 - [x] Step 5: Failure drill — runtime health failure (`504d3ab`) ⇒ production stayed on `8d7d2dd`, bad SHA in hold; found and fixed the empty-diff tag-selection defect.
@@ -200,6 +200,7 @@ Measured from `git push origin main` to the public production footer serving the
 | `5c98ee8` | tag-selection fix (slow path) | skipped build, waited for Verify | 685 s |
 | `fa5152d`+`c299a2d` | double push (CSS then Svelte, 3 s apart) | both runs success, ref advanced twice | 315 s |
 | `71d4d2b` | remove acceptance markers (web+api) | both components built | 332 s |
+| `a06546e` | independent-review fixes (slow path) | build skipped, waited for Verify | 1012 s |
 
 The build stage is 1–2 minutes; the rest is the 5-minute timer plus staging/production rollout. With `OnUnitInactiveSec=20s` the expected push → production time is ~130–220 s for web/CSS changes and ~220–260 s for backend changes. Double push behaves correctly: `cancel-in-progress: false` lets the first run finish, the next starts from the already advanced base, and production ends on the second SHA (`c299a2d`) with no mixed composition.
 

@@ -10,6 +10,10 @@
 
 2026-10-20: staging и production выпущены на `bb8aec38d6c019e08d940b6209e794795ca956e3` (TASK-64: 719 меток Senkuro; TASK-65: панель фильтров каталога). [Verify Qmanga 39333412292](https://github.com/maqsatto/qmanga/actions/runs/39333412292): обе acceptance-половины и все три ARM64 images success. Staging poller поднял тот же SHA (green), production переведён `release.sh production` на blue, прошлый green (`f4d73ef`) остаётся тёплым для отката; backup `20261019T222451Z` проверен off-host. Внешние проверки: health 200, главная отдаёт SHA, `/api/v1/genres` = 713, 6 групп в порядке main-cast→demographics, панель `/catalog` проверена Playwright (kk/ru, обе темы, desktop/mobile).
 
+2026-10-20 (ночь): включён автоматический путь `push → staging → production` (TASK-66) и проверен серией реальных релизов. Текущая production-точка: `36b3a5f455eb37830408af44c2e2f00b48eabd51` (TASK-67: desktop-панель фильтров каталога снова скроллится). Ей предшествовали автоматические выпуски: `a06546e` (исправления независимого review: тег компонента по последнему изменению входов, fail-closed при отсутствующем образе, сверка запущенных image ID, отказ от re-exec; slow path 1012 s), `71d4d2b` (снятие меток приёмки, web+api, 332 s), double-push `fa5152d`→`c299a2d` (315 s, production на втором SHA), slow path `5c98ee8` (685 s). Замеры push → публичный production при старом 5-минутном таймере: CSS 350 s, Svelte 300 s, Go 351 s, web+api 332 s; сборка 34–102 s. Drill `504d3ab`: намеренный сбой health в контейнере — production остался на прежнем SHA, плохой SHA записан в `state/deployment-hold`. Verify для `36b3a5f` и `a06546e` зелёный; docs-only push `5dacbbd` не создал workflow-запусков и не сдвинул `refs/deploy-ready`. Осталось владельцу: установить обновлённые systemd service/timer (команда ниже), после чего ожидаемое время ~130–260 s.
+
+До этого автоматического пути production последовательно был на `bb8aec3`, `43c1a5d`, `cf45ae7`, `8d7d2dd`, а staging выпускался тем же poller-ом.
+
 ## Адреса и доступ
 
 | Назначение | Адрес / путь |
