@@ -124,6 +124,7 @@ type Repository interface {
 	CreateProject(context.Context, string, string, string, string) error
 	StudioProjects(context.Context, string, ...int) ([]Project, error)
 	StudioProjectPage(context.Context, string, ProjectFilter) (ProjectPage, error)
+	SearchAdminTitles(context.Context, string, string, ...int) ([]Summary, error)
 	AdminTitles(context.Context, string, ...int) ([]Summary, error)
 	AdminDetail(context.Context, string, string) (Detail, error)
 	UpdateTitle(context.Context, string, domain.Title) error
@@ -342,6 +343,16 @@ func (service *Service) StudioProjectPage(ctx context.Context, actor string, fil
 	}
 	return service.repository.StudioProjectPage(ctx, actor, filter)
 }
+func (service *Service) SearchAdminTitles(ctx context.Context, actorID, query string, offset ...int) ([]Summary, error) {
+	if utf8.RuneCountInString(query) > 160 {
+		return nil, domain.ErrInvalid
+	}
+	if failure := service.admin(ctx, actorID); failure != nil {
+		return nil, failure
+	}
+	return service.repository.SearchAdminTitles(ctx, actorID, strings.TrimSpace(query), offset...)
+}
+
 func (service *Service) AdminTitles(ctx context.Context, actorID string, offset ...int) ([]Summary, error) {
 	if failure := service.admin(ctx, actorID); failure != nil {
 		return nil, failure

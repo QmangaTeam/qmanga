@@ -18,7 +18,7 @@ export class HttpCatalogManagementGateway implements CatalogManagementGateway {
  async deleteTaxon(kind:'genres'|'categories'|'collections',id:string){await this.api.call('/api/v1/admin/'+kind+'/'+encodeURIComponent(id),'DELETE');}
  async saveCollection(input:Collection){await this.api.call('/api/v1/admin/collections'+(input.id?'/'+encodeURIComponent(input.id):''),input.id?'PUT':'POST',{name:input.name,slug:input.slug,description:input.description,position:input.position,visible:input.visible,title_ids:input.titleIds});}
  async setCategories(title:string,ids:string[]){await this.api.call('/api/v1/admin/titles/'+encodeURIComponent(title)+'/categories','PUT',{category_ids:ids});}
- async titles(offset=0) { return page(await this.api.call('/api/v1/admin/titles?offset='+offset), summary).items; }
+ async titles(offset=0,query='') { return page(await this.api.call('/api/v1/admin/titles?offset='+offset+'&q='+encodeURIComponent(query)), summary).items; }
  async detail(id: string) { return detail(await this.api.call('/api/v1/admin/titles/' + encodeURIComponent(id))); }
  async project(id: string) { return project(await this.api.call('/api/v1/admin/projects/' + encodeURIComponent(id))); }
  async genres() { return page(await this.api.call('/api/v1/genres'), genre).items; }

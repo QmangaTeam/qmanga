@@ -6,7 +6,7 @@ export interface CatalogManagementGateway {
  deleteTaxon(kind:'genres'|'categories'|'collections',id:string):Promise<void>;
  saveCollection(input:Collection):Promise<void>;
  setCategories(title:string,ids:string[]):Promise<void>;
- titles(offset?:number): Promise<Summary[]>;
+ titles(offset?:number,query?:string): Promise<Summary[]>;
  detail(id: string): Promise<TitleDetail>;
  project(id: string): Promise<Project>;
  genres(): Promise<Genre[]>;

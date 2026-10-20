@@ -389,7 +389,7 @@ func (handler *CatalogHandler) studioProjects(request *gin.Context) {
 }
 func (handler *CatalogHandler) adminTitles(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.AdminTitles(request.Request.Context(), account.ID, requestOffset(request))
+	items, failure := handler.service.SearchAdminTitles(request.Request.Context(), account.ID, request.Query("q"), requestOffset(request))
 	if failure != nil {
 		catalogError(request, failure)
 		return

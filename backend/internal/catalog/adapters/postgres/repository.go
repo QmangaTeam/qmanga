@@ -529,6 +529,9 @@ func (repository *Repository) CreateProject(ctx context.Context, actorID, id, ti
 }
 
 func (repository *Repository) AdminTitles(ctx context.Context, actorID string, offset ...int) ([]application.Summary, error) {
+	return repository.SearchAdminTitles(ctx, actorID, "", offset...)
+}
+func (repository *Repository) SearchAdminTitles(ctx context.Context, actorID, query string, offset ...int) ([]application.Summary, error) {
 	allowed, failure := repository.IsAdmin(ctx, actorID)
 	if failure != nil {
 		return nil, failure
@@ -536,7 +539,7 @@ func (repository *Repository) AdminTitles(ctx context.Context, actorID string, o
 	if !allowed {
 		return nil, domain.ErrForbidden
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT "+summaryColumns+" FROM titles title ORDER BY title.updated_at DESC,title.id DESC LIMIT 100 OFFSET "+pageOffset(offset))
+	rows, failure := repository.pool.Query(ctx, "SELECT "+summaryColumns+" FROM titles title WHERE ($1='' OR title.name_kk ILIKE '%'||$1||'%' OR title.original_name ILIKE '%'||$1||'%' OR title.slug ILIKE '%'||$1||'%' OR title.id=$1) ORDER BY title.updated_at DESC,title.id DESC LIMIT 100 OFFSET "+pageOffset(offset), query)
 	if failure != nil {
 		return nil, failure
 	}
