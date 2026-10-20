@@ -10,13 +10,13 @@ function sql(input){const result=spawnSync('docker',['compose','--env-file',fixt
 function api(action){const result=spawnSync('docker',['compose','--env-file',fixture.env_file,'-p',fixture.project_name,action,'api'],{encoding:'utf8',timeout:30000});assert.equal(result.status,0,result.stderr);}
 test('catalogue retry recovers exact search filters sort and cursor after API outage',{timeout:150000},async()=>{
  const browser=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});
- const context=await browser.newContext({baseURL,viewport:{width:360,height:800}});let paused=false;const titleId=randomUUID();
+ const context=await browser.newContext({baseURL,viewport:{width:360,height:800}});let paused=false;const titleId=randomUUID(),secondTitleId=randomUUID();
  try{
-  sql(`INSERT INTO titles(id,slug,name_kk,is_listed,search_text) VALUES('${titleId}','outage-${titleId}','Synthetic outage fixture',true,'synthetic outage fixture')`);
+  sql(`INSERT INTO titles(id,slug,name_kk,is_listed,search_text) VALUES('${titleId}','outage-${titleId}','Outage regression A',true,'outage regression a'),('${secondTitleId}','outage-${secondTitleId}','Outage regression B',true,'outage regression b')`);
   await context.addCookies([{name:'qmanga_locale',value:'ru',url:baseURL}]);
-  const source=await context.request.get('/api/v1/titles?q=Synthetic&kind=manga&sort=name&limit=1');assert.equal(source.status(),200);
-  const cursor=(await source.json()).next_cursor;assert.ok(cursor,'fixture must have enough public titles to supply a real cursor');
-  const exact='/catalog?q='+encodeURIComponent('Synthetic')+'&kind=manga&sort=name&cursor='+encodeURIComponent(cursor);
+  const source=await context.request.get('/api/v1/titles?q=Outage%20regression&kind=manga&sort=name&limit=1');assert.equal(source.status(),200);
+  const cursor=(await source.json()).next_cursor;assert.ok(cursor,'self-contained public titles must supply a real cursor');
+  const exact='/catalog?q='+encodeURIComponent('Outage regression')+'&kind=manga&sort=name&cursor='+encodeURIComponent(cursor);
   const page=await context.newPage();page.setDefaultTimeout(10000);
   await page.goto(exact);await page.locator('.catalogue-content').count();
   api('pause');paused=true;
@@ -29,5 +29,5 @@ test('catalogue retry recovers exact search filters sort and cursor after API ou
   assert.equal(new URL(page.url()).pathname+new URL(page.url()).search,exact);
   assert.equal((await context.cookies()).find(cookie=>cookie.name==='qmanga_locale').value,'ru');
   await page.reload();assert.equal(await page.getByRole('link',{name:'Повторить',exact:true}).count(),0);
- }finally{try{if(paused)api('unpause');}finally{sql(`DELETE FROM titles WHERE id='${titleId}'`);await context.close();await browser.close();}}
+ }finally{try{if(paused)api('unpause');}finally{sql(`DELETE FROM titles WHERE id IN ('${titleId}','${secondTitleId}')`);await context.close();await browser.close();}}
 });
