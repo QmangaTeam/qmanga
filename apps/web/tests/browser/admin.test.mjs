@@ -131,3 +131,55 @@ test('admin outside team follows catalogue project link to a read-only card', { 
   }
  } finally { await context.close(); }
 });
+
+test('creating a project preserves unsaved title metadata and category choices', { timeout: 60000 }, async () => {
+ const { context, page } = await adminPage();
+ try {
+  await page.goto('/admin/catalog');
+  const picker=page.locator('select').first();
+  await picker.locator(`option[value="${process.env.QMANGA_TITLE_ID}"]`).waitFor({state:'attached'});
+  await picker.selectOption(process.env.QMANGA_TITLE_ID);
+  const name=page.locator('input[maxlength="200"]').first();
+  await page.waitForFunction(()=>document.querySelector('input[maxlength="200"]')?.value!=='');
+  const draft=(await name.inputValue())+' · draft before project';
+  await name.fill(draft);
+  const aliases=page.locator('textarea[rows="3"]').first();
+  await aliases.fill('Unsaved alias');
+  const authors=page.locator('textarea[maxlength="2000"]').first();
+  await authors.fill('Unsaved author');
+  const category=page.locator('fieldset').filter({has:page.locator('legend', {hasText:'Категории содержания'})}).locator('input[type="checkbox"]').first();
+  let checked;
+  if(await category.count()){checked=!(await category.isChecked());await category.setChecked(checked);}
+  await page.route(`**/api/v1/admin/titles/${process.env.QMANGA_TITLE_ID}/projects`,route=>route.fulfill({status:201,json:{id:'ui-only-project'}}));
+  const projectForm=page.locator('form').filter({has:page.getByRole('button',{name:'Создать проект',exact:true})});
+  const team=projectForm.locator('select');
+  const value=await team.locator('option').evaluateAll(options=>options.find(option=>option.value)?.value);
+  assert.ok(value,'fixture must provide an approved team');
+  await team.selectOption(value);
+  await projectForm.getByRole('button',{name:'Создать проект',exact:true}).click();
+  await page.getByRole('status').waitFor();
+  assert.equal(await name.inputValue(),draft,'creating a project must not replace unsaved metadata');
+  assert.equal(await aliases.inputValue(),'Unsaved alias');
+  assert.equal(await authors.inputValue(),'Unsaved author');
+  if(await category.count())assert.equal(await category.isChecked(),checked);
+ } finally {await context.close();}
+});
+
+test('focused reply beyond the first batch does not skip intermediate replies on load more', { timeout: 60000 }, async () => {
+ const { context, page } = await adminPage();
+ try {
+  const response=await context.request.get(`/api/v1/admin/titles/${process.env.QMANGA_TITLE_ID}`);
+  const title=await response.json();
+  const make=(number)=>({id:`paging-${number}`,user_id:'fixture-user',display_name:'Reader',parent_id:'paging-root',root_id:'paging-root',body:`Paging reply ${number}`,spoiler:false,hidden:false,created_at:new Date(Date.UTC(2026,0,1,0,0,number)).toISOString(),replies:0});
+  const root={...make(0),id:'paging-root',parent_id:'',root_id:'',body:'Paging root',replies:30,reply_cursor:'paging-10'};
+  await page.route('**/api/v1/community/titles/*',route=>route.fulfill({json:{comments:[root,...Array.from({length:10},(_,index)=>make(index+1)),make(25)],next:'',score:0,ratings:0}}));
+  let requestedCursor;
+  await page.route('**/api/v1/community/comments/paging-root/replies?*',route=>{requestedCursor=new URL(route.request().url()).searchParams.get('after');return route.fulfill({json:{comments:Array.from({length:20},(_,index)=>make(index+11)),next:'paging-30'}});});
+  await page.goto(`/titles/${encodeURIComponent(title.slug)}?tab=comments&comment=paging-25`);
+  await page.locator('#comment-paging-25').waitFor();
+  await page.getByRole('button',{name:'Показать остальные ответы'}).click();
+  await page.locator('#comment-paging-30').waitFor();
+  assert.equal(requestedCursor,'paging-10','focused reply25 must not replace contiguous cursor10');
+  for(let number=1;number<=30;number++)assert.equal(await page.locator(`#comment-paging-${number}`).count(),1,`reply${number} must appear exactly once`);
+ } finally {await context.close();}
+});
