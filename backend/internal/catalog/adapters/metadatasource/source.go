@@ -35,7 +35,7 @@ type Source struct {
 }
 
 func New(kind string) *Source {
-	endpoint := "https://shikimori.one"
+	endpoint := "https://shikimori.io"
 	if kind == "anilist" {
 		endpoint = "https://graphql.anilist.co"
 	}
@@ -53,7 +53,7 @@ func (s *Source) fetch(ctx context.Context, key, path string, body any) ([]byte,
 	}
 	delay := 2500 * time.Millisecond
 	if s.kind == "shikimori" {
-		delay = 600 * time.Millisecond
+		delay = time.Second
 	}
 	s.next = time.Now().Add(delay)
 	s.mu.Unlock()
@@ -166,7 +166,7 @@ type shikiTitle struct {
 
 func (s *Source) shikiMap(item shikiTitle) application.ImportTitle {
 	result := initial("shikimori", strconv.Itoa(item.ID))
-	result.URL = "https://shikimori.one/mangas/" + result.ID
+	result.URL = "https://shikimori.io/mangas/" + result.ID
 	result.Name = plain(item.Name, 200)
 	result.OriginalName = first(item.Japanese)
 	result.Aliases = names(append(append(append([]string{item.Russian}, item.English...), item.Synonyms...), item.Japanese...), 12)
@@ -199,9 +199,9 @@ func (s *Source) shikiMap(item shikiTitle) application.ImportTitle {
 	}
 	image := item.Image.Original
 	if strings.HasPrefix(image, "/") {
-		image = "https://shikimori.one" + image
+		image = "https://shikimori.io" + image
 	}
-	result.CoverURL = safeImage(image, "shikimori.one", "desu.shikimori.one", "moe.shikimori.one", "nyaa.shikimori.one")
+	result.CoverURL = safeImage(image, "shikimori.io", "shikimori.one", "dere.shikimori.one", "desu.shikimori.one", "moe.shikimori.one", "nyaa.shikimori.one")
 	for _, tag := range item.Genres {
 		result.Tags = append(result.Tags, application.ExternalTag{ID: strconv.Itoa(tag.ID), Name: plain(tag.Name, 160), Aliases: []string{plain(tag.Russian, 160)}})
 	}
@@ -267,7 +267,7 @@ func (s *Source) Detail(ctx context.Context, id string) (application.ImportTitle
 		return application.ImportTitle{}, application.ErrSourceUnavailable
 	}
 	result := s.shikiMap(item)
-	timer := time.NewTimer(650 * time.Millisecond)
+	timer := time.NewTimer(1050 * time.Millisecond)
 	defer timer.Stop()
 	select {
 	case <-ctx.Done():

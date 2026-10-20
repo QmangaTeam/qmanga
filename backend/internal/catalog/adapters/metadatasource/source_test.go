@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"qmanga/internal/catalog/application"
@@ -112,5 +113,47 @@ func TestImmediateSearchThenSelectWaitsForOrdinaryBudget(t *testing.T) {
 	}
 	if time.Since(started) < 2*time.Second {
 		t.Fatal("ordinary source budget not respected")
+	}
+}
+
+type roundTripFunc func(*http.Request) (*http.Response, error)
+
+func (f roundTripFunc) RoundTrip(r *http.Request) (*http.Response, error) { return f(r) }
+func TestSearchArtworkUsesValidatedCachedURLWithoutDetailBudget(t *testing.T) {
+	apiCalls, imageCalls := 0, 0
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		apiCalls++
+		if r.URL.Path != "/api/mangas" {
+			t.Errorf("thumbnail refetched detail %s", r.URL)
+		}
+		w.Write([]byte(`[{"id":13,"name":"One Piece","image":{"original":"/cover.jpg"}}]`))
+	}))
+	defer server.Close()
+	source := New("shikimori")
+	if source.endpoint != "https://shikimori.io" {
+		t.Fatal("documented public endpoint lost")
+	}
+	source.endpoint = server.URL
+	source.client.Transport = roundTripFunc(func(r *http.Request) (*http.Response, error) {
+		if r.URL.Host == "shikimori.io" {
+			imageCalls++
+			if r.URL.Path != "/cover.jpg" {
+				t.Error(r.URL)
+			}
+			return &http.Response{StatusCode: 200, Header: make(http.Header), Body: io.NopCloser(strings.NewReader("image"))}, nil
+		}
+		return http.DefaultTransport.RoundTrip(r)
+	})
+	items, err := source.Search(context.Background(), "One Piece")
+	if err != nil || len(items) != 1 || items[0].URL != "https://shikimori.io/mangas/13" {
+		t.Fatal(items, err)
+	}
+	reader, err := source.OpenCover(context.Background(), "13")
+	if err != nil {
+		t.Fatal(err)
+	}
+	reader.Close()
+	if apiCalls != 1 || imageCalls != 1 {
+		t.Fatal(apiCalls, imageCalls)
 	}
 }
