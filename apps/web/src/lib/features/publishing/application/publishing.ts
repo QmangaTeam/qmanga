@@ -9,7 +9,9 @@ export interface StudioProject {id:string;titleId:string;titleName:string;teamId
 export interface ProjectListItem {nextRevisionId?:string;nextRevisionState?:string;id:string;titleName:string;teamName:string;teamId?:string;coverURL?:string;chapterCount?:number;ratingCount?:number;score?:number}
 export interface ProjectPage {items:ProjectListItem[];nextCursor:string;total:number}
 export interface ProjectFilter {query?:string;teamId?:string}
+export interface ChapterImportTask {done:Promise<UploadSource[]>;cancel():void}
 export interface PublishingGateway {
+ importChapter?(file:unknown,progress:(done:number,total:number)=>void):ChapterImportTask;
  projectPage(filter:ProjectFilter,cursor?:string):Promise<ProjectPage>;
  project(id:string):Promise<StudioProject>;
  createChapter(projectId:string,input:{label:string;volume:string;name:string;order:number}):Promise<string>;
