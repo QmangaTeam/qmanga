@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@studio-agent'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 17:02'
+updated_date: '2026-10-20 17:18'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -51,4 +51,6 @@ Independent review P2 исправлен: 8414f46 сохраняет валид�
 Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
 
 CI6e2fa97 выявил test-only ожидание scroll до автоматической прокрутки ссылки Playwright. Исправлено: ссылка явно прокручивается в видимую область, фиксируется departure scroll; отдельно проверяются путь/версия/шаг/позиция/projectsReturn и строгая обратная ссылка. Studio-workflow4/4 local PASS; independent review без замечаний. SHA тестовых исправлений dd66757cb766a5f5809e018b85314174f0af2730. Требуется повторный Verify Qmanga; статус Review, выпуск не подтверждён.
+
+Final remote verification 2026-10-20: SHA 4145910eb7bc649aaca2a2e890a44fbfa5f75575, Verify Qmanga https://github.com/maqsatto/qmanga/actions/runs/39463685921 SUCCESS (both acceptance/browser shards, Go/PostgreSQL/codecs and frontend checks); Fast Release https://github.com/maqsatto/qmanga/actions/runs/39463685942 SUCCESS. Earlier CI follow-up failures are resolved. External production still reports 36b3a5f455eb37830408af44c2e2f00b48eabd51; deployment of this package is not confirmed, status remains Review. Physical Android TASK-97 remains not_run; new imports TASK-99–103 are queued only.
 <!-- SECTION:NOTES:END -->
