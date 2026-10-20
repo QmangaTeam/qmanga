@@ -28,9 +28,13 @@ func (*Processor) ProcessAvatar(source io.Reader) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	side := min(config.Width, config.Height)
-	left := (config.Width - side) / 2
-	top := (config.Height - side) / 2
+	if format == "jpeg" {
+		src = orientedImage{src, jpegOrientation(raw)}
+	}
+	bounds := src.Bounds()
+	side := min(bounds.Dx(), bounds.Dy())
+	left := bounds.Min.X + (bounds.Dx()-side)/2
+	top := bounds.Min.Y + (bounds.Dy()-side)/2
 	target := image.NewRGBA(image.Rect(0, 0, 256, 256))
 	draw.CatmullRom.Scale(target, target.Bounds(), src, image.Rect(left, top, left+side, top+side), draw.Src, nil)
 	var output bytes.Buffer
