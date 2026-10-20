@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@reader-agent'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 16:52'
+updated_date: '2026-10-20 17:02'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -45,4 +45,6 @@ ordinal: 44030
 18e11b4: SSR load сохраняет точный pathname+search для retry включая cursor. SSR regression pass. Browser сбой/восстановление на актуальном runtime pending root; не выдаётся за пройденный. Локально текущие svelte-check 0 errors/warnings, frontend boundaries pass, UI45 pass; выпуска не подтверждают. Следующий шаг: root serial browser/runtime, independent review и authorised release acceptance.
 
 Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
+
+CI6e2fa97 выявил зависимость теста от названия baseline-тайтла. Тест теперь создаёт два своих listed manga с search_text, получает действительный cursor и удаляет оба в finally. Изолированный API pause→unpause→retry21s local PASS. Продукт не менялся; independent review без замечаний. SHA тестовых исправлений dd66757cb766a5f5809e018b85314174f0af2730. Требуется повторный Verify Qmanga; статус Review, выпуск не подтверждён.
 <!-- SECTION:NOTES:END -->

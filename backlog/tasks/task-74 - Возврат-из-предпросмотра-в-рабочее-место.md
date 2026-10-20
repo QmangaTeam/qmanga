@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@studio-agent'
 created_date: '2026-10-20 15:13'
-updated_date: '2026-10-20 16:52'
+updated_date: '2026-10-20 17:02'
 labels:
   - ux-top30-2026-10-20
   - web
@@ -49,4 +49,6 @@ Independent review P2 исправлен: 8414f46 сохраняет валид�
 Локальная общая приёмка 20.10: полный Go/PostgreSQL -p1 ./... PASS (tmp/task72/go-final.log), 146 module +46UI PASS, Svelte0/0, architecture/contrast/ui-preview PASS. Browser studio-priority/studio-workflow/tag-search9/9 и publishing/cover/project-cards6/6 PASS; восстановление списка/скролла, preview→версия/шаг, reload, processing/grid/preflight подтверждены. Повторное независимое review3P2context исправлено, новых замечаний нет. Выпуск до push не подтверждён.
 
 Итоговая локальная приёмка пакета bd9654c579a6bd1cd3465c58f74f2fdeec7ee24a: 75 уникальных browser-сценариев PASS (35 файлов; два старых селектора обновлены и перепроверены, отдельный API pause/unpause recovery PASS),146 module и46 UI PASS; Svelte0 errors/0 warnings, architecture/contrast/ui-preview PASS, Docker web/API build+health PASS. Полный Go/PostgreSQL ./... выполнен последовательно -p1 PASS; identity/HTTP после PNG EXIF также PASS. Независимый review трёх областей и повтор после исправлений: замечаний, препятствующих push, нет. Невыполненная физическая приёмка отдельно TASK97. Выпуск до push не подтверждён; статус Review.
+
+CI6e2fa97 выявил test-only ожидание scroll до автоматической прокрутки ссылки Playwright. Исправлено: ссылка явно прокручивается в видимую область, фиксируется departure scroll; отдельно проверяются путь/версия/шаг/позиция/projectsReturn и строгая обратная ссылка. Studio-workflow4/4 local PASS; independent review без замечаний. SHA тестовых исправлений dd66757cb766a5f5809e018b85314174f0af2730. Требуется повторный Verify Qmanga; статус Review, выпуск не подтверждён.
 <!-- SECTION:NOTES:END -->
