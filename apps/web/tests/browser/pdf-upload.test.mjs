@@ -45,7 +45,8 @@ test('production PDF bundle previews locally and uploads ordered images through 
   assert.deepEqual(current.pages.map(page=>page.original_name),['pdf-page-001.png','pdf-page-002.png']);
   assert.equal(uploads,2);
  }finally{
-  if(revision){const current=await(await context.request.get('/api/v1/studio/revisions/'+revision)).json();await context.request.delete('/api/v1/studio/revisions/'+revision+'?version='+current.version,{headers});}
-  await context.close();await browser.close();
+  try{
+   if(revision){const current=await(await context.request.get('/api/v1/studio/revisions/'+revision)).json();await context.request.delete('/api/v1/studio/revisions/'+revision+'?version='+current.version,{headers});}
+  }finally{await context.close();await browser.close();}
  }
 });
