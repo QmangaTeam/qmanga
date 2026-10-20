@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 14:35'
-updated_date: '2026-10-20 14:46'
+updated_date: '2026-10-20 14:54'
 labels: []
 dependencies: []
 type: bug
@@ -46,6 +46,8 @@ ordinal: 43026
 Заявка тайтла: ID-based TaxonomySelection с поиском kk/ru/slug, выбранными значениями и ограниченной высотой списка; перед обновлением грязного черновика явное подтверждение, отмена сохраняет текст/FileList. Новые browser-регрессии 5/5 (включая >12 ID и retry второй страницы жалоб); независимый source review без замечаний. Svelte 0/0, architecture/contrast/preview зелёные; модули 127/127 и UI 41/41. Интегрированный Docker web собран. Выполняется прогон существующих связанных browser-сценариев.
 
 Результат пакета: d8a1fe3 (жалобы), 10a26d7 (аккаунты), 2ff3a0b (дополнительные регрессии), c114fdc (заявка и компактный выбор меток). Итог: recovery browser 5/5; существующие admin/publishing-cover/publishing-steps/taxonomy/workspace 11/11 без skip; frontend modules 127/127, UI 41/41; check/preview 0 ошибок и предупреждений; architecture/contrast и Docker production build зелёные. Новые исходные 4 регрессии подтверждённо красные до правок. kk/ru, обе темы, 320/360/1280 и клавиатура проверены на синтетической таксономии 720+ меток, сохранность >12 ID и evidence FileList подтверждена. Независимый source review без замечаний. Логи и снимки в игнорируемой tmp/task68/. Production внешне наблюдён на 36b3a5f455eb37830408af44c2e2f00b48eabd51, не менялся в этой работе. Осталось: запрос владельца на push, удалённые workflows, наблюдаемый выпуск и приёмка того же SHA; AC5 до этого не закрыт.
+
+По запросу владельца 20 октября выполнен git push origin main: 97fd1f07eabc4d4afada7e558e35aa6df47432b5. Fast Release 39442724763 success, refs/deploy-ready указывает на этот SHA; Verify Qmanga 39442724496 выполняет browser acceptance. Публичные HTTPS health 200, PostgreSQL/S3 ok; production пока 36b3a5f455eb37830408af44c2e2f00b48eabd51. SSH к VM из текущего окружения: Connection timed out; обходов poller/gates не выполняли. Следующий шаг — внешне подтвердить автоматический выпуск 97fd1f0 и служебный smoke, затем закрыть AC5/Done. До наблюдаемого выпуска Review сохраняется.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
