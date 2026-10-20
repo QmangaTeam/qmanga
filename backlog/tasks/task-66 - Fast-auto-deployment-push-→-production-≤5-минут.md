@@ -1,10 +1,11 @@
 ---
 id: TASK-66
 title: 'Fast auto deployment: push → production ≤5 минут'
-status: Review
-assignee: []
+status: In Progress
+assignee:
+  - '@codex'
 created_date: '2026-10-20 01:19'
-updated_date: '2026-10-20 18:19'
+updated_date: '2026-10-20 18:24'
 labels:
   - CI
   - deployment
@@ -38,4 +39,6 @@ ordinal: 41026
 Remote release readiness 2026-10-20: tested product SHA842a23f2c9bd55da1ad9447def70f428bda0b3b1. Verify Qmanga https://github.com/maqsatto/qmanga/actions/runs/39470308246 SUCCESS: both acceptance shards,88 browser scenarios (42+46),0 failures, full Go/PostgreSQL/codecs, frontend and all3 ARM64 images. Fast Release https://github.com/maqsatto/qmanga/actions/runs/39470308114 SUCCESS; refs/deploy-ready confirmed842a23f. Prior39468803806 failure was a real pre-hydration sidebar lost-Enter race, reproduced and fixed with native disabled-until-mounted control plus cold-JS regression; independent review passed, local workspace3/3/UI46/Svelte0/0 and repeated full CI green. Live Shikimori/AniList DTO→mapper→merge→metadataError/validPublication also validated (no titles created/changed). Public production still reports36b3a5f455eb37830408af44c2e2f00b48eabd51, health200; strict SSH with existing key and trusted known_hosts still times out before authentication. Rollout/production acceptance remains unconfirmed; keep Review. Next step: restore authorized SSH network access and inspect existing poller journal/state, preserve locks/backup/restore gates and release the ready immutable SHA through the single standard path.
 
 Oracle Console read-only diagnosis: owner signed in through the visible browser. VM qmanga is Running, expected public address and subnet, no VNIC NSGs. Associated security list permits TCP22 from exactly one previous operator /32; verified current external operator IPv4 does not match that allowlist. HTTP80/HTTPS443 are public as expected; no OCI rules have been saved or changed. Prepared a single-/32 replacement in the existing SSH ingress form and requested explicit owner approval before Save; host firewall and poller state are still uninspected. No personal source IPs or account credentials recorded here. Bounded public observation after ready842a23f did not observe rollout; public API import route remains404 and productionSHA36b3a5f. Next: owner decision on the proposed restricted SSH source replacement, then SSH read-only poller/backup/hold diagnosis before normal gated promotion.
+
+2026-10-20: owner explicitly approved replacing the single stale OCI SSH source with current operator /32, retaining TCP22 only. Saved and verified visible state; strict existing-key/known-host SSH now succeeds. Both active environments remain36b3a5f. Existing enabled5min poller is held on842a23f because component selection expects api:6be46e4 (last backend input change), while successful CI publishes release-head tags. Hold preserved. Plan: reproduce tag-contract mismatch, fix safe immutable content-equivalent selection with regression, independent review, checks/push, observe existing poller gates and actual production SHA. No credentials or personal source addresses stored.
 <!-- SECTION:NOTES:END -->
