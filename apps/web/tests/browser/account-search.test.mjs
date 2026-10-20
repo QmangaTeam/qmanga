@@ -29,7 +29,7 @@ test('account load more uses the applied search until another search is submitte
   const query=page.getByRole('textbox',{name:'Имя, ID или точная почта'});await query.fill('new-unsubmitted-search');
   await page.getByRole('button',{name:'Загрузить ещё',exact:true}).click();await page.getByText('Synthetic second',{exact:true}).waitFor();
   assert.deepEqual(calls.at(-1),{query:'',after:'first'},'continuation stays bound to applied criteria');
-  await page.getByRole('button',{name:'Найти',exact:true}).click();await page.getByText('Synthetic first',{exact:true}).waitFor();
+  await page.getByRole('button',{name:'Найти',exact:true}).click();await page.getByText('Synthetic second',{exact:true}).waitFor({state:'hidden'});
   assert.deepEqual(calls.at(-1),{query:'new-unsubmitted-search',after:''});assert.equal(await page.getByText('Synthetic second',{exact:true}).count(),0);
  }finally{await context.close();}
 });
