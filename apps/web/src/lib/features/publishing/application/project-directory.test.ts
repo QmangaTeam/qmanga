@@ -115,3 +115,11 @@ test('slow superseded search failure does not overwrite newer successful search'
  expect(directory.items[0].titleName).toBe('Fast Result');
  expect(directory.error).toBeNull();
 });
+
+test('account reset invalidates an in-flight page and clears previous account context',async()=>{
+ let resolve!:(page:ProjectPage)=>void;
+ const directory=new ProjectDirectory({projectPage:()=>new Promise(done=>resolve=done)});
+ const pending=directory.search('private','team-a');directory.reset();
+ resolve({items:[{id:'secret',titleName:'Secret',teamName:'Old team'}],nextCursor:'next',total:1});await pending;
+ expect(directory.items).toEqual([]);expect(directory.appliedCriteria).toEqual({query:'',teamId:''});expect(directory.cursor).toBe('');expect(directory.loading).toBe(false);
+});

@@ -1,5 +1,6 @@
 <script lang="ts">
- import {onMount,untrack} from 'svelte';
+ import {onMount,untrack,tick} from 'svelte';
+ import {replaceState} from '$app/navigation';
  import {page} from '$app/stores';
  import type {Account} from '$lib/features/identity/domain/account';
  import type {PublishingGateway} from '../application/publishing';
@@ -25,6 +26,11 @@
  const appliedCriteria=$derived.by(()=>{directoryVersion;return directory.appliedCriteria;});
  const directoryError=$derived.by(()=>{directoryVersion;return directory.error;});
  let searchGeneration=0;
+ let loadedPages=$state(1),position=$state(0),mounted=$state(false);
+ const returnTo=$derived('/studio/projects?'+new URLSearchParams({q:appliedCriteria.query,team:appliedCriteria.teamId,pages:String(loadedPages),position:String(position)}));
+ function updateURL(){const next=new URL(window.location.href);next.search=new URLSearchParams({q:directory.appliedCriteria.query,team:directory.appliedCriteria.teamId,pages:String(loadedPages),position:String(Math.round(window.scrollY))}).toString();replaceState(next,$page.state);}
+ async function more(){const generation=searchGeneration;await directory.more();if(generation===searchGeneration&&!directory.error){loadedPages++;updateURL();}}
+
 
  async function loadTeams(generation:number){
   try{
@@ -38,19 +44,35 @@
  async function search(){
   const generation=++searchGeneration;
   error='';
-  await directory.search(query,team);
+  loadedPages=1;await directory.search(query,team);
+  if(generation===searchGeneration)updateURL();
   if(generation===searchGeneration&&!teams.length)await loadTeams(generation);
  }
 
  async function retry(){
-  if(directory.error)await directory.retry();
+  if(directory.error){const append=directory.items.length>0&&directory.hasMore;await directory.retry();if(!directory.error){if(append)loadedPages++;updateURL();}}
   if(error)await loadTeams(searchGeneration);
  }
 
+ async function restore(){
+  const generation=++searchGeneration;
+  directory.reset();teams=[];error='';
+  if(!user)return;
+  const params=new URL(window.location.href).searchParams;
+  query=(params.get('q')||'').slice(0,80);team=params.get('team')||'';loadedPages=1;
+  await directory.search(query,team);
+  const pages=Math.min(20,Math.max(1,Number(params.get('pages'))||1));
+  while(generation===searchGeneration&&loadedPages<pages&&directory.hasMore&&!directory.error){await directory.more();if(generation===searchGeneration&&!directory.error)loadedPages++;}
+  if(generation!==searchGeneration)return;
+  await loadTeams(generation);if(generation!==searchGeneration)return;await tick();
+  const top=Math.min(1000000,Math.max(0,Number(params.get('position'))||0));window.scrollTo({top,behavior:'instant'});
+ }
+ $effect(()=>{const account=user?.id;if(mounted){untrack(()=>{void restore();});}return ()=>{if(account!==user?.id)directory.reset();};});
  onMount(()=>{
-  team=$page.url.searchParams.get('team')||'';
-  if(user)void search();
-  return ()=>{searchGeneration++;};
+  mounted=true;
+  const remember=()=>{position=Math.min(1000000,Math.round(window.scrollY));};
+  const pop=()=>{void restore();};window.addEventListener('scroll',remember,{passive:true});window.addEventListener('popstate',pop);
+  return ()=>{searchGeneration++;directory.reset();window.removeEventListener('scroll',remember);window.removeEventListener('popstate',pop);};
  });
 </script>
 <svelte:head><title>{text($locale,'Аударма жобалары','Проекты переводов')} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>
@@ -64,8 +86,8 @@
  {#if loading&&!items.length}<p role="status">{text($locale,'Жобалар жүктелуде…','Загружаем проекты…')}</p>
  {:else if !items.length&&!error&&!directoryError&&(appliedCriteria.teamId||appliedCriteria.query)}<p class="empty-state">{text($locale,'Жоба табылмады. Сұрау не команданы өзгерт.','Проекты не найдены. Измени запрос или команду.')}</p>
  {:else if !items.length&&!error&&!directoryError}<div class="next-step"><h2>{teams.some(team=>team.approved)?text($locale,'Бірінші жобаңды сұра','Запроси первый проект'):text($locale,'Командадан баста','Начни с команды')}</h2><p>{teams.some(team=>team.approved)?text($locale,'Каталогтан тайтл таңда немесе жаңа шығарма ұсын. Мақұлданған жоба осында пайда болады.','Выбери тайтл из каталога или предложи новый. Одобренный проект появится здесь.'):text($locale,'Команда құруға өтінім бер. Мақұлдағаннан кейін тайтл сұрап, тараулар жүктей аласың.','Подай заявку на команду. После одобрения можно запросить тайтл и загружать главы.')}</p><div class="actions"><a class="button primary" href={teams.some(team=>team.approved)?'/studio/requests?new=1':'/studio/teams?new=1'}>{teams.some(team=>team.approved)?text($locale,'Өтінім жіберу','Подать заявку'):text($locale,'Командаларға өту','Перейти к командам')}</a><a class="button subtle" href="/studio/requests">{text($locale,'Өтінімдерім','Мои заявки')}</a></div></div>
- {:else}<div class="projects">{#each items as item (item.id)}<ProjectCard {item}/>{/each}</div>{/if}
- {#if hasMore}<button class="button subtle" disabled={loading} onclick={()=>directory.more()}>{text($locale,'Тағы жобалар','Ещё проекты')}</button>{/if}
+ {:else}<div class="projects">{#each items as item (item.id)}<ProjectCard {item} {returnTo}/>{/each}</div>{/if}
+ {#if hasMore}<button class="button subtle" disabled={loading} onclick={()=>more()}>{text($locale,'Тағы жобалар','Ещё проекты')}</button>{/if}
 {/if}
 <style>
  .project-search{display:flex;align-items:end;flex-wrap:wrap;gap:12px;margin:20px 0}.project-search label{display:grid;gap:8px;flex:1 1 220px;min-width:0}

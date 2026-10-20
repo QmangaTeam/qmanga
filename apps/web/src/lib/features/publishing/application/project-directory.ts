@@ -24,6 +24,8 @@ export class ProjectDirectory {
 
  constructor(private gateway: Pick<PublishingGateway, 'projectPage'>, private changed: () => void = () => {}) {}
 
+ reset(){this.generation++;this.items=[];this.cursor='';this.hasMore=false;this.total=undefined;this.loading=false;this.error=null;this.appliedCriteria={query:'',teamId:''};this.changed();}
+
  async search(draftQuery: string, teamId: string) {
   this.generation++;
   this.appliedCriteria = { query: draftQuery.trim(), teamId };
