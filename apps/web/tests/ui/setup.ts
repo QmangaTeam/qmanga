@@ -4,7 +4,7 @@ import { resolve } from 'node:path';
 import { compile } from 'svelte/compiler';
 import { mock } from 'bun:test';
 
-mock.module('$app/navigation', () => ({ goto: async () => {}, invalidateAll: async () => {}, beforeNavigate: () => {}, afterNavigate: () => {} }));
+mock.module('$app/navigation', () => ({ goto: async () => {}, invalidateAll: async () => {}, beforeNavigate: () => {}, afterNavigate: () => {}, replaceState: () => {} }));
 mock.module('$app/state', () => ({ page: { url: new URL('http://localhost/') } }));
 
 plugin({

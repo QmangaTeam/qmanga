@@ -1,4 +1,5 @@
 <script lang="ts">
+ import {fieldValidation} from '$lib/shared/presentation/form-validation';
  import {onMount} from 'svelte';
  import {beforeNavigate} from '$app/navigation';
  import {useLocale,text} from '$lib/shared/presentation/locale';
@@ -32,7 +33,7 @@
 {#if proposal&&context}
  <h2>{context.title_name}</h2>
  {#if history.some(x=>x.status==='pending')}<p class="notice">{text($locale,'Осы жобаның өтінімі қаралуда. Шешімді күтіңіз.','Заявка этого проекта уже рассматривается. Дождитесь решения.')}</p>{:else}
- <form onsubmit={submit} oninput={()=>dirty=true}>
+ <form use:fieldValidation={{locale:$locale}} onsubmit={submit} oninput={()=>dirty=true}>
  <fieldset disabled={busy}>
  <section class="panel fields"><h2>{text($locale,'Тайтл туралы','Сведения о тайтле')}</h2>
  <label>{text($locale,'Атауы','Название')}<input bind:value={proposal.data.name} maxlength="200" required/></label>
