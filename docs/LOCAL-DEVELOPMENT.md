@@ -80,7 +80,9 @@ Missing fixture values fail the run; they are not skips. The browser uses a new 
 
 ## Persistent owner review library
 
-The current workstation has two separate owner-requested manual review titles: <http://localhost:18080/titles/ajal-arnasy> preserves the requested production metadata and cover, and <http://localhost:18080/titles/jupar-gul-asqaq-zhaiqalady> contains the 54 CBZ pages. The latter title and author (Сака Миками) come from its first page, which also supplies its cover. Its existing reader URL remains <http://localhost:18080/read/4fa60dd5-ee9d-4315-9793-83c96319ee55>. Its database and media use the existing named volumes. The protected config is stored separately from disposable test fixtures:
+The current workstation has two separate owner-requested manual review titles: <http://localhost:18080/titles/ajal-arnasy> preserves the requested production metadata and cover, and <http://localhost:18080/titles/jupar-gul-asqaq-zhaiqalady> contains the 54 CBZ pages. The latter title and author (Сака Миками) come from its first page, which also supplies its cover. Its existing reader URL remains <http://localhost:18080/read/4fa60dd5-ee9d-4315-9793-83c96319ee55>. A complete fictional review fixture is also available at <http://localhost:18080/titles/synthetic-29e5596f?tab=about>, named «Қала шамдары — толық UI демо». It keeps the demo badge and clearly identifies its test data: long bilingual description, multiple authors/publishers, aliases, formats, year, country, source links, genres, generated geometric cover/banner and two translation teams (one avatar and one fallback). Published synthetic releases exercise the normal reader/team links. The real CBZ titles remain separate. Its local receipt is kept privately as `dense-demo.json` alongside the review configuration.
+
+Its database and media use the existing named volumes. The protected config is stored separately from disposable test fixtures:
 
 ```sh
 docker compose --env-file "$HOME/.config/qmanga/local-review/stack.env" up -d --wait

@@ -5,7 +5,7 @@ status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-20 20:04'
-updated_date: '2026-10-20 20:17'
+updated_date: '2026-10-20 21:26'
 labels: []
 dependencies: []
 type: enhancement
@@ -38,6 +38,8 @@ Completed local-only permanent import: /titles/ajal-arnasy, reader /read/4fa60dd
 Owner correction: CBZ belongs to a different title. First page visually inspected: Жұпар гүл асқақ жайқалады, Сака Миками. Correct association with separate local page and first-page cover; retain DeathTube metadata page. Preserve54uploadedpages and reader ID; verify both titles independently.
 
 Correction supersedes original mistaken association. New title/project and first-page artwork created through local admin/moderated APIs. Guarded local PostgreSQL transaction moved chapter/release preserving revision/media. Source attribution corrected. Public APIs and independent review confirm old0/new1chapters,54orderedpages andnewtitleID. Protected receipt/docs updated; historical importer disabled. No production mutation.
+
+Owner requested fullypopulatedlocaltitle for realisticUItesting. Existing synthetic-29e5596f transformed into clearly fictional Қала шамдары — толық UI демо withdemo=true,2authors,2publishers,3aliasesplusoriginalname,longbilingualdescription,year/country/source/3formats/2links/5genres/16+rating andgeneratedgeometriccover/banner. Normaladmin+moderatedartwork APIs; newapprovedtestteam/avatar/project and1generatedsyntheticpagepublished via existingprocessing/rights/moderation to make2teams publiclyvisible (oneavatar,onefallback). Existing syntheticrelease preserved; realCBZ andDeathTube untouched. Fullfixture readonlybrowseracceptancepassedincludingavatarloads,fallback,allmetadata,responsiveness,descriptionandnativekeyboardscroll. Persistentreceipt private ~/.config/qmanga/local-review/dense-demo.json,normalexistingvolumes;docsLOCALupdated. DemoURL http://localhost:18080/titles/synthetic-29e5596f?tab=about . Localonlydatarequest complete; no productionrelease needed.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary

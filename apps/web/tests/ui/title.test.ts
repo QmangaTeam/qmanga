@@ -70,3 +70,12 @@ test('title tab links preserve scroll without a content fragment',async()=>{
  expect(await elements(html,'.metadata .contributors')).toHaveLength(0);
  expect(await elements(html,'.title-information>.contributors')).toHaveLength(1);
 });
+
+test('title metadata uses field icons, status dots and a team avatar without repeating chapter totals',async()=>{
+ const html=render(Title).body;
+ expect(await elements(html,'.summary-facts>div')).toHaveLength(8);
+ expect(await elements(html,'.summary-facts dt svg')).toHaveLength(8);
+ expect(await elements(html,'.status-dot')).toHaveLength(2);
+ expect(await elements(html,'.contributors .team-avatar img')).toHaveLength(1);
+ expect((await elements(html,'.team-avatar img'))[0].src).toBe('/media/avatars/team/team');
+});
