@@ -5,7 +5,10 @@ import {render,elements} from './markup';
 test('title places actions and publication metadata beside a unified facts panel',async()=>{
  const html=render(Title).body;
  expect(await elements(html,'.title-aside a[href="/read/release"]')).toHaveLength(1);
- expect(await elements(html,'.title-facts')).toHaveLength(1);
+ expect(await elements(html,'.title-information .metadata')).toHaveLength(1);
+ expect(await elements(html,'.title-facts,.sidebar-metadata,.mobile-metadata')).toHaveLength(0);
+ expect(await elements(html,'.metadata .summary-facts')).toHaveLength(1);
+ expect(await elements(html,'.metadata .statistics')).toHaveLength(1);
  expect(html).toContain('185');
  expect(html).toContain('Publisher');
  expect(html).toContain('Корея');
