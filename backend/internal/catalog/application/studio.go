@@ -21,11 +21,25 @@ func (service *Service) RequestProject(ctx context.Context, actor string, input 
 	}
 	return request, service.repository.CreateProjectRequest(ctx, actor, request)
 }
-func (service *Service) ProjectRequests(ctx context.Context, actor string, admin bool, after string) ([]domain.ProjectRequest, error) {
+
+type ProjectRequestFilter struct {
+	Team string
+	Kind string
+}
+
+func (service *Service) ProjectRequests(ctx context.Context, actor string, admin bool, after string, filters ...ProjectRequestFilter) ([]domain.ProjectRequest, error) {
 	if len(after) > 36 {
 		return nil, domain.ErrInvalid
 	}
-	return service.repository.ProjectRequests(ctx, actor, admin, after)
+	filter := ProjectRequestFilter{}
+	if len(filters) > 0 {
+		filter = filters[0]
+	}
+	filter.Team = strings.TrimSpace(filter.Team)
+	if utf8.RuneCountInString(filter.Team) > 160 || (filter.Kind != "" && filter.Kind != "new" && filter.Kind != "existing") {
+		return nil, domain.ErrInvalid
+	}
+	return service.repository.ProjectRequests(ctx, actor, admin, after, filter)
 }
 func (service *Service) ReviewProjectRequest(ctx context.Context, actor, id, decision, reason, titleID string) (domain.ProjectRequest, error) {
 	if !domain.ValidRequestDecision(decision, reason) || len(titleID) > 36 {

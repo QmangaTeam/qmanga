@@ -70,7 +70,11 @@ func (repository *Repository) CreateProjectRequest(ctx context.Context, actor st
 	}
 	return transaction.Commit(ctx)
 }
-func (repository *Repository) ProjectRequests(ctx context.Context, actor string, admin bool, after string) ([]domain.ProjectRequest, error) {
+func (repository *Repository) ProjectRequests(ctx context.Context, actor string, admin bool, after string, filters ...application.ProjectRequestFilter) ([]domain.ProjectRequest, error) {
+	filter := application.ProjectRequestFilter{}
+	if len(filters) > 0 {
+		filter = filters[0]
+	}
 	condition := `EXISTS(SELECT 1 FROM team_memberships membership JOIN users account ON account.id=membership.user_id AND account.is_verified AND NOT account.is_blocked WHERE membership.team_id=request.team_id AND account.id=$1)`
 	if admin {
 		allowed, failure := repository.IsAdmin(ctx, actor)
@@ -82,7 +86,7 @@ func (repository *Repository) ProjectRequests(ctx context.Context, actor string,
 		}
 		condition = "request.status='pending' AND $1::text<>''"
 	}
-	rows, failure := repository.pool.Query(ctx, "SELECT "+requestColumns+requestJoins+" WHERE "+condition+" AND ($2::text='' OR (request.created_at,request.id)<(SELECT created_at,id FROM project_requests WHERE id=$2)) ORDER BY request.created_at DESC,request.id DESC LIMIT 50", actor, after)
+	rows, failure := repository.pool.Query(ctx, "SELECT "+requestColumns+requestJoins+" WHERE "+condition+" AND ($2::text='' OR (request.created_at,request.id)<(SELECT created_at,id FROM project_requests WHERE id=$2)) AND ($3::text='' OR request.team_id=$3 OR position(lower($3) in lower(team.name))>0) AND ($4::text='' OR ($4='new' AND request.title_id IS NULL) OR ($4='existing' AND request.title_id IS NOT NULL)) ORDER BY request.created_at DESC,request.id DESC LIMIT 50", actor, after, filter.Team, filter.Kind)
 	if failure != nil {
 		return nil, failure
 	}

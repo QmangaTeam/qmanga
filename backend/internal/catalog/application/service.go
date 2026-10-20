@@ -105,7 +105,7 @@ type UpdatePage struct {
 type Repository interface {
 	Rankings(context.Context, string, int) ([]Summary, error)
 	CreateProjectRequest(context.Context, string, domain.ProjectRequest) error
-	ProjectRequests(context.Context, string, bool, string) ([]domain.ProjectRequest, error)
+	ProjectRequests(context.Context, string, bool, string, ...ProjectRequestFilter) ([]domain.ProjectRequest, error)
 	ReviewProjectRequest(context.Context, string, string, string, string, string) (domain.ProjectRequest, error)
 	CancelProjectRequest(context.Context, string, string) error
 	StudioProject(context.Context, string, string) (StudioProject, error)

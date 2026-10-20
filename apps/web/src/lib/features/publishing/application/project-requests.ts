@@ -2,7 +2,7 @@ import type {ProjectRequest,ProjectRequestInput} from '../domain/project-request
 import {validProjectRequest} from '../domain/project-request';
 import {AppFailure} from '$lib/shared/domain/failure';
 export interface ProjectRequestsGateway {
- list(admin?:boolean,after?:string):Promise<{items:ProjectRequest[];hasMore:boolean}>;
+ list(admin?:boolean,after?:string,filter?:{team:string;kind:string}):Promise<{items:ProjectRequest[];hasMore:boolean}>;
  create(input:ProjectRequestInput):Promise<void>;
  review(id:string,decision:'approve'|'reject',reason:string,titleId?:string):Promise<void>;
  cancel(id:string):Promise<void>;

@@ -10,7 +10,7 @@ function request(value:unknown):ProjectRequest{
 }
 export class HttpProjectRequestsGateway implements ProjectRequestsGateway {
  constructor(private api:ApiClient){}
- async list(admin=false,after=''){const value=object(await this.api.call('/api/v1/'+(admin?'admin':'studio')+'/project-requests?after='+encodeURIComponent(after)));if(!Array.isArray(value.items))throw new AppFailure('unavailable');return {items:value.items.map(request),hasMore:value.has_more===true};}
+ async list(admin=false,after='',filter={team:'',kind:''}){const value=object(await this.api.call('/api/v1/'+(admin?'admin':'studio')+'/project-requests?'+new URLSearchParams({after,...filter})));if(!Array.isArray(value.items))throw new AppFailure('unavailable');return {items:value.items.map(request),hasMore:value.has_more===true};}
  async create(input:ProjectRequestInput){await this.api.call('/api/v1/studio/project-requests','POST',{team_id:input.teamId,title_id:input.titleId,name:input.name,original_name:input.originalName,slug:input.slug,kind:input.kind,description:input.description,source_url:input.sourceURL,note:input.note});}
  async review(id:string,decision:'approve'|'reject',reason:string,titleId=''){await this.api.call('/api/v1/admin/project-requests/'+encodeURIComponent(id)+'/review','POST',{decision,reason,title_id:titleId});}
  async cancel(id:string){await this.api.call('/api/v1/studio/project-requests/'+encodeURIComponent(id)+'/cancel','POST',{});}

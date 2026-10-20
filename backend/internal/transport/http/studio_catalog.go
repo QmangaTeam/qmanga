@@ -11,7 +11,7 @@ func projectRequestView(item domain.ProjectRequest) gin.H {
 }
 func (handler *CatalogHandler) projectRequests(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.ProjectRequests(request.Request.Context(), account.ID, request.FullPath() == "/api/v1/admin/project-requests", request.Query("after"))
+	items, failure := handler.service.ProjectRequests(request.Request.Context(), account.ID, request.FullPath() == "/api/v1/admin/project-requests", request.Query("after"), application.ProjectRequestFilter{Team: request.Query("team"), Kind: request.Query("kind")})
 	if failure != nil {
 		catalogError(request, failure)
 		return
