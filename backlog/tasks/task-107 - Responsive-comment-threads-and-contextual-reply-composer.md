@@ -1,11 +1,11 @@
 ---
 id: TASK-107
 title: Responsive comment threads and contextual reply composer
-status: Review
+status: Done
 assignee:
   - '@codex-comments'
 created_date: '2026-10-20 21:42'
-updated_date: '2026-10-20 21:53'
+updated_date: '2026-10-21 05:01'
 labels: []
 dependencies: []
 type: enhancement
@@ -42,4 +42,6 @@ Independentreview completed:4browsercasespassedpluslive320px nestedcomposerinspe
 Committed source/isolatedpreview/tests asbe7491c. Independentreviewpassed UI/code and4browsercases; finalsource testedwith5casesincludingfailure-draftretention. Manualsyntheticpreview localhost3002 runningseparately; normalapplication remainslocalhost18080. Root observedcompactinlinecomposer inCua andsavedtmp/task104/discussion-refinement-live.png. DocsLOCALrecordsmanualpreviewcommand. Awaitownervisualacceptance; no releaseclaim.
 
 Final combined verification:10/10 browser tests pass,0skips;51UItests806assertions pass;Svelte0errors0warnings;frontendbuild,boundaries andboth-themecontrast pass. Independentreviews no blockers. Productcommits c6a0254/7905513/be7491c; a37952a recorded docs/readiness beforethisfinalnote. MainfrontendHMR18080 andsyntheticreplypreview3002 remainrunning. Awaitownerlocalacceptance; no productionrelease.
+
+Owner-authorized release accepted2026-10-21: final source1cdb00a11d9ef8a24c296a9a117501f44ebae203 pushed to GitHub main; Fast Release39546480513 success (https://github.com/maqsatto/qmanga/actions/runs/39546480513). Full Verify39546480550 success,98browser regressions45+53,0fail0skip (https://github.com/maqsatto/qmanga/actions/runs/39546480550). Cold CI test config/cache and statistics accessible-label regressions fixed; title interactions wait for hydration. Local Svelte0errors0warnings,51UItests802assertions,frontendbuild pass; isolated codec4/4 and clean community5/5, read-only title interaction1/1 pass. Independent final review no blockers. VM poller automatically released same SHA staging blue then production blue05:00UTC; oldgreen retained for rollback. Public health/PostgreSQL/S3 and exact homepageSHA confirmed; actual public kk/ru x dark/light browser matrix320/360/1280 passes login/register singleQbrand, centeredmobileHomeQ, titlemetadata/icons/status/contributors, hiddenrails, conditionaldescription and tabs/nooverflow. No local private fixture data or accounts uploaded; no migration/backend changes. Physical Android is not claimed. No remaining release action for these cards.
 <!-- SECTION:NOTES:END -->

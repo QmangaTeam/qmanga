@@ -1,11 +1,11 @@
 ---
 id: TASK-104
 title: Mobile title reflow and single-Q wordmark in both themes
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-20 19:50'
-updated_date: '2026-10-21 04:52'
+updated_date: '2026-10-21 05:01'
 labels: []
 dependencies: []
 priority: high
@@ -84,4 +84,6 @@ Verified source result:7052d1e (conditional description disclosure). Local accep
 Owner authorized GitHub push and production release. Pushed 6ba2e32cacebb4dd60112a511450263d562dad20; Fast Release39545484083 succeeded. VM poller promoted staging then production green at04:49 UTC on2026-10-21. Public health/PostgreSQL/S3 and exact homepage SHA confirmed; read-only browser matrix kk/ru x dark/light at320/360/1280 passed branding/auth/nav/title metadata/tabs/conditional disclosure. Full Verify39545484081 exposed cold-host standalone Vite test config/cache failures and stale status-dot assertion/missing statistics accessible label. Fixing and rerunning CI before final acceptance; remains Review. Independent pre-release review clean.
 
 Follow-up8d48d0d39a3306ccbff058d90122c1acaeeb28d8 pushed: restored localized statistics action name; original-status test now scoped independently of translation-status dot; standalone CBZ/PDF/community Vite tests use explicit raw TypeScript config and writable cache. Local Svelte0/0,51UItests802assertions,build and4codec+5community clean-host cases pass. Independent review no blockers. FastRelease39546400200 and Verify39546400189 running; await same-SHA release/CI acceptance.
+
+Owner-authorized release accepted2026-10-21: final source1cdb00a11d9ef8a24c296a9a117501f44ebae203 pushed to GitHub main; Fast Release39546480513 success (https://github.com/maqsatto/qmanga/actions/runs/39546480513). Full Verify39546480550 success,98browser regressions45+53,0fail0skip (https://github.com/maqsatto/qmanga/actions/runs/39546480550). Cold CI test config/cache and statistics accessible-label regressions fixed; title interactions wait for hydration. Local Svelte0errors0warnings,51UItests802assertions,frontendbuild pass; isolated codec4/4 and clean community5/5, read-only title interaction1/1 pass. Independent final review no blockers. VM poller automatically released same SHA staging blue then production blue05:00UTC; oldgreen retained for rollback. Public health/PostgreSQL/S3 and exact homepageSHA confirmed; actual public kk/ru x dark/light browser matrix320/360/1280 passes login/register singleQbrand, centeredmobileHomeQ, titlemetadata/icons/status/contributors, hiddenrails, conditionaldescription and tabs/nooverflow. No local private fixture data or accounts uploaded; no migration/backend changes. Physical Android is not claimed. No remaining release action for these cards.
 <!-- SECTION:NOTES:END -->
