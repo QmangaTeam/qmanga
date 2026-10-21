@@ -15,7 +15,7 @@ test('mobile title reflows and the single-Q wordmark follows explicit and system
    for(const width of [320,360,487]){
     await page.setViewportSize({width,height:900});
     const cover=await page.locator('.cover-wrap').boundingBox(),heading=await page.locator('.title-heading').boundingBox();
-    assert.ok(cover.width>=170,'cover has useful phone size');assert.ok(heading.y+heading.height<=cover.y+1,'heading precedes cover');
+    assert.ok(cover.width>=96&&cover.width<=140,'compact cover remains legible');assert.ok(cover.x+cover.width<=heading.x+1,'heading shares the cover row');
     assert.equal(await page.locator('.title-information').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'horizontal metadata stays contained in the panel');
     if(width===320){
      const rail=page.locator('.metadata-rail');assert.equal(await rail.evaluate(e=>e.scrollWidth>e.clientWidth),true,'mobile metadata slides horizontally');
