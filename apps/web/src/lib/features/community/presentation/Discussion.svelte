@@ -48,18 +48,18 @@
 {/snippet}
 {#snippet composer()}
  <form class="comment-composer" onsubmit={event=>{event.preventDefault();void submit();}}>
-  <div class="composer-context">
-   <p title={parent?author(comments.find(item=>item.id===parent)!):undefined}>{#if parent}{text($locale,'Жауап: ','Ответ для ')}<strong>{author(comments.find(item=>item.id===parent)!)}</strong>{:else if editing}{copy($locale,"Пікірді өңдеу")}{:else}{copy($locale,"Пікір жазу")}{/if}</p>
+  <div class="composer-context" class:root-context={!parent&&!editing}>
+   <p class:sr-only={!parent&&!editing} title={parent?author(comments.find(item=>item.id===parent)!):undefined}>{#if parent}{text($locale,'Жауап: ','Ответ для ')}<strong>{author(comments.find(item=>item.id===parent)!)}</strong>{:else if editing}{copy($locale,"Пікірді өңдеу")}{:else}{copy($locale,"Пікір жазу")}{/if}</p>
    <button class="close-composer" type="button" disabled={busy} aria-label={text($locale,'Өңдегішті жабу','Закрыть редактор')} onclick={cancelComposer}>×</button>
   </div>
-  <label><span class:sr-only={!!(parent||editing)}>{editing?copy($locale,"Пікірді өңдеу"):parent?copy($locale,"Жауап жазу"):copy($locale,"Пікір жазу")}</span><textarea disabled={busy} bind:this={editor} bind:value={body} required maxlength="2000" rows="3"></textarea></label>
+  <label><span class="sr-only">{editing?copy($locale,"Пікірді өңдеу"):parent?copy($locale,"Жауап жазу"):copy($locale,"Пікір жазу")}</span><textarea disabled={busy} bind:this={editor} bind:value={body} required maxlength="2000" rows="3" placeholder={editing?'':parent?text($locale,'Жауап жазыңыз…','Напишите ответ…'):text($locale,'Пікір жазыңыз…','Напишите комментарий…')}></textarea></label>
   <div class="editor-footer">
    <div class="format-actions" aria-label={text($locale,'Мәтін пішімі','Форматирование')}>
     <button disabled={busy} type="button" title={text($locale,'Қалың қаріп','Жирный')} aria-label={text($locale,'Қалың қаріп','Жирный')} onclick={()=>wrapSelection('**')}><strong>B</strong></button>
     <button disabled={busy} type="button" title={text($locale,'Курсив','Курсив')} aria-label={text($locale,'Курсив','Курсив')} onclick={()=>wrapSelection('*')}><em>I</em></button>
     <button disabled={busy} type="button" title={text($locale,'Сызылған','Зачёркнутый')} aria-label={text($locale,'Сызылған','Зачёркнутый')} onclick={()=>wrapSelection('~~')}><s>S</s></button>
     <button disabled={busy} type="button" aria-pressed={spoiler} onclick={()=>spoiler=!spoiler}>{text($locale,'Спойлер','Спойлер')}</button>
-    <details class="comment-preview"><summary>{text($locale,'Алдын ала көру','Предпросмотр')}</summary><CommentBody body={body}/></details>
+    <details class="comment-preview"><summary aria-label={text($locale,'Алдын ала көру','Предпросмотр')}><Icon name="eye" size={18}/><span class="preview-label">{text($locale,'Алдын ала көру','Предпросмотр')}</span></summary><CommentBody body={body}/></details>
    </div>
    <div class="submit-actions"><span class="character-count">{body.length}/2000</span>{#if editing||parent}<button type="button" class="cancel-composer" disabled={busy} onclick={cancelComposer}>{copy($locale,"Бас тарту")}</button>{/if}<button class="button primary" disabled={busy}>{copy($locale,"Жіберу")}</button></div>
   </div>
@@ -141,16 +141,19 @@
  .reply-address{display:block;color:var(--muted);font-size:12px;overflow-wrap:anywhere;margin:0 0 8px}
  .more-replies{margin-top:12px;white-space:normal;max-width:100%;text-align:left}
  .comment-composer{display:grid;grid-template-columns:minmax(0,1fr);gap:8px;min-width:0;margin:12px 0;padding:10px;border:1px solid var(--line);border-radius:10px;background:var(--panel)}
- .composer-context{display:flex;min-width:0;gap:8px;align-items:center;border-bottom:1px solid var(--line);padding-bottom:6px}
+ .comment-composer{position:relative;padding:12px;gap:8px}
+ .comment-composer:focus-within{border-color:var(--accent)}
+ .composer-context{display:flex;min-width:0;gap:8px;align-items:center;border-bottom:0;padding:0 40px 0 0;min-height:24px}
  .composer-context p{flex:1;min-width:0;margin:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--muted);font-size:13px}
  .composer-context strong{color:var(--text);font-size:inherit}
- .close-composer{flex:none;width:44px;height:44px;border:0;border-radius:8px;background:none;color:var(--muted);font:inherit;font-size:24px;cursor:pointer}
+ .root-context{height:0;min-height:0;padding:0}.close-composer{position:absolute;right:4px;top:4px;flex:none;width:44px;height:44px;border:0;border-radius:8px;background:none;color:var(--muted);font:inherit;font-size:24px;cursor:pointer}
  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
  label{display:grid;gap:8px;font-size:14px;min-width:0}
- .comment-composer textarea{box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-height:88px;resize:vertical}
- .comment-preview{min-width:0;max-width:100%}.comment-preview[open]{flex-basis:100%}.comment-preview summary{padding:0 8px}
+ .comment-composer textarea{box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-height:96px;max-height:320px;resize:vertical;border:0;border-radius:0;background:transparent;padding:4px 38px 4px 2px;box-shadow:none}
+ .comment-composer textarea:focus,.comment-composer textarea:focus-visible{outline:none;border:0;box-shadow:none}
+ .comment-preview{min-width:0;max-width:100%}.comment-preview[open]{flex-basis:100%}.comment-preview summary{display:flex;gap:5px;min-width:44px;padding:0 8px}
  .comment-preview summary{font-size:12px;color:var(--muted)}
- .editor-footer{display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
+ .editor-footer{border-top:1px solid var(--line);padding-top:6px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
  .format-actions{display:flex;align-items:center;gap:2px;flex-wrap:wrap;min-width:0;flex:1}
  .format-actions button{min-width:44px;min-height:44px;padding:8px;border:0;border-radius:6px;background:transparent;color:var(--text);font:inherit;font-size:13px;cursor:pointer}
  .format-actions button:hover,.close-composer:hover{background:var(--raised)}
@@ -162,5 +165,5 @@
  .comment-composer{animation:composer-enter 160ms ease-out}
  @media(prefers-reduced-motion:reduce){.comment-composer{animation:none}}
  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
- @media(max-width:479px){.thread-toggle{margin-left:36px}.comment-row{grid-template-columns:28px minmax(0,1fr);gap:8px}.avatar{width:28px;height:28px;font-size:12px}.thread{margin-left:13px;padding-left:10px}.comment-composer{padding:10px}.comment-content .comment-composer{margin-left:-36px}.submit-actions{flex-basis:100%}}
+ @media(max-width:479px){.preview-label{display:none}.thread-toggle{margin-left:36px}.comment-row{grid-template-columns:28px minmax(0,1fr);gap:8px}.avatar{width:28px;height:28px;font-size:12px}.thread{margin-left:13px;padding-left:10px}.comment-composer{padding:10px}.comment-content .comment-composer{margin-left:-36px}.submit-actions{flex-basis:100%}}
 </style>
