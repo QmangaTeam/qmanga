@@ -54,6 +54,7 @@ test('reply and edit retain formatting, spoilers, preview, cancellation and exac
  const page=await browser.newPage({viewport:{width:320,height:850}});
  try{
   await open(page);
+  await page.locator('#comment-root .thread-toggle').click();
   const nested=page.locator('#comment-nested');await nested.getByRole('button',{name:'Ответить',exact:true}).click();
   const composer=page.locator('.comment-composer'),editor=composer.getByRole('textbox');
   assert.match(await composer.locator('.composer-context').textContent(),/Ответ для Оқырман/);
@@ -96,7 +97,7 @@ test('guest, empty discussion and failed-load retry remain available',{timeout:3
  const page=await browser.newPage();
  try{
   await open(page,'locale=ru&guest=1');assert.equal(await page.locator('.comment-composer').count(),0);assert.equal(await page.getByRole('link',{name:'войди',exact:true}).count(),1);
-  await page.goto(baseURL+'/?locale=ru&empty=1');await page.getByText('Оставь первый комментарий.',{exact:true}).waitFor();assert.equal(await page.locator('.comment-composer').count(),1);
+  await page.goto(baseURL+'/?locale=ru&empty=1');await page.getByText('Оставь первый комментарий.',{exact:true}).waitFor();assert.equal(await page.locator('.comment-composer').count(),0);assert.equal(await page.locator('.composer-prompt').count(),1);
   await page.goto(baseURL+'/?locale=ru&error=1');await page.getByRole('button',{name:'Повторить',exact:true}).click();await page.locator('#comment-root').waitFor();
   assert.equal((await calls(page)).filter(call=>call.kind==='discussion').length,2);
  }finally{await page.close();}
@@ -107,6 +108,7 @@ test('a failed reply keeps its draft, recipient and spoiler toggle for retry',{t
  const page=await browser.newPage({viewport:{width:360,height:850}});
  try{
   await open(page,'locale=ru&submit-error=1');
+  await page.locator('#comment-root .thread-toggle').click();
   const nested=page.locator('#comment-nested');
   await nested.getByText('Показать спойлер',{exact:true}).click();assert.equal(await nested.getByText('Жасырын жауап',{exact:true}).isVisible(),true);
   await nested.getByRole('button',{name:'Ответить',exact:true}).click();
@@ -117,5 +119,41 @@ test('a failed reply keeps its draft, recipient and spoiler toggle for retry',{t
   assert.equal(await composer.getByRole('button',{name:'Спойлер',exact:true}).getAttribute('aria-pressed'),'true');
   await composer.getByRole('button',{name:'Отправить',exact:true}).click();await page.locator('#comment-new').waitFor();
   assert.equal((await calls(page)).find(call=>call.kind==='comment').parent,'nested');
+ }finally{await page.close();}
+});
+
+test('root composer and loaded replies disclose without losing drafts or refetching',{timeout:30000},async()=>{
+ const page=await browser.newPage({viewport:{width:360,height:844},reducedMotion:'reduce'});
+ try{
+  await open(page);
+  const prompt=page.locator('.composer-prompt'),root=page.locator('#comment-root'),toggle=root.locator('.thread-toggle');
+  assert.equal(await page.locator('.comment-composer').count(),0);
+  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+  assert.equal(await page.locator('#comment-reply').isVisible(),false);
+  await prompt.focus();await page.keyboard.press('Enter');
+  const editor=page.locator('.comment-composer textarea');await editor.fill('Сохранённый черновик');
+  await page.getByRole('button',{name:'Спойлер',exact:true}).click();
+  await page.locator('.close-composer').click();assert.equal(await prompt.evaluate(e=>e===document.activeElement),true);
+  await prompt.click();assert.equal(await editor.inputValue(),'Сохранённый черновик');assert.equal(await page.getByRole('button',{name:'Спойлер',exact:true}).getAttribute('aria-pressed'),'true');
+  await root.locator('.comment-actions button').first().click();await editor.fill('Ответ в ветке');await page.locator('.close-composer').click();
+  assert.equal(await editor.inputValue(),'Сохранённый черновик','root draft restored after inline cancellation');
+  await page.locator('.close-composer').click();
+  await toggle.click();assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+  await toggle.focus();await page.keyboard.press('Space');await page.locator('#comment-reply').waitFor({state:'visible'});
+  await toggle.click();await toggle.click();assert.equal((await calls(page)).filter(c=>c.kind==='replies').length,0,'loaded replies do not refetch');
+  await page.getByRole('button',{name:'Показать остальные ответы',exact:true}).click();await page.locator('#comment-remaining').waitFor();
+  await toggle.click();await toggle.click();assert.equal((await calls(page)).filter(c=>c.kind==='replies').length,1);
+ }finally{await page.close();}
+});
+
+test('failed root send preserves editor and successful retry clears the draft',{timeout:30000},async()=>{
+ const page=await browser.newPage();
+ try{await open(page,'locale=ru&submit-error=1');await page.locator('.composer-prompt').click();
+  const editor=page.locator('.comment-composer textarea');await editor.fill('Корневой черновик после ошибки');await page.getByRole('button',{name:'Спойлер',exact:true}).click();
+  await page.getByRole('button',{name:'Отправить',exact:true}).click();await page.locator('.form-message').waitFor();
+  assert.equal(await editor.inputValue(),'Корневой черновик после ошибки');assert.equal(await page.getByRole('button',{name:'Спойлер',exact:true}).getAttribute('aria-pressed'),'true');
+  await page.getByRole('button',{name:'Отправить',exact:true}).click();await page.locator('#comment-new').waitFor();await page.locator('.composer-prompt').waitFor();
+  assert.equal(await page.locator('.comment-composer').count(),0);assert.equal(await page.locator('.composer-prompt').evaluate(e=>e===document.activeElement),true);
+  await page.locator('.composer-prompt').click();assert.equal(await editor.inputValue(),'');
  }finally{await page.close();}
 });

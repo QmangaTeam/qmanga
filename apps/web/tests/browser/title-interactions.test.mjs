@@ -72,6 +72,7 @@ test('title rating saves independently and updates its distribution', {timeout:3
   const detail=await (await context.request.get('/api/v1/titles/'+title.slug)).json();
   assert.ok(detail.rating_distribution[6]>=1);
   await page.goto('/titles/'+title.slug+'?tab=comments');
+  await page.locator('.composer-prompt').click();
   await page.getByRole('textbox',{name:'Написать комментарий'}).waitFor();
   assert.equal(await page.locator('.format-actions button').count(),4);
   if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'comments-editor-1280.png')});}

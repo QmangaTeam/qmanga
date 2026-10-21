@@ -44,7 +44,8 @@ test('status updates the title button immediately and ratings save from ten acce
    const titleURL='/titles/'+(fixture.title_slug||fixture.title_id);
    const beforeCount=(await (await context.request.get('/api/v1/titles/'+(fixture.title_slug||fixture.title_id))).json()).comment_count;
    await page.goto(titleURL+'?tab=comments');const draft='Synthetic counter test '+Date.now();
-   const composer=page.locator('.discussion>form');await composer.getByRole('textbox',{name:'Написать комментарий',exact:true}).fill(draft);
+   await page.locator('.composer-prompt').click();
+   const composer=page.locator('.discussion .comment-composer');await composer.getByRole('textbox',{name:'Написать комментарий',exact:true}).fill(draft);
    await composer.getByRole('button',{name:'Отправить',exact:true}).click();
    await page.waitForFunction(expected=>Number(document.querySelector('.title-tabs a[href*="tab=comments"] .tab-count')?.textContent)===expected,beforeCount+1);
    const posted=page.locator('.discussion>article').filter({hasText:draft});await posted.getByRole('button',{name:'Удалить',exact:true}).click();
@@ -60,9 +61,9 @@ test('status updates the title button immediately and ratings save from ten acce
    assert.equal(await reply.evaluate(el=>el===document.activeElement),true);
    await root.getByRole('button',{name:'Отмена',exact:true}).click();assert.equal(await root.locator('textarea').count(),0);
    comments.push({...comments[0],id:'fixture-reply',parent_id:'fixture-0',root_id:'fixture-0',body:'Synthetic reply'});
-   await page.reload();const nested=page.locator('#comment-fixture-0 .reply');await nested.scrollIntoViewIfNeeded();
+   await page.reload();await page.locator('#comment-fixture-0 .thread-toggle').click();const nested=page.locator('#comment-fixture-0 .reply');await nested.scrollIntoViewIfNeeded();
    await nested.getByRole('button',{name:'Ответить',exact:true}).click();await nested.getByRole('textbox',{name:'Написать ответ',exact:true}).fill('Reply to reply remains here');
-   assert.equal(await page.locator('.discussion>form').count(),0);
+   assert.equal(await page.locator('.discussion [id^="root-editor-"] form').count(),0);
    await nested.getByRole('button',{name:'Отмена',exact:true}).click();
 
   }finally{await context.close();}

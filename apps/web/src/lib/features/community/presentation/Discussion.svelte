@@ -11,21 +11,31 @@
  import {invalidateAll} from '$app/navigation';
  import ReportForm from './ReportForm.svelte';
  import CommentBody from './CommentBody.svelte';
+ import Icon from '$lib/shared/presentation/ui/Icon.svelte';
  let {titleId,titleSlug='',releaseId='',gateway,showReport=true}:{titleId:string;titleSlug?:string;releaseId?:string;gateway:CommunityGateway;showReport?:boolean}=$props();
  let opened=$state(false),loadFailed=$state(false),comments=$state<Comment[]>([]),next=$state(''),account=$state<string|null>(null),body=$state(''),spoiler=$state(false),parent=$state(''),editing=$state(''),reporting=$state(''),busy=$state(false),message=$state('');
  const focused=$derived(page.url.searchParams.get('comment')||'');
  let targetMissing=$state(false);
  let editor=$state<HTMLTextAreaElement|undefined>();
  let missingAvatars=$state<string[]>([]);
+ let rootOpen=$state(false),rootDraft=$state({body:'',spoiler:false}),expandedRoots=$state<string[]>([]);
+ const rootEditorId=$derived('root-editor-'+titleId+'-'+(releaseId||'title'));
+ const threadId=(id:string)=>'comment-thread-'+id;
+ const replyCount=(root:Comment)=>Math.max(root.replies,comments.filter(item=>item.rootId===root.id).length);
+ function revealThread(id:string){if(!expandedRoots.includes(id))expandedRoots=[...expandedRoots,id];}
+ async function toggleThread(root:Comment){if(expandedRoots.includes(root.id)){expandedRoots=expandedRoots.filter(id=>id!==root.id);return;}revealThread(root.id);if(!comments.some(item=>item.rootId===root.id)&&root.replies>0)await replies(root);}
+ function rememberRoot(){if(!parent&&!editing)rootDraft={body,spoiler};}
+ function openRoot(trigger:HTMLButtonElement){composerTrigger=trigger;body=rootDraft.body;spoiler=rootDraft.spoiler;rootOpen=true;void focusEditor();}
+ let rootTrigger=$state<HTMLButtonElement|undefined>();
  let composerTrigger:HTMLButtonElement|undefined;
- async function cancelComposer(){editing='';parent='';body='';spoiler=false;await tick();composerTrigger?.focus({preventScroll:true});}
+ async function cancelComposer(){const inline=!!(parent||editing);if(!inline){rememberRoot();rootOpen=false;}editing='';parent='';body=rootDraft.body;spoiler=rootDraft.spoiler;await tick();(inline?composerTrigger:rootTrigger)?.focus({preventScroll:true});}
  onMount(()=>{void load();});
- async function load(after=''){opened=true;busy=true;loadFailed=false;message='';try{const result=await gateway.discussion(titleId,releaseId,after,after?'':focused);comments=after?[...comments,...result.comments]:result.comments;next=result.next;account=await gateway.account();if(!after&&focused){targetMissing=!comments.some(item=>item.id===focused);await tick();document.getElementById('comment-'+focused)?.focus();document.getElementById('comment-'+focused)?.scrollIntoView({block:'center'});}}catch(failure){loadFailed=true;message=failureCode(failure);}finally{busy=false;}}
+ async function load(after=''){opened=true;busy=true;loadFailed=false;message='';try{const result=await gateway.discussion(titleId,releaseId,after,after?'':focused);comments=after?[...comments,...result.comments]:result.comments;next=result.next;account=await gateway.account();if(!after&&focused){targetMissing=!comments.some(item=>item.id===focused);const target=comments.find(item=>item.id===focused);if(target?.rootId)revealThread(target.rootId);await tick();document.getElementById('comment-'+focused)?.focus();document.getElementById('comment-'+focused)?.scrollIntoView({block:'center'});}}catch(failure){loadFailed=true;message=failureCode(failure);}finally{busy=false;}}
  async function focusEditor(){await tick();editor?.focus({preventScroll:true});}
- function replyTo(item:Comment,trigger:HTMLButtonElement){composerTrigger=trigger;parent=item.id;editing='';body='';spoiler=false;focusEditor();}
- function editComment(item:Comment,trigger:HTMLButtonElement){composerTrigger=trigger;editing=item.id;body=item.body;spoiler=item.spoiler;parent='';focusEditor();}
+ function replyTo(item:Comment,trigger:HTMLButtonElement){rememberRoot();revealThread(item.rootId||item.id);composerTrigger=trigger;parent=item.id;editing='';body='';spoiler=false;focusEditor();}
+ function editComment(item:Comment,trigger:HTMLButtonElement){rememberRoot();if(item.rootId)revealThread(item.rootId);composerTrigger=trigger;editing=item.id;body=item.body;spoiler=item.spoiler;parent='';focusEditor();}
  function wrapSelection(marker:string){if(body.length+2*marker.length>2000)return;const start=editor?.selectionStart??body.length,end=editor?.selectionEnd??start;const selected=body.slice(start,end);body=body.slice(0,start)+marker+selected+marker+body.slice(end);requestAnimationFrame(()=>{editor?.focus();editor?.setSelectionRange(start+marker.length,end+marker.length);});}
- async function submit(){if(!account||!validComment(body)){message="comment_length";return;}busy=true;try{if(editing)await gateway.edit(account,editing,body,spoiler);else await gateway.comment(account,titleId,releaseId,parent,body,spoiler);body='';parent='';editing='';spoiler=false;await load();await invalidateAll();}catch(failure){message=failureCode(failure);}finally{busy=false;}}
+ async function submit(){const inline=!!(parent||editing);if(!account||!validComment(body)){message="comment_length";return;}busy=true;try{if(editing)await gateway.edit(account,editing,body,spoiler);else await gateway.comment(account,titleId,releaseId,parent,body,spoiler);if(!parent&&!editing)rootDraft={body:'',spoiler:false};if(parent)revealThread(comments.find(item=>item.id===parent)?.rootId||parent);body=rootDraft.body;parent='';editing='';spoiler=rootDraft.spoiler;rootOpen=false;await load();await invalidateAll();await tick();(inline?composerTrigger:rootTrigger)?.focus({preventScroll:true});}catch(failure){message=failureCode(failure);}finally{busy=false;}}
  async function remove(id:string){if(!account)return;busy=true;try{await gateway.remove(account,id);await load();await invalidateAll();}catch(failure){message=failureCode(failure);}finally{busy=false;}}
  async function replies(root:Comment){busy=true;try{const result=await gateway.replies(root.id,replyCursor(root,comments));comments=mergeReplyPage(comments,root,result.comments);}catch{message="replies_failed";}finally{busy=false;}}
  const author=(item:Comment)=>item.displayName||copy($locale,"Оқырман · ")+item.userId.slice(-6);
@@ -38,20 +48,20 @@
 {/snippet}
 {#snippet composer()}
  <form class="comment-composer" onsubmit={event=>{event.preventDefault();void submit();}}>
-  {#if parent||editing}<div class="composer-context">
-   <p title={parent?author(comments.find(item=>item.id===parent)!):undefined}>{#if parent}{text($locale,'Жауап: ','Ответ для ')}<strong>{author(comments.find(item=>item.id===parent)!)}</strong>{:else}{copy($locale,"Пікірді өңдеу")}{/if}</p>
-   <button class="close-composer" type="button" aria-label={text($locale,'Өңдегішті жабу','Закрыть редактор')} onclick={cancelComposer}>×</button>
-  </div>{/if}
-  <label><span class:sr-only={!!(parent||editing)}>{editing?copy($locale,"Пікірді өңдеу"):parent?copy($locale,"Жауап жазу"):copy($locale,"Пікір жазу")}</span><textarea bind:this={editor} bind:value={body} required maxlength="2000" rows="3"></textarea></label>
+  <div class="composer-context">
+   <p title={parent?author(comments.find(item=>item.id===parent)!):undefined}>{#if parent}{text($locale,'Жауап: ','Ответ для ')}<strong>{author(comments.find(item=>item.id===parent)!)}</strong>{:else if editing}{copy($locale,"Пікірді өңдеу")}{:else}{copy($locale,"Пікір жазу")}{/if}</p>
+   <button class="close-composer" type="button" disabled={busy} aria-label={text($locale,'Өңдегішті жабу','Закрыть редактор')} onclick={cancelComposer}>×</button>
+  </div>
+  <label><span class:sr-only={!!(parent||editing)}>{editing?copy($locale,"Пікірді өңдеу"):parent?copy($locale,"Жауап жазу"):copy($locale,"Пікір жазу")}</span><textarea disabled={busy} bind:this={editor} bind:value={body} required maxlength="2000" rows="3"></textarea></label>
   <div class="editor-footer">
    <div class="format-actions" aria-label={text($locale,'Мәтін пішімі','Форматирование')}>
-    <button type="button" title={text($locale,'Қалың қаріп','Жирный')} aria-label={text($locale,'Қалың қаріп','Жирный')} onclick={()=>wrapSelection('**')}><strong>B</strong></button>
-    <button type="button" title={text($locale,'Курсив','Курсив')} aria-label={text($locale,'Курсив','Курсив')} onclick={()=>wrapSelection('*')}><em>I</em></button>
-    <button type="button" title={text($locale,'Сызылған','Зачёркнутый')} aria-label={text($locale,'Сызылған','Зачёркнутый')} onclick={()=>wrapSelection('~~')}><s>S</s></button>
-    <button type="button" aria-pressed={spoiler} onclick={()=>spoiler=!spoiler}>{text($locale,'Спойлер','Спойлер')}</button>
+    <button disabled={busy} type="button" title={text($locale,'Қалың қаріп','Жирный')} aria-label={text($locale,'Қалың қаріп','Жирный')} onclick={()=>wrapSelection('**')}><strong>B</strong></button>
+    <button disabled={busy} type="button" title={text($locale,'Курсив','Курсив')} aria-label={text($locale,'Курсив','Курсив')} onclick={()=>wrapSelection('*')}><em>I</em></button>
+    <button disabled={busy} type="button" title={text($locale,'Сызылған','Зачёркнутый')} aria-label={text($locale,'Сызылған','Зачёркнутый')} onclick={()=>wrapSelection('~~')}><s>S</s></button>
+    <button disabled={busy} type="button" aria-pressed={spoiler} onclick={()=>spoiler=!spoiler}>{text($locale,'Спойлер','Спойлер')}</button>
     <details class="comment-preview"><summary>{text($locale,'Алдын ала көру','Предпросмотр')}</summary><CommentBody body={body}/></details>
    </div>
-   <div class="submit-actions"><span class="character-count">{body.length}/2000</span>{#if editing||parent}<button type="button" class="cancel-composer" onclick={cancelComposer}>{copy($locale,"Бас тарту")}</button>{/if}<button class="button primary" disabled={busy}>{copy($locale,"Жіберу")}</button></div>
+   <div class="submit-actions"><span class="character-count">{body.length}/2000</span>{#if editing||parent}<button type="button" class="cancel-composer" disabled={busy} onclick={cancelComposer}>{copy($locale,"Бас тарту")}</button>{/if}<button class="button primary" disabled={busy}>{copy($locale,"Жіберу")}</button></div>
   </div>
  </form>
 {/snippet}
@@ -63,8 +73,8 @@
  {:else}<CommentBody body={item.body}/>{/if}
  <div class="comment-actions">
   {#if account&&!item.hidden}
-   <button onclick={event=>replyTo(item,event.currentTarget)}>{copy($locale,"Жауап беру")}</button>
-   {#if item.userId===account}<button onclick={event=>editComment(item,event.currentTarget)}>{copy($locale,"Өңдеу")}</button><button onclick={()=>remove(item.id)} disabled={busy}>{copy($locale,"Өшіру")}</button>{/if}
+   <button disabled={busy} onclick={event=>replyTo(item,event.currentTarget)}>{copy($locale,"Жауап беру")}</button>
+   {#if item.userId===account}<button disabled={busy} onclick={event=>editComment(item,event.currentTarget)}>{copy($locale,"Өңдеу")}</button><button onclick={()=>remove(item.id)} disabled={busy}>{copy($locale,"Өшіру")}</button>{/if}
   {/if}
   {#if isReply||account&&!item.hidden}<button class="report-comment" onclick={()=>reporting=reporting===item.id?'':item.id}>{copy($locale,"Шағым")}</button>{/if}
  </div>
@@ -76,11 +86,16 @@
 <section class="discussion" aria-label={copy($locale,"Пікірлер")}>
  <h2>{copy($locale,"Пікірлер")}</h2>
  {#if !opened}<p role="status">{copy($locale,"Жүктелуде…")}</p>{:else}
-  {#if account}{#if !parent&&!editing}{@render composer()}{/if}{:else}<p class="muted">{text($locale,'Пікір жазу үшін ','Чтобы написать комментарий, ')}<a class="auth-link" href={'/login?returnTo='+encodeURIComponent(releaseId?'/read/'+releaseId:titleSlug?'/titles/'+titleSlug:'/catalog')}>{copy($locale,"кіріңіз")}</a>{copy($locale," және поштаңызды растаңыз.")}</p>{/if}
+  {#if account}{#if !parent&&!editing}
+   {#if !rootOpen}<button bind:this={rootTrigger} class="composer-prompt" type="button" disabled={busy} aria-expanded="false" aria-controls={rootEditorId} onclick={event=>openRoot(event.currentTarget)}><span class="prompt-icon" aria-hidden="true"><Icon name="message" size={20}/></span><span>{rootDraft.body?text($locale,'Пікір жобасын жалғастыру…','Продолжить черновик…'):text($locale,'Пікір жазу…','Написать комментарий…')}</span></button>{/if}
+   <div id={rootEditorId}>{#if rootOpen}{@render composer()}{/if}</div>
+  {/if}{:else}<p class="muted">{text($locale,'Пікір жазу үшін ','Чтобы написать комментарий, ')}<a class="auth-link" href={'/login?returnTo='+encodeURIComponent(releaseId?'/read/'+releaseId:titleSlug?'/titles/'+titleSlug:'/catalog')}>{copy($locale,"кіріңіз")}</a>{copy($locale," және поштаңызды растаңыз.")}</p>{/if}
   {#each comments.filter(item=>!item.parentId).sort((left,right)=>right.createdAt.localeCompare(left.createdAt)) as root}
    <article id={'comment-'+root.id} tabindex="-1" class:focused={focused===root.id}>
     <div class="comment-row">{@render avatar(root)}<div class="comment-content">{@render commentContent(root)}</div></div>
-    {#if comments.some(item=>item.rootId===root.id)||root.replies>0}<div class="thread">
+    {#if comments.some(item=>item.rootId===root.id)||root.replies>0}
+     <button class="thread-toggle" type="button" disabled={busy} aria-expanded={expandedRoots.includes(root.id)} aria-controls={threadId(root.id)} onclick={()=>toggleThread(root)}><Icon name={expandedRoots.includes(root.id)?'up':'down'} size={16}/>{expandedRoots.includes(root.id)?text($locale,'Жауаптарды жию','Скрыть ответы'):text($locale,'Жауаптарды көрсету','Показать ответы')}<span class="reply-count">{replyCount(root)}</span></button>
+     <div class="thread" id={threadId(root.id)} hidden={!expandedRoots.includes(root.id)}>
      {#each comments.filter(item=>item.rootId===root.id) as reply}
       <div class="reply comment-row" id={'comment-'+reply.id} tabindex="-1" class:focused={focused===reply.id}>
        {@render avatar(reply)}<div class="comment-content">{@render commentContent(reply,true)}</div>
@@ -99,6 +114,11 @@
 </section>
 <style>
  .discussion{padding:24px 0;max-width:800px;margin:auto;text-align:left;min-width:0}
+ .composer-prompt{display:flex;align-items:center;gap:12px;width:100%;min-height:56px;padding:8px 12px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--muted);font:inherit;font-size:14px;text-align:left;cursor:pointer}
+ .prompt-icon{display:grid;place-items:center;flex:none;width:32px;height:32px;border-radius:50%;background:var(--raised)}
+ .composer-prompt:hover{color:var(--text);border-color:var(--muted)}
+ .thread-toggle{display:flex;align-items:center;gap:6px;min-height:44px;margin-left:48px;padding:6px 0;border:0;background:none;color:var(--muted);font:inherit;font-size:12px;cursor:pointer}
+ .thread-toggle:hover{color:var(--text)}.reply-count{font-variant-numeric:tabular-nums}.thread[hidden]{display:none}
  .discussion h2{font-size:21px;margin:0 0 18px}
  .focused{outline:2px solid var(--accent);outline-offset:3px;scroll-margin-top:100px}
  article{border-bottom:1px solid var(--line);padding:20px 0;min-width:0}
@@ -138,6 +158,9 @@
  .submit-actions{display:flex;align-items:center;justify-content:flex-end;flex-wrap:wrap;gap:8px;margin-left:auto}
  .character-count{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
  .cancel-composer{justify-self:end;padding:0 8px}
+ @keyframes composer-enter{from{opacity:.6;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+ .comment-composer{animation:composer-enter 160ms ease-out}
+ @media(prefers-reduced-motion:reduce){.comment-composer{animation:none}}
  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
- @media(max-width:479px){.comment-row{grid-template-columns:28px minmax(0,1fr);gap:8px}.avatar{width:28px;height:28px;font-size:12px}.thread{margin-left:13px;padding-left:10px}.comment-composer{padding:10px}.comment-content .comment-composer{margin-left:-36px}.submit-actions{flex-basis:100%}}
+ @media(max-width:479px){.thread-toggle{margin-left:36px}.comment-row{grid-template-columns:28px minmax(0,1fr);gap:8px}.avatar{width:28px;height:28px;font-size:12px}.thread{margin-left:13px;padding-left:10px}.comment-composer{padding:10px}.comment-content .comment-composer{margin-left:-36px}.submit-actions{flex-basis:100%}}
 </style>
