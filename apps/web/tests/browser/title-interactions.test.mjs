@@ -25,6 +25,7 @@ test('title stats live inside facts and comments load without an extra click', {
   const detail=(await (await context.request.get('/api/v1/titles/'+title.slug)).json());
   const page=await context.newPage();
   await page.goto('/titles/'+title.slug);
+  await page.waitForLoadState('networkidle');
   assert.equal(await page.locator('.title-tabs a').count(),3);
   assert.equal(await page.locator('.metadata a[href*="original_status=ongoing"] .status-dot.ongoing').count(),1);
   await page.getByRole('button',{name:'Статистика тайтла',exact:true}).click();
@@ -60,6 +61,7 @@ test('title rating saves independently and updates its distribution', {timeout:3
   original=(await current.json()).score;
   const page=await context.newPage();
   await page.goto('/titles/'+title.slug);
+  await page.waitForLoadState('networkidle');
   await page.getByRole('button',{name:'Оценить тайтл'}).click();
   const dialog=page.getByRole('dialog',{name:'Оценить тайтл'});
   await dialog.getByRole('button',{name:'7 / 10',exact:true}).click();
@@ -98,6 +100,7 @@ test('title actions open dialogs and library status saves with one choice', {tim
   original=(await (await context.request.get('/api/v1/library/'+title.id,{headers})).json()).entry;
   const page=await context.newPage();
   await page.goto('/titles/'+title.slug);
+  await page.waitForLoadState('networkidle');
   await page.getByRole('button',{name:'Добавить в список'}).click();
   const dialog=page.getByRole('dialog',{name:'Мой список'});
   await dialog.getByRole('button',{name:'В планах'}).click();
