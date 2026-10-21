@@ -25,7 +25,15 @@
  let libraryDialog=$state<HTMLDialogElement|undefined>(),reportDialog=$state<HTMLDialogElement|undefined>();
  const maxRating=$derived(Math.max(1,...(title.ratingDistribution||[])));
  let slideDirection=$state(1);
- let descriptionExpanded=$state(false);
+ let descriptionExpanded=$state(false),descriptionCanExpand=$state(false);
+ function observeDescription(node:HTMLParagraphElement,body:string){
+  let currentBody=body,disposed=false;
+  const measure=()=>{if(disposed)return;const lineHeight=parseFloat(getComputedStyle(node).lineHeight);descriptionCanExpand=!!currentBody&&node.scrollHeight>Math.ceil(lineHeight*3)+1;if(!descriptionCanExpand)descriptionExpanded=false;};
+  const observer=new ResizeObserver(measure);observer.observe(node);
+  document.fonts.addEventListener('loadingdone',measure);void document.fonts.ready.then(measure);
+  measure();
+  return {update(value:string){currentBody=value;queueMicrotask(measure);},destroy(){disposed=true;observer.disconnect();document.fonts.removeEventListener('loadingdone',measure);}};
+ }
  $effect(()=>{title.id;descriptionExpanded=false;});
  let shareNotice=$state('');
  async function share(){
@@ -68,7 +76,7 @@
      {#if nextURL}<Pager label={text($locale,'Тарау беттері','Страницы глав')} next={{label:text($locale,'Келесі тараулар','Следующие главы'),href:nextURL}}/>{/if}
     </section>
    {:else if active==='about'}
-    <section class="about"><h2>{text($locale,'Сипаттама','Описание')}</h2><p id="title-description" class:description-collapsed={!descriptionExpanded}>{title.description||text($locale,'Сипаттама әлі қосылмаған','Описание пока не добавлено')}</p>{#if title.description}<button class="description-toggle" type="button" aria-expanded={descriptionExpanded} aria-controls="title-description" onclick={()=>descriptionExpanded=!descriptionExpanded}>{descriptionExpanded?text($locale,'Жию','Свернуть'):text($locale,'Толығырақ','Подробнее')}<Icon name={descriptionExpanded?'up':'down'} size={16}/></button>{/if}</section>
+    <section class="about"><h2>{text($locale,'Сипаттама','Описание')}</h2><p id="title-description" use:observeDescription={title.description} class:description-collapsed={!descriptionExpanded}>{title.description||text($locale,'Сипаттама әлі қосылмаған','Описание пока не добавлено')}</p>{#if descriptionCanExpand}<button class="description-toggle" type="button" aria-expanded={descriptionExpanded} aria-controls="title-description" onclick={()=>descriptionExpanded=!descriptionExpanded}>{descriptionExpanded?text($locale,'Жию','Свернуть'):text($locale,'Толығырақ','Подробнее')}<Icon name={descriptionExpanded?'up':'down'} size={16}/></button>{/if}</section>
    {:else if active==='comments'}
     {#if discussion}{@render discussion()}{/if}
    {/if}

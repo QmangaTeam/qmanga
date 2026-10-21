@@ -36,10 +36,14 @@ test('mobile title reflows and the single-Q wordmark follows explicit and system
    }
    await page.goto('/titles/'+fixture.title_slug+'?tab=about');await page.waitForLoadState('networkidle');
    for(const width of [320,688,1440]){await page.setViewportSize({width,height:900});
-   const disclosure=page.locator('.description-toggle');assert.equal(await disclosure.getAttribute('aria-expanded'),'false');
-   assert.equal(await page.locator('#title-description').evaluate(e=>getComputedStyle(e).webkitLineClamp),'3');
-   await disclosure.click();await page.waitForFunction(()=>document.querySelector('.description-toggle')?.getAttribute('aria-expanded')==='true');assert.equal(await disclosure.getAttribute('aria-expanded'),'true');assert.equal(await page.locator('#title-description').evaluate(e=>getComputedStyle(e).webkitLineClamp),'none');
-   assert.equal(await disclosure.innerText(),locale==='kk'?'Жию':'Свернуть');await disclosure.click();await page.waitForFunction(()=>document.querySelector('.description-toggle')?.getAttribute('aria-expanded')==='false');assert.equal(await disclosure.getAttribute('aria-expanded'),'false');
+   const paragraph=page.locator('#title-description');
+   const clipped=await paragraph.evaluate(e=>e.scrollHeight>Math.ceil(parseFloat(getComputedStyle(e).lineHeight)*3)+1);
+   const disclosure=page.locator('.description-toggle');
+   if(clipped){await disclosure.waitFor();assert.equal(await disclosure.getAttribute('aria-expanded'),'false');
+    assert.equal(await disclosure.getAttribute('aria-controls'),'title-description');
+    await disclosure.click();await page.waitForFunction(()=>document.querySelector('.description-toggle')?.getAttribute('aria-expanded')==='true');assert.equal(await paragraph.evaluate(e=>getComputedStyle(e).webkitLineClamp),'none');
+    assert.equal(await disclosure.innerText(),locale==='kk'?'Жию':'Свернуть');await disclosure.click();await page.waitForFunction(()=>document.querySelector('.description-toggle')?.getAttribute('aria-expanded')==='false');
+   }else{await page.waitForFunction(()=>!document.querySelector('.description-toggle'));assert.equal(await disclosure.count(),0,'short descriptions have no expand control');}
    }
    await page.locator('.statistics').click();assert.equal(await page.locator('.stats-dialog').evaluate(e=>e.open),true);await page.keyboard.press('Escape');
    await page.setViewportSize({width:1280,height:900});const mark=page.locator('header a.wordmark');

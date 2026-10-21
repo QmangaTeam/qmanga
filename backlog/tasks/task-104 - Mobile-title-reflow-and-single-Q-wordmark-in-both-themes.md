@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 19:50'
-updated_date: '2026-10-20 21:53'
+updated_date: '2026-10-21 04:35'
 labels: []
 dependencies: []
 priority: high
@@ -40,6 +40,8 @@ Owner refinement: tabs noScroll links withoutfragment, sliding active indicator/
 Owner: remove chapter count only fromfacts,add fieldicons/statusdots and actualteamavatar withfallback. Populate existing synthetic local title with full clearlysynthetic metadata/ownedgeneratedartwork,longtext,multipleteams/avatar to review dense realshape. Keep realCBZ titles untouched; verify fallback,allfields,responsive,themes andindependentreview.
 
 Owner dense-spacing refinement: intrinsic-height metadata/credits up to viewport-aware caps, native scrolling only onactualoverflow, no fixedemptyheight. Desktopboundsfacts+longaliases andcontributors;mobileboundsrailheight andusescompactcreditgrid. Preserveallfields,44pxcontrols,scrollkeyboard andhiddenhorizontalbar. RootownsTitleMetadata+title tests;branding/commentsassignedindependenttasks106/107.
+
+Owner disclosure correction: showtoggle onlyif rendereddescription exceeds3linepreview,not wordcount. Recalculate resize/fontload/bodyupdate andkeepCollapse whileexpanded; hide/reset whenfit. Check sparse/dense andresponsive threshold, independentreview, localdev.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -74,4 +76,6 @@ Owner dense-spacing follow-up: intrinsic metadata/creditheight withcaps only; mo
 Source result committed as c6a0254. Latercombinedchecks use same productcode: Svelte0/0,51UItests806assertions,build/boundary/contrast pass. Finalbrowser readiness stabilization waits for hydration/networkidle beforechapter-form interactions; initialbuild-overlap timing failure passedisolatedrerun. Ownerlocalreviewstillpending; no releaseclaim.
 
 Final combined verification:10/10 browser tests pass,0skips;51UItests806assertions pass;Svelte0errors0warnings;frontendbuild,boundaries andboth-themecontrast pass. Independentreviews no blockers. Productcommits c6a0254/7905513/be7491c; a37952a recorded docs/readiness beforethisfinalnote. MainfrontendHMR18080 andsyntheticreplypreview3002 remainrunning. Awaitownerlocalacceptance; no productionrelease.
+
+Descriptiontoggle correction: measureactual scrollHeight against3computedlineheights,showonlyifclipped. ResizeObserver,fontloadingdone/fonts.ready andactionbodyupdate remeasure;Collapse retainedforexpandedlongtext;reset/hideiftextfits;cleanupguardpreventsdetachedcallbacks. No wordcountguess. ShortSSRdescription hasno unmeasuredtoggle. LocalSvelte0/0,51UItests802assertions pass; sparse+dense browsermatrices kk/ru×explicit/systemthemes and320/688/1440 pass. Independentlive review320/360/1280 verifiedsparseabsent,longrepeatedexpandcollapse/resize,noResizeObservererrors. Frontendbuild+boundarypass. Cua shortpageobservedwithouttoggle,screenshot tmp/task104/short-description-no-toggle.png. Localdevlive;Reviewpendingowner,no release.
 <!-- SECTION:NOTES:END -->
