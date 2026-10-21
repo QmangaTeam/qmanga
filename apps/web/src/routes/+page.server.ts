@@ -6,5 +6,5 @@ export const load:PageServerLoad=async({fetch,url})=>{
  const topKind=requested==='manga'||requested==='manhua'?requested:'manhwa';
  const gateway=createPublicCatalogue(fetch);
  const [mostRead,updates,top]=await Promise.all([loadRankings(gateway),loadUpdates(gateway),loadRankings(gateway,topKind)]);
- return {mostRead,updates,top,topKind};
+ return {mostRead,updates,top,topKind,topRequested:requested!==null};
 };

@@ -17,7 +17,7 @@ test('home follows most-read, continuation, updates and type-top order',()=>{
 });
 
 test('below-fold type tops do not eagerly load images on weak connections',async()=>{
- const html=render(HomeDiscovery,{props:{topFilled:true}}).body;
+ const html=render(HomeDiscovery,{props:{topFilled:true,topRequested:true}}).body;
  expect((await elements(html,'section[aria-labelledby="browse-heading"] img'))[0]).toMatchObject({loading:'eager',fetchpriority:'high'});
  expect((await elements(html,'#tops img'))[0]).toMatchObject({loading:'lazy',fetchpriority:'auto'});
 });
@@ -77,4 +77,19 @@ test('cover classification keeps native links and never labels unclassified cont
  expect(await elements(html,'.cover-card .age-rating.adult')).toHaveLength(1);
  expect(await elements(html,'a a, a button')).toHaveLength(0);
  expect(html).toContain('18+');
+});
+
+
+test('returning readers reach continuation first without removing discovery',()=>{
+ const html=render(HomeDiscovery,{props:{hasContinuation:true}}).body;
+ expect(html.indexOf('id="continue-heading"')).toBeLessThan(html.indexOf('id="browse-heading"'));
+ expect(html).toContain('id="updates-heading"');
+});
+
+test('default repeated type rankings collapse while explicit type requests retain results',async()=>{
+ const defaultPage=render(HomeDiscovery,{props:{topFilled:true}}).body;
+ expect(await elements(defaultPage,'#tops .cover-card')).toHaveLength(0);
+ expect(await elements(defaultPage,'.shelf-tabs a')).toHaveLength(3);
+ const explicit=render(HomeDiscovery,{props:{topFilled:true,topRequested:true}}).body;
+ expect(await elements(explicit,'#tops .cover-card')).toHaveLength(1);
 });

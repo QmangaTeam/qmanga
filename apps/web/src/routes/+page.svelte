@@ -10,6 +10,10 @@
  const {locale}=useLocale();
 </script>
 <svelte:head><title>{text($locale,'Qmanga — қазақша манга','Qmanga — манга на казахском')}</title></svelte:head>
-<CoverStatuses {...reading} titleIds={[...data.mostRead.page.items,...data.top.page.items].map(title=>title.id)}>{#snippet children(statuses)}<HomeDiscovery {statuses} mostRead={data.mostRead} updates={data.updates} top={data.top} topKind={data.topKind}>
- {#snippet continuation()}<ContinueReading {...reading}/>{/snippet}
-</HomeDiscovery>{/snippet}</CoverStatuses>
+<CoverStatuses {...reading} titleIds={[...data.mostRead.page.items,...data.top.page.items].map(title=>title.id)}>{#snippet children(statuses)}
+ <ContinueReading {...reading}>{#snippet children(hasContinuation,content)}
+  <HomeDiscovery {statuses} {hasContinuation} mostRead={data.mostRead} updates={data.updates} top={data.top} topKind={data.topKind} topRequested={data.topRequested}>
+   {#snippet continuation()}{@render content()}{/snippet}
+  </HomeDiscovery>
+ {/snippet}</ContinueReading>
+{/snippet}</CoverStatuses>
