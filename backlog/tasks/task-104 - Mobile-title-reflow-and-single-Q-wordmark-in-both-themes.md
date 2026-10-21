@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 19:50'
-updated_date: '2026-10-21 04:36'
+updated_date: '2026-10-21 04:51'
 labels: []
 dependencies: []
 priority: high
@@ -80,4 +80,6 @@ Final combined verification:10/10 browser tests pass,0skips;51UItests806assertio
 Descriptiontoggle correction: measureactual scrollHeight against3computedlineheights,showonlyifclipped. ResizeObserver,fontloadingdone/fonts.ready andactionbodyupdate remeasure;Collapse retainedforexpandedlongtext;reset/hideiftextfits;cleanupguardpreventsdetachedcallbacks. No wordcountguess. ShortSSRdescription hasno unmeasuredtoggle. LocalSvelte0/0,51UItests802assertions pass; sparse+dense browsermatrices kk/ru×explicit/systemthemes and320/688/1440 pass. Independentlive review320/360/1280 verifiedsparseabsent,longrepeatedexpandcollapse/resize,noResizeObservererrors. Frontendbuild+boundarypass. Cua shortpageobservedwithouttoggle,screenshot tmp/task104/short-description-no-toggle.png. Localdevlive;Reviewpendingowner,no release.
 
 Verified source result:7052d1e (conditional description disclosure). Local acceptance remains Review.
+
+Owner authorized GitHub push and production release. Pushed 6ba2e32cacebb4dd60112a511450263d562dad20; Fast Release39545484083 succeeded. VM poller promoted staging then production green at04:49 UTC on2026-10-21. Public health/PostgreSQL/S3 and exact homepage SHA confirmed; read-only browser matrix kk/ru x dark/light at320/360/1280 passed branding/auth/nav/title metadata/tabs/conditional disclosure. Full Verify39545484081 exposed cold-host standalone Vite test config/cache failures and stale status-dot assertion/missing statistics accessible label. Fixing and rerunning CI before final acceptance; remains Review. Independent pre-release review clean.
 <!-- SECTION:NOTES:END -->

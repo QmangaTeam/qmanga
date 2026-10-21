@@ -23,7 +23,7 @@
   <div><dt><Icon name='users' size={13}/>{text($locale,'Аударма күйі','Статус перевода')}</dt><dd><a class="status-value" href={'/catalog?translation_status='+title.translationStatus}><span class={'status-dot '+title.translationStatus} aria-hidden="true"></span>{names.translation[title.translationStatus]}</a></dd></div>
   <div><dt><Icon name='catalog' size={13}/>{text($locale,'Формат','Формат')}</dt><dd>{publication?.formats.length?publication.formats.join(', '):text($locale,'Белгісіз','Не указан')}</dd></div>
   {#if publication?.year}<div><dt><Icon name='file' size={13}/>{text($locale,'Шыққан жылы','Год выпуска')}</dt><dd>{publication.year}</dd></div>{/if}
-  {#if onStatistics}<div><dt><Icon name='chart' size={13}/>{text($locale,'Статистика','Статистика')}</dt><dd><button class="statistics" type="button" onclick={onStatistics}>{title.ratingCount} {text($locale,'баға','оценок')} <span aria-hidden="true">↗</span></button></dd></div>{/if}
+  {#if onStatistics}<div><dt><Icon name='chart' size={13}/>{text($locale,'Статистика','Статистика')}</dt><dd><button class="statistics" type="button" aria-label={text($locale,'Тайтл статистикасы','Статистика тайтла')} onclick={onStatistics}>{title.ratingCount} {text($locale,'баға','оценок')} <span aria-hidden="true">↗</span></button></dd></div>{/if}
 
   {#if publication?.source}<div><dt><Icon name='file' size={13}/>{text($locale,'Түпнегіз','Первоисточник')}</dt><dd>{publication.source}</dd></div>{/if}
   {#if publication?.country}<div><dt><Icon name='flag' size={13}/>{text($locale,'Шыққан елі','Страна производства')}</dt><dd>{publication.country}</dd></div>{/if}

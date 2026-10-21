@@ -4,16 +4,17 @@ import {createHash} from 'node:crypto';
 import { fileURLToPath } from 'node:url';
 import { chromium } from 'playwright';
 import { createServer } from 'vite';
+import { isolatedViteOptions, cleanViteCache } from './isolated-vite.mjs';
 import { pdfAssets } from '../../scripts/pdf-assets.mjs';
 
 let server, browser, base;
 before(async () => {
- server = await createServer({ configFile:false, plugins:[pdfAssets()], appType:'custom', root: fileURLToPath(new URL('../../', import.meta.url)), resolve: { alias: { '$lib': fileURLToPath(new URL('../../src/lib', import.meta.url)) } }, server: { host: '127.0.0.1', port: 0 } });
+ server = await createServer({ ...await isolatedViteOptions(), configFile:false, plugins:[pdfAssets()], appType:'custom', root: fileURLToPath(new URL('../../', import.meta.url)), resolve: { alias: { '$lib': fileURLToPath(new URL('../../src/lib', import.meta.url)) } }, server: { host: '127.0.0.1', port: 0 } });
  server.middlewares.use('/__pdf_import_test', (_req,res) => { res.setHeader('Content-Type','text/html');res.end('<!doctype html><title>PDF codec test</title>'); });
  await server.listen(); base = `http://127.0.0.1:${server.httpServer.address().port}`;
  browser = await chromium.launch({ headless:true, ...(process.env.QMANGA_BROWSER_EXECUTABLE ? {executablePath:process.env.QMANGA_BROWSER_EXECUTABLE} : {}) });
 });
-after(async () => { await browser?.close(); await server?.close(); });
+after(async () => { await browser?.close(); await server?.close();await cleanViteCache(server); });
 
 // Original synthetic vector PDF: two colored pages, with valid offsets and no fixture assets.
 function pdf() {

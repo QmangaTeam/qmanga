@@ -26,8 +26,8 @@ test('title stats live inside facts and comments load without an extra click', {
   const page=await context.newPage();
   await page.goto('/titles/'+title.slug);
   assert.equal(await page.locator('.title-tabs a').count(),3);
-  assert.equal(await page.locator('.status-dot.ongoing').count(),1);
-  await page.getByRole('button',{name:/Статистика/}).click();
+  assert.equal(await page.locator('.metadata a[href*="original_status=ongoing"] .status-dot.ongoing').count(),1);
+  await page.getByRole('button',{name:'Статистика тайтла',exact:true}).click();
   const dialog=page.getByRole('dialog',{name:'Статистика тайтла'});
   await dialog.waitFor();
   if(detail.rating_count===0)assert.equal(await dialog.getByText('Оценок пока нет').count(),1);
@@ -64,7 +64,7 @@ test('title rating saves independently and updates its distribution', {timeout:3
   const dialog=page.getByRole('dialog',{name:'Оценить тайтл'});
   await dialog.getByRole('button',{name:'7 / 10',exact:true}).click();
   await dialog.waitFor({state:'hidden'});
-  await page.getByRole('button',{name:/Статистика/}).click();
+  await page.getByRole('button',{name:'Статистика тайтла',exact:true}).click();
   const bar=page.locator('.stats-dialog .rating-bar').filter({has:page.locator('span').filter({hasText:/^7$/})});
   assert.equal(await bar.count()>0,true);
   const detail=await (await context.request.get('/api/v1/titles/'+title.slug)).json();
