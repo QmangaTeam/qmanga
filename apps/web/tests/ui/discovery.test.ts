@@ -93,3 +93,11 @@ test('default repeated type rankings collapse while explicit type requests retai
  const explicit=render(HomeDiscovery,{props:{topFilled:true,topRequested:true}}).body;
  expect(await elements(explicit,'#tops .cover-card')).toHaveLength(1);
 });
+
+
+test('populated home retains unique discoveries and eager image budget',async()=>{
+ const html=render(HomeDiscovery,{props:{size:8,topFilled:true,distinctTop:true}}).body;
+ expect(await elements(html,'section[aria-labelledby="browse-heading"] .cover-card')).toHaveLength(8);
+ expect(await elements(html,'#tops .cover-card')).toHaveLength(1);
+ expect(await elements(html,'img[fetchpriority="high"]')).toHaveLength(3);
+});

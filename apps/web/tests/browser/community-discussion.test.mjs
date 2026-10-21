@@ -157,3 +157,16 @@ test('failed root send preserves editor and successful retry clears the draft',{
   await page.locator('.composer-prompt').click();assert.equal(await editor.inputValue(),'');
  }finally{await page.close();}
 });
+
+test('sparse and populated homepage fixtures reflow with real shelf controls',{timeout:60000},async()=>{
+ const context=await browser.newContext();const page=await context.newPage();
+ try{for(const locale of ['kk','ru'])for(const theme of ['light','dark'])for(const size of [1,8]){
+  await page.goto(baseURL+`/?view=home&locale=${locale}&theme=${theme}&size=${size}&returning=1`);await page.locator('.discovery-home').waitFor();
+  for(const width of [320,360,768,1280]){await page.setViewportSize({width,height:900});
+   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false,`${locale}/${theme}/${size}/${width}`);
+   assert.equal(await page.locator('section[aria-labelledby="browse-heading"] .cover-card').count(),size);
+   assert.equal(await page.locator('#tops .cover-card').count(),size===8?1:0);
+  }
+  if(size===8){await page.setViewportSize({width:320,height:900});await page.locator('section[aria-labelledby="browse-heading"] .shelf-controls button').last().click();await page.waitForFunction(()=>document.querySelector('.cover-shelf').scrollLeft>0);}
+ }}finally{await context.close();}
+});

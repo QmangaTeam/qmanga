@@ -6,7 +6,7 @@ Owner direction, 18 October 2026: copy Senkuro's placement and interaction patte
 
 ### Home section order — owner's latest correction
 
-The main page now follows exactly: Most read → Continue reading → Latest updates → type-top tabs (manhwa / manga / manhua). This replaces the earlier updated/new/completed home navigation and editorial shelf; it does not remove catalogue filters or editorial metadata from the product.
+Owner-approved refinement,21 October2026 (TASK-108, local review): returning readers with resumable items see Continue reading → Most read → Latest updates → type-top navigation. New visitors keep Most read → Continue reading → Latest updates. Continuation retains explicit loading/empty/error states. Sparse catalogues use tighter section spacing and natural update columns. The default lower type shelf omits titles already visible in Most read; all three type links remain available, and an explicit type query shows its actual complete results, empty state or error. Ranking definitions and catalogue filters are preserved.
 
 Most read is an all-time ranking of distinct non-blocked accounts with persisted reading progress. Anonymous/offline-only local progress is not silently counted as server statistics. Type tops rank published titles by actual non-blocked-user average rating, then vote count and stable title ID. Unrated titles sort after rated titles; no score badge appears without votes. Rankings exclude unpublished announcements, and each response is bounded to16 titles. The backend read model reuses catalogue summaries and Go media URLs; no new tracking events, image provider or database table was introduced.
 
@@ -21,7 +21,7 @@ Final full Go suite passes, including real PostgreSQL ranking tests. Serial Alpi
 - Desktop: 1280px reading-site container, logo left, search/catalogue/translator destinations centrally, personal icons right. Mobile: compact search at the top and five inset bottom destinations.
 - First content: heading, compact navigation chips, horizontal cover shelf. Approximately 146px covers on desktop and 116px on phones; full cards are native title links. Type/actual rating are placed over artwork; two-line names below. No slogans or metadata paragraphs.
 - Catalogue navigation uses real updated/new/completed filters. No invented most-read ranking, time-period ranking, ratings, advertising blocks, messages or unrelated premium controls.
-- Continuation retains real reading progress after the initial shelf in linked illustrated rows, using available catalogue covers without extra image-metadata requests. Unknown covers use a compact icon, not a fabricated image. Editorial shelf only exists when real editorial picks exist. Updates use clickable thumbnails and adjacent chapter buttons rather than wide text-only rows and detached controls.
+- Continuation retains real reading progress in linked illustrated rows, first for returning readers and after discovery for new visitors, using available catalogue covers without extra image-metadata requests. Unknown covers use a compact icon, not a fabricated image. Editorial shelf only exists when real editorial picks exist. Updates use clickable thumbnails and adjacent chapter buttons rather than wide text-only rows and detached controls.
 - Existing weak-network image policy, Go media gateway, language preference and domain boundaries remain intact. Additional images are lazy except the first three covers. No new font, carousel library or remote image dependency.
 
 ## Scope

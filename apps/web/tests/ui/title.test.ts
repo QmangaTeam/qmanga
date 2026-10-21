@@ -78,3 +78,11 @@ test('title metadata uses field icons, status dots and a team avatar without rep
  expect(await elements(html,'.contributors .team-avatar img')).toHaveLength(1);
  expect((await elements(html,'.team-avatar img'))[0].src).toBe('/media/avatars/team/team');
 });
+
+
+test('title without artwork keeps a placeholder and working reading destination',async()=>{
+ const html=render(Title,{props:{coverURL:''}}).body;
+ expect(await elements(html,'.cover-empty')).toHaveLength(1);
+ expect(await elements(html,'.title-banner')).toHaveLength(0);
+ expect((await elements(html,'.read-button'))[0].href).toBe('/read/release');
+});
