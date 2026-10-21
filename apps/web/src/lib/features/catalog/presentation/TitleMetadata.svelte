@@ -12,11 +12,16 @@
  let notice=$state('');
  let failedTeamAvatars=$state<string[]>([]);
  $effect(()=>{title.id;failedTeamAvatars=[];});
+ function overflowEdges(node:HTMLDivElement){
+  const measure=()=>{node.toggleAttribute('data-left-more',node.scrollLeft>1);node.toggleAttribute('data-right-more',node.scrollLeft+node.clientWidth<node.scrollWidth-1);};
+  const resize=new ResizeObserver(measure);resize.observe(node);const changes=new MutationObserver(measure);changes.observe(node,{childList:true,subtree:true,characterData:true});node.addEventListener('scroll',measure);document.fonts.addEventListener('loadingdone',measure);measure();
+  return {destroy(){resize.disconnect();changes.disconnect();node.removeEventListener('scroll',measure);document.fonts.removeEventListener('loadingdone',measure);}};
+ }
  async function copyName(value:string){try{await navigator.clipboard.writeText(value);notice=text($locale,'Атауы көшірілді','Название скопировано');}catch{notice=text($locale,'Көшіру мүмкін болмады. Мәтінді белгіле.','Не удалось скопировать. Выдели текст вручную.');}}
 </script>
 <section class="metadata" aria-label={text($locale,'Тайтл туралы мәлімет','Сведения о тайтле')}>
  <!-- svelte-ignore a11y_no_noninteractive_tabindex (Native horizontal scrolling supports keyboard users.) -->
- <div class="metadata-rail" tabindex="0" role="region" aria-label={text($locale,'Тайтл деректері','Факты о тайтле')}>
+ <div class="metadata-rail" use:overflowEdges tabindex="0" role="region" aria-label={text($locale,'Тайтл деректері','Факты о тайтле')}>
  <dl class="summary-facts">
   <div><dt><Icon name='catalog' size={13}/>{text($locale,'Түрі','Тип')}</dt><dd><a href={'/catalog?kind='+title.kind}>{names.kind[title.kind]}</a></dd></div>
   <div><dt><Icon name='file' size={13}/>{text($locale,'Тайтл күйі','Статус тайтла')}</dt><dd><a class="status-value" href={'/catalog?original_status='+title.originalStatus}><span class={'status-dot '+title.originalStatus} aria-hidden="true"></span>{names.original[title.originalStatus]}</a></dd></div>
@@ -57,6 +62,8 @@
  .status-dot.ongoing{background:#3ac66d}.status-dot.completed{background:#4894ee}.status-dot.hiatus,.status-dot.paused{background:#e3a52d}.status-dot.cancelled,.status-dot.stopped{background:#e55b60}
  .team-avatar{width:32px;height:32px;flex:none;display:grid;place-items:center;overflow:hidden;border-radius:5px;background:var(--bg)}.team-avatar img{width:100%;height:100%;object-fit:cover}
  @media(max-width:959px){
+  .metadata{position:relative}.metadata:has(:global(.metadata-rail[data-right-more]))::after,.metadata:has(:global(.metadata-rail[data-left-more]))::before{content:'';position:absolute;top:10px;bottom:10px;width:18px;pointer-events:none;z-index:1}
+  .metadata:has(:global(.metadata-rail[data-right-more]))::after{right:8px;background:linear-gradient(to right,transparent,var(--panel))}.metadata:has(:global(.metadata-rail[data-left-more]))::before{left:8px;background:linear-gradient(to left,transparent,var(--panel))}
   .metadata-rail{display:flex;gap:14px;overflow:auto;max-height:88px;scroll-snap-type:x proximity;scroll-padding-inline:0;overscroll-behavior-x:contain;scrollbar-width:none;padding-bottom:4px}
   dl{display:contents}dl>div,.metadata-group{flex:0 0 auto;width:max-content;min-width:88px;max-width:156px;scroll-snap-align:start}
   .metadata-group:has(.aliases){max-width:none}.aliases{display:flex;gap:12px}.aliases li{width:230px;flex:0 0 230px}

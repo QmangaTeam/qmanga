@@ -11,7 +11,7 @@ test('mobile title reflows and the single-Q wordmark follows explicit and system
   try{
    await context.addCookies([{name:'qmanga_locale',value:locale,url:fixture.app_url}]);
    if(!mode.startsWith('system-'))await context.addInitScript(value=>localStorage.setItem('qmanga.theme',value),mode);
-   const page=await context.newPage();await page.goto('/titles/'+fixture.title_slug);
+   const page=await context.newPage();await page.goto('/titles/'+fixture.title_slug+'?tab=about');
    for(const width of [320,360,487]){
     await page.setViewportSize({width,height:900});
     const cover=await page.locator('.cover-wrap').boundingBox(),heading=await page.locator('.title-heading').boundingBox();
@@ -19,6 +19,7 @@ test('mobile title reflows and the single-Q wordmark follows explicit and system
     assert.equal(await page.locator('.title-information').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'horizontal metadata stays contained in the panel');
     if(width===320){
      const rail=page.locator('.metadata-rail');assert.equal(await rail.evaluate(e=>e.scrollWidth>e.clientWidth),true,'mobile metadata slides horizontally');
+     await page.waitForFunction(()=>document.querySelector('.metadata-rail').hasAttribute('data-right-more'));
      await rail.focus();await page.keyboard.press('ArrowRight');await page.waitForFunction(()=>document.querySelector('.metadata-rail').scrollLeft>0);
     }
     assert.equal(await page.locator('.title-tabs').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'all title tabs fit');

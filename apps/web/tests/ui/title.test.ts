@@ -3,7 +3,7 @@ import Title from './Title.fixture.svelte';
 import {render,elements} from './markup';
 
 test('title places actions and publication metadata beside a unified facts panel',async()=>{
- const html=render(Title).body;
+ const html=render(Title,{props:{tab:'about'}}).body;
  expect(await elements(html,'.title-aside a[href="/read/release"]')).toHaveLength(1);
  expect(await elements(html,'.title-information .metadata')).toHaveLength(1);
  expect(await elements(html,'.title-facts,.sidebar-metadata,.mobile-metadata')).toHaveLength(0);
@@ -62,7 +62,7 @@ test('description SSR keeps the preview without offering an unmeasured disclosur
 });
 
 test('title tab links preserve scroll without a content fragment',async()=>{
- const html=render(Title).body;
+ const html=render(Title,{props:{tab:'about'}}).body;
  for(const link of await elements(html,'.title-tabs a')){expect(link.href).not.toContain('#');expect(link['data-sveltekit-noscroll']).toBeDefined();}
  expect(await elements(html,'.metadata .metadata-rail')).toHaveLength(1);
  expect(html).toContain('Издатель');
@@ -71,7 +71,7 @@ test('title tab links preserve scroll without a content fragment',async()=>{
 });
 
 test('title metadata uses field icons, status dots and a team avatar without repeating chapter totals',async()=>{
- const html=render(Title).body;
+ const html=render(Title,{props:{tab:'about'}}).body;
  expect(await elements(html,'.summary-facts>div')).toHaveLength(8);
  expect(await elements(html,'.summary-facts dt svg')).toHaveLength(8);
  expect(await elements(html,'.status-dot')).toHaveLength(2);
@@ -85,4 +85,10 @@ test('title without artwork keeps a placeholder and working reading destination'
  expect(await elements(html,'.cover-empty')).toHaveLength(1);
  expect(await elements(html,'.title-banner')).toHaveLength(0);
  expect((await elements(html,'.read-button'))[0].href).toBe('/read/release');
+});
+
+
+test('title information is exclusive to About, leaving chapter and comment views focused',async()=>{
+ for(const tab of ['chapters','comments']){const html=render(Title,{props:{tab}}).body;expect(await elements(html,'.title-information,.metadata,.contributors')).toHaveLength(0);}
+ expect(await elements(render(Title,{props:{tab:'about'}}).body,'.title-information')).toHaveLength(1);
 });

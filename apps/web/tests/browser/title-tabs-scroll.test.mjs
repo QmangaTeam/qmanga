@@ -12,7 +12,8 @@ test('title choices preserve scroll and animate only without reduced motion',{ti
    await page.evaluate(()=>scrollTo(0,document.querySelector('.title-tabs').getBoundingClientRect().top+scrollY-120));
    const before=await page.evaluate(()=>scrollY);
    await page.locator('.title-tabs a[href*="tab=chapters"]').click();await page.waitForURL(url=>url.searchParams.get('tab')==='chapters');await page.locator('.chapter-search').waitFor();
-   assert.ok(Math.abs(await page.evaluate(()=>scrollY)-before)<3,'tab choice must not jump to content/footer');assert.equal(new URL(page.url()).hash,'');
+   const position=await page.evaluate(()=>({y:scrollY,max:Math.max(0,document.documentElement.scrollHeight-innerHeight)}));
+   assert.ok(Math.abs(position.y-Math.min(before,position.max))<3,'tab preserves scroll within the shorter page bounds: '+JSON.stringify({width,before,...position}));assert.equal(new URL(page.url()).hash,'');
    const duration=await page.locator('.title-tabs').evaluate(e=>getComputedStyle(e,'::before').transitionDuration);assert.equal(duration,reducedMotion==='reduce'?'0s':'0.18s');
    const animation=await page.locator('.tab-panel').evaluate(e=>getComputedStyle(e).animationName);if(reducedMotion==='reduce')assert.equal(animation,'none');else assert.ok(animation.endsWith('tab-enter'));
    await page.goBack();await page.waitForURL(url=>url.searchParams.get('tab')==='about');await page.locator('.title-tabs a[href*="tab=about"][aria-current]').waitFor();assert.equal(await page.locator('.title-tabs a[aria-current]').getAttribute('href'),'/titles/'+fixture.title_slug+'?tab=about');

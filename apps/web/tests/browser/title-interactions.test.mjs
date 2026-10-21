@@ -24,7 +24,7 @@ test('title stats live inside facts and comments load without an extra click', {
   assert.ok(title.slug);
   const detail=(await (await context.request.get('/api/v1/titles/'+title.slug)).json());
   const page=await context.newPage();
-  await page.goto('/titles/'+title.slug);
+  await page.goto('/titles/'+title.slug+'?tab=about');
   await page.waitForLoadState('networkidle');
   assert.equal(await page.locator('.title-tabs a').count(),3);
   assert.equal(await page.locator('.metadata a[href*="original_status=ongoing"] .status-dot.ongoing').count(),1);
@@ -60,7 +60,7 @@ test('title rating saves independently and updates its distribution', {timeout:3
   assert.equal(current.status(),200);
   original=(await current.json()).score;
   const page=await context.newPage();
-  await page.goto('/titles/'+title.slug);
+  await page.goto('/titles/'+title.slug+'?tab=about');
   await page.waitForLoadState('networkidle');
   await page.getByRole('button',{name:'Оценить тайтл'}).click();
   const dialog=page.getByRole('dialog',{name:'Оценить тайтл'});

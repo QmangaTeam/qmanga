@@ -61,7 +61,7 @@ test('reply and edit retain formatting, spoilers, preview, cancellation and exac
   await editor.fill('Ответ с форматированием');await editor.evaluate(element=>element.setSelectionRange(0,5));
   await composer.getByRole('button',{name:'Жирный',exact:true}).click();assert.equal(await editor.inputValue(),'**Ответ** с форматированием');
   await composer.getByRole('button',{name:'Спойлер',exact:true}).click();assert.equal(await composer.getByRole('button',{name:'Спойлер',exact:true}).getAttribute('aria-pressed'),'true');
-  await composer.getByText('Предпросмотр',{exact:true}).click();assert.equal(await composer.locator('.comment-preview strong').textContent(),'Ответ');
+  await composer.locator('.comment-preview summary').click();assert.equal(await composer.locator('.comment-preview strong').textContent(),'Ответ');
   await composer.getByRole('button',{name:'Отправить',exact:true}).click();await page.locator('#comment-new').waitFor();
   assert.deepEqual((await calls(page)).find(call=>call.kind==='comment'),{kind:'comment',account:'own',title:'synthetic-title',release:'',parent:'nested',body:'**Ответ** с форматированием',spoiler:true});
   const reply=page.locator('#comment-reply');await reply.getByRole('button',{name:'Редактировать',exact:true}).click();
@@ -169,4 +169,51 @@ test('sparse and populated homepage fixtures reflow with real shelf controls',{t
   }
   if(size===8){await page.setViewportSize({width:320,height:900});await page.locator('section[aria-labelledby="browse-heading"] .shelf-controls button').last().click();await page.waitForFunction(()=>document.querySelector('.cover-shelf').scrollLeft>0);}
  }}finally{await context.close();}
+});
+
+test('dense title tags disclose only real overflow and editions remain bounded with exact destinations',{timeout:60000},async()=>{
+ const page=await browser.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));
+ try{
+  for(const width of [320,624,1280]){
+   await page.setViewportSize({width,height:900});
+   await page.goto(baseURL+'/?view=title&tags=1&editions=1&section=chapters');
+   await page.locator('.title-genres a').waitFor();
+   assert.equal(await page.locator('.tags-toggle').count(),0,'short taxonomy needs no toggle');
+   assert.equal(await page.locator('.title-information').count(),0,'chapters have no About metadata');
+   assert.equal(await page.locator('.chapter-link').getAttribute('href'),'/read/release');
+   for(const editions of [2,10,50]){
+    await page.goto(baseURL+`/?view=title&tags=30&editions=${editions}&section=chapters`);
+    const toggle=page.locator('.tags-toggle');await toggle.waitFor();
+    assert.equal(await page.locator('.title-genres a').count(),30);
+    assert.ok(await page.locator('.title-genres a[inert]').count()>0,'clipped tags leave keyboard order');
+    await toggle.click();assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+    await page.waitForFunction(()=>!document.querySelector('.title-genres a[inert]'));
+    await toggle.click();assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+    const picker=page.locator('.edition-picker');
+    assert.ok((await picker.boundingBox()).height<=70,'many editions use one compact chapter row');
+    await picker.locator('summary').click();
+    const list=picker.locator('.edition-list');assert.ok((await list.boundingBox()).height<=322,'expanded editions have bounded height');
+    if(editions>5)await picker.locator('input').fill(`Команда ${editions}`);
+    const last=picker.locator(`a[href="/read/release-${editions-1}"]`);assert.equal(await last.count(),1);
+    assert.equal(await picker.locator(`a[href="/teams/team-${editions-1}"]`).count(),1,'team profile is separate from reading');
+    assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'dense title fits viewport');
+   }
+  }
+  assert.deepEqual(errors,[]);
+ }finally{await page.close();}
+});
+
+test('taxonomy disclosure responds to width and preserves both locale/theme palettes',{timeout:30000},async()=>{
+ const page=await browser.newPage();
+ try{for(const locale of ['kk','ru'])for(const theme of ['dark','light']){
+  await page.setViewportSize({width:320,height:900});
+  await page.goto(baseURL+`/?view=title&tags=5&editions=1&locale=${locale}&theme=${theme}&section=about`);
+  const toggle=page.locator('.tags-toggle');await toggle.waitFor();
+  assert.equal(await toggle.innerText(),locale==='kk'?'Толығырақ':'Подробнее');
+  await toggle.click();assert.equal(await toggle.innerText(),locale==='kk'?'Жию':'Свернуть');
+  await page.setViewportSize({width:1280,height:900});
+  await page.waitForFunction(()=>!document.querySelector('.tags-toggle'));
+  assert.equal(await page.locator('.title-genres a[inert]').count(),0,'all fitting links remain reachable after resize');
+  assert.equal(await page.locator('.title-information').count(),1);
+ }}finally{await page.close()}
 });
