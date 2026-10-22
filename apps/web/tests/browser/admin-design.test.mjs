@@ -29,3 +29,13 @@ test('publication canvas uses exact revision manifest and retries rejected decis
  fail=false;await page.locator('dialog[open]').getByRole('button',{name:'Вернуть с причиной',exact:true}).click();await page.waitForFunction(()=>!document.querySelector('dialog[open]'));await page.getByRole('button',{name:'Проверить версию',exact:true}).click();await page.locator('.page-fragments img').waitFor();await page.getByRole('button',{name:'Опубликовать и далее',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.form-message.success')?.textContent.includes('опубликована'));assert.match(decisions.at(-1).url,/review-b\/review$/);assert.equal(decisions.at(-1).decision,'publish');
  }finally{await context.close();await browser.close();}
 });
+test('dictionary list and editor preserve dirty guard across tabs in both themes and small viewports',{timeout:45000},async()=>{
+ const {browser,context,page}=await session();try{
+ await page.goto('/admin/taxonomy');await page.locator('.dictionary-row').first().waitFor();assert.equal(await page.getByRole('status').count(),0,'loading a dictionary is not a saved mutation');await page.locator('.dictionary-row').first().click();const name=page.locator('.dictionary-editor input').first();await name.waitFor();const original=await name.inputValue();await name.fill(original+' draft');
+ page.once('dialog',dialog=>dialog.dismiss());await page.locator('.dictionary-tabs button').nth(1).click();assert.equal(await name.inputValue(),original+' draft');assert.equal(await page.locator('.dictionary-tabs button').first().getAttribute('aria-pressed'),'true');
+ page.once('dialog',dialog=>dialog.accept());await page.locator('.dictionary-tabs button').nth(1).click();assert.equal(await page.locator('.dictionary-tabs button').nth(1).getAttribute('aria-pressed'),'true');
+ await page.locator('.dictionary-tabs button').nth(2).click();await page.getByRole('button',{name:'Сохранить подборку',exact:true}).waitFor();
+ for(const theme of ['dark','light'])for(const width of [320,360,1280]){await page.setViewportSize({width,height:900});await page.evaluate(value=>document.documentElement.dataset.theme=value,theme);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+ await page.locator('.dictionary-tabs button').first().click();await page.setViewportSize({width:1280,height:900});await page.locator('.dictionary-row').first().click();await mkdir('tmp/task120/screens',{recursive:true});await page.screenshot({path:'tmp/task120/screens/admin-dictionary.png'});
+ }finally{await context.close();await browser.close();}
+});
