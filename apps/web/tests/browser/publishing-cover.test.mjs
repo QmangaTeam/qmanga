@@ -26,7 +26,7 @@ test('artwork changes require moderation, keep evidence private and support a co
   const revisions=await (await owner.request.get('/api/v1/studio/projects/'+fixture.project_id+'/revisions')).json();const count=revisions.items.reduce((n,x)=>n+x.pages.length,0);
   const csrf=await (await owner.request.get('/api/v1/auth/csrf')).json();
   for(const endpoint of ['cover','cover-file']){const response=await owner.request.put('/api/v1/studio/projects/'+fixture.project_id+'/'+endpoint,{headers:{Origin:fixture.app_url,'X-CSRF-Token':csrf.csrf_token},data:{page_id:''}});assert.equal(response.status(),409);assert.equal((await response.json()).error.code,'moderation_required');}
-  const page=await owner.newPage();await page.goto('/studio/projects/'+fixture.project_id);await page.getByRole('link',{name:'Изменить данные проекта'}).click();
+  const page=await owner.newPage();await page.goto('/studio/projects/'+fixture.project_id);await page.locator('.project-navigation').getByRole('link',{name:'Сведения о тайтле',exact:true}).click();
   await page.getByRole('heading',{name:'Изменить данные проекта',exact:true}).waitFor();await page.getByRole('textbox',{name:'Название',exact:true}).waitFor();
   assert.equal(await page.locator('input[name="slug"]').count(),0);
   const file=join(dirname(process.env.QMANGA_FIXTURE_FILE),'pages','page-01.png');
@@ -67,17 +67,15 @@ test('accidental draft can be cancelled then discarded without touching the publ
   const page=await context.newPage();
   try{
    await page.goto('/studio/projects/'+fixture.project_id);
-   await page.locator('.draft-panel h2').waitFor();
-   if(!await page.locator('.chapter-choice form').isVisible())await page.locator('.chapter-choice summary').click();
-   await page.locator('.chapter-sidebar select').first().selectOption({label:'Добавить новую главу'});
+   await page.getByRole('button',{name:'Добавить главу',exact:true}).click();
    await page.getByRole('textbox',{name:'Номер или обозначение главы'}).fill(label);
-   await page.getByRole('button',{name:'Добавить главу и открыть черновик'}).click();
+   await page.getByRole('button',{name:'Создать черновик',exact:true}).click();
    await page.locator('.draft-panel h2').filter({hasText:label}).waitFor();
    const rail=page.locator('.draft-steps');
    assert.equal(await rail.locator('a').count(),3);
    const railX=await rail.evaluate(element=>element.getBoundingClientRect().left);
    const panelX=await page.locator('.draft-panel').evaluate(element=>element.getBoundingClientRect().left);
-   assert.ok(railX>panelX,'step rail should be to the right of the editor');
+   assert.ok(Math.abs(railX-panelX)<2,'editor tabs align with the working surface');
    if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:join(process.env.QMANGA_SCREENSHOT_DIR,'draft-rail-1280.png'),fullPage:false});}
    await rail.locator('a[href="#draft-details"]').click();
    await page.waitForFunction(()=>document.querySelector('.draft-steps a[href="#draft-details"]')?.getAttribute('aria-current')==='location');

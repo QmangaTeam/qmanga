@@ -11,7 +11,7 @@
  import PublicationFields from './PublicationFields.svelte';
  import TaxonomySelection from './TaxonomySelection.svelte';
  import {catalogNames} from './messages';
- let {gateway,projectId,coverPageId='',imports}:{imports?:MetadataImportsGateway;gateway:TitleChangesGateway;projectId:string;coverPageId?:string}=$props();
+ let {gateway,projectId,coverPageId='',imports,projectReturn=''}:{imports?:MetadataImportsGateway;gateway:TitleChangesGateway;projectId:string;coverPageId?:string;projectReturn?:string}=$props();
  const {locale}=useLocale();const names=$derived(catalogNames($locale));
  const taxonomyFields=['genre_ids','category_ids'] as const;
  let importBusy=$state(false);
@@ -28,7 +28,7 @@
  onMount(()=>{void load();const stop=gateway.watchAccount(()=>{busy=false;saved=false;links='';void load();});const unload=(e:BeforeUnloadEvent)=>{if(dirty){e.preventDefault();e.returnValue='';}};window.addEventListener('beforeunload',unload);return()=>{generation++;stop();window.removeEventListener('beforeunload',unload);};});
 </script>
 <svelte:head><title>{text($locale,'Жоба деректерін өзгерту','Изменить данные проекта')} — Qmanga</title></svelte:head>
-<a class="back" href={'/studio/projects/'+encodeURIComponent(projectId)}>{text($locale,'Жобаға оралу','Вернуться к проекту')}</a>
+<a class="back" href={'/studio/projects/'+encodeURIComponent(projectId)+(projectReturn?'?projectsReturn='+encodeURIComponent(projectReturn):'')}>{text($locale,'Жобаға оралу','Вернуться к проекту')}</a>
 <h1>{text($locale,'Жоба деректерін өзгерту','Изменить данные проекта')}</h1>
 <p class="muted">{text($locale,'Өзгерістер модерациядан кейін барлық командалар үшін тайтл карточкасына қолданылады.','После модерации изменения применятся к общей карточке тайтла для всех команд.')}</p>
 {#if loading}<p role="status">{text($locale,'Жүктелуде…','Загрузка…')}</p>{/if}

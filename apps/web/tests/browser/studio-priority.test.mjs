@@ -16,42 +16,18 @@ async function session(locale='ru',theme='dark'){
  return context;
 }
 
-test('mobile project starts with current work and keeps chapter choice and metadata secondary',{timeout:45000},async()=>{
- for(const locale of ['ru','kk'])for(const theme of ['dark','light']){
- const context=await session(locale,theme);
- try{
-  const page=await context.newPage();await page.goto('/studio/projects/'+fixture.project_id);
-  await page.locator('.draft-panel h2').waitFor();
-  const pageCount=await page.locator('.studio-pages-grid button').count();
-  assert.match(await page.locator('.revision-option[aria-current="true"]').innerText(),new RegExp((locale==='ru'?'Страниц: ':'Беттер: ')+pageCount),'opened revision uses full detail count rather than summary pages');
-  for(const width of [320,360]){
-   await page.setViewportSize({width,height:800});
-   const panel=await page.locator('.draft-panel').boundingBox(),choice=await page.locator('.chapter-sidebar').boundingBox(),metadata=await page.locator('.cover-panel').boundingBox();
-   assert.ok(panel.y<550,'current chapter should be on the first screen');assert.ok(choice.y>=panel.y+panel.height-1,'chapter choice follows current work');assert.ok(metadata.y>panel.y,'metadata follows work');
-   assert.equal(await page.locator('.draft-panel').evaluate(el=>!!(el.compareDocumentPosition(document.querySelector('.chapter-sidebar'))&Node.DOCUMENT_POSITION_FOLLOWING)),true,'DOM order matches mobile reading order');
-   assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),true);
-  }
-  const change=page.getByRole('button',{name:locale==='ru'?'Выбрать главу':'Тарауды таңдау',exact:true});await change.press('Enter');
-  await page.locator('.chapter-choice form').waitFor({state:'visible'});assert.equal(await page.locator('.chapter-choice summary').evaluate(el=>el===document.activeElement),true,'choice receives keyboard focus');
-  await page.setViewportSize({width:1280,height:900});for(const id of ['draft-pages','draft-details','draft-preview']){await page.locator('.draft-steps a[href="#'+id+'"]').click();assert.equal(await page.locator('#'+id).isVisible(),true,'each desktop workspace view is reachable');}
- }finally{await context.close();}
- }
+test('project overview offers internal sections and keeps editor behind explicit continue',{timeout:45000},async()=>{
+ for(const locale of ['ru','kk'])for(const theme of ['dark','light']){const context=await session(locale,theme);try{const page=await context.newPage();await page.goto('/studio/projects/'+fixture.project_id);await page.locator('.version-row a').first().waitFor();assert.equal(await page.locator('.draft-panel').count(),0);assert.equal(await page.locator('.project-navigation a').count(),4);for(const width of [320,360,1280]){await page.setViewportSize({width,height:900});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}await page.locator('.version-row a').first().click();await page.locator('.draft-panel h2').waitFor();const change=page.getByRole('button',{name:locale==='ru'?'Выбрать главу':'Тарауды таңдау',exact:true});await change.press('Enter');assert.equal(await page.locator('.chapter-switch-dialog').evaluate(el=>el.matches(':modal')),true);await page.keyboard.press('Escape');assert.equal(await change.evaluate(el=>el===document.activeElement),true);for(const id of ['draft-pages','draft-details','draft-preview']){await page.locator('.draft-steps a[href="#'+id+'"]').click();assert.equal(await page.locator('#'+id).isVisible(),true);}}finally{await context.close();}}
 });
-
-test('project without chapters keeps creation reachable without a false current revision',{timeout:20000},async()=>{
- const context=await session();
- try{
-  const page=await context.newPage();await page.route('**/api/v1/studio/projects/*/chapters?*',route=>route.fulfill({json:{items:[]}}));await page.route('**/api/v1/studio/projects/*/revisions?*',route=>route.fulfill({json:{items:[]}}));
-  await page.goto('/studio/projects/'+fixture.project_id);await page.getByRole('textbox',{name:'Номер или обозначение главы'}).waitFor();
-  assert.equal(await page.getByRole('button',{name:'Добавить главу и открыть черновик',exact:true}).isVisible(),true);assert.equal(await page.locator('.draft-panel h2').count(),0);
- }finally{await context.close();}
+test('empty project offers creation without a false current revision',{timeout:20000},async()=>{
+ const context=await session();try{const page=await context.newPage();await page.route('**/api/v1/studio/projects/*/chapters?*',route=>route.fulfill({json:{items:[]}}));await page.route('**/api/v1/studio/projects/*/revisions?*',route=>route.fulfill({json:{items:[]}}));await page.goto('/studio/projects/'+fixture.project_id);await page.getByRole('button',{name:'Добавить главу',exact:true}).click();await page.getByRole('textbox',{name:'Номер или обозначение главы'}).waitFor();assert.equal(await page.locator('.draft-panel h2').count(),0);}finally{await context.close();}
 });
 
 
 test('studio shell keeps catalog access and responsive workspace navigation without reader chrome',{timeout:45000},async()=>{
  for(const locale of ['ru','kk'])for(const theme of ['dark','light']){
   const context=await session(locale,theme);
-  try{const page=await context.newPage();await page.goto('/studio/projects/'+fixture.project_id);await page.locator('.draft-panel h2').waitFor();
+  try{const page=await context.newPage();await page.goto('/studio/projects/'+fixture.project_id);await page.locator('.project-heading .identity p').waitFor();
    assert.equal(await page.locator('.workspace-topbar').count(),1);assert.equal(await page.locator('.site-footer').count(),0);
    for(const width of [320,360,1280]){await page.setViewportSize({width,height:800});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     if(width<1000){const trigger=page.locator('.workspace-menu');await trigger.press('Enter');const dialog=page.locator('.workspace-drawer');await dialog.waitFor();assert.equal(await dialog.locator('nav a').count(),4);await page.keyboard.press('Escape');assert.equal(await trigger.evaluate(el=>el===document.activeElement),true);}
