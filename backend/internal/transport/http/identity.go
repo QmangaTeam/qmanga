@@ -153,19 +153,30 @@ func (handler *IdentityHandler) register(request *gin.Context) {
 }
 func (handler *IdentityHandler) login(request *gin.Context) {
 	var input struct {
+		Remember *bool  `json:"remember"`
 		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 	if !decode(request, &input) {
 		return
 	}
-	result, failure := handler.service.Login(request.Request.Context(), input.Email, input.Password)
+	remember := true
+	if input.Remember != nil {
+		remember = *input.Remember
+	}
+	result, failure := handler.service.Login(request.Request.Context(), input.Email, input.Password, remember)
 	if failure != nil {
 		handler.respondError(request, failure)
 		return
 	}
-	handler.cookie(request, "qmanga_session", result.SessionToken, result.ExpiresAt)
-	handler.cookie(request, "qmanga_csrf", result.CSRFToken, result.ExpiresAt)
+	if remember {
+		handler.cookie(request, "qmanga_session", result.SessionToken, result.ExpiresAt)
+		handler.cookie(request, "qmanga_csrf", result.CSRFToken, result.ExpiresAt)
+	} else {
+		for name, value := range map[string]string{"qmanga_session": result.SessionToken, "qmanga_csrf": result.CSRFToken} {
+			http.SetCookie(request.Writer, &http.Cookie{Name: name, Value: value, Path: "/", HttpOnly: true, Secure: handler.secure, SameSite: http.SameSiteLaxMode})
+		}
+	}
 	request.JSON(200, gin.H{"user": userView(result.Account)})
 }
 func (handler *IdentityHandler) cookie(request *gin.Context, name, value string, expiration time.Time) {

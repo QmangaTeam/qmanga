@@ -99,7 +99,7 @@ func (service *Service) register(ctx context.Context, email, password, displayNa
 	}
 	return service.sendToken(ctx, account, "verify")
 }
-func (service *Service) Login(ctx context.Context, email, password string) (LoginResult, error) {
+func (service *Service) Login(ctx context.Context, email, password string, remember ...bool) (LoginResult, error) {
 	normalized, validationError := domain.NormalizeEmail(email)
 	if validationError != nil || len(password) > 512 {
 		return LoginResult{}, domain.ErrCredentials
@@ -115,9 +115,12 @@ func (service *Service) Login(ctx context.Context, email, password string) (Logi
 	if !service.credentials.Verify(password, account.PasswordHash) {
 		return LoginResult{}, domain.ErrCredentials
 	}
+	if len(remember) > 0 && !remember[0] {
+		return service.newSession(ctx, account, 24*time.Hour)
+	}
 	return service.newSession(ctx, account)
 }
-func (service *Service) newSession(ctx context.Context, account domain.Account) (LoginResult, error) {
+func (service *Service) newSession(ctx context.Context, account domain.Account, lifetime ...time.Duration) (LoginResult, error) {
 	token, tokenError := service.credentials.RandomToken()
 	if tokenError != nil {
 		return LoginResult{}, tokenError
@@ -126,7 +129,11 @@ func (service *Service) newSession(ctx context.Context, account domain.Account) 
 	if csrfError != nil {
 		return LoginResult{}, csrfError
 	}
-	expiration := service.now().Add(30 * 24 * time.Hour)
+	duration := 30 * 24 * time.Hour
+	if len(lifetime) > 0 {
+		duration = lifetime[0]
+	}
+	expiration := service.now().Add(duration)
 	session := Session{Hash: service.credentials.Digest(token), UserID: account.ID, CSRFHash: service.credentials.Digest(csrf), ExpiresAt: expiration}
 	if saveError := service.repository.SaveSession(ctx, session); saveError != nil {
 		return LoginResult{}, saveError

@@ -19,10 +19,10 @@ test('new registration imports automatically, retries a failed transfer and neve
    await context.addCookies([{name:'qmanga_locale',value:'ru',url:fixture.app_url}]);
    const response=await context.request.get('/api/v1/releases/'+fixture.release_id+'/manifest');assert.equal(response.status(),200);const manifest=await response.json();
    const page=await context.newPage();const errors=[];page.on('pageerror',error=>errors.push(error.message));page.setDefaultTimeout(8000);await page.goto('/');await seedGuest(page,manifest);
-   await page.goto('/register');await page.locator('#auth-nickname').fill('Import Reader');await page.locator('#auth-email').fill(address);await page.locator('#auth-password').fill(password);await page.getByRole('button',{name:'Регистрация',exact:true}).click();await page.getByText('Письмо отправлено. Проверь почту.',{exact:true}).waitFor();
+   await page.goto('/register');await page.waitForLoadState('networkidle');await page.locator('#auth-nickname').fill('Import Reader');await page.locator('#auth-email').fill(address);await page.locator('#auth-password').fill(password);await page.locator('.terms-consent input').check();await page.getByRole('button',{name:'Регистрация',exact:true}).click();await page.getByText('Письмо отправлено. Проверь почту.',{exact:true}).waitFor();
    const receipt=(await context.cookies()).find(cookie=>cookie.name==='qmanga_guest_registration');assert.ok(receipt?.httpOnly);assert.equal(receipt.sameSite,'Lax');
    await page.route('**/api/v1/progress/*',route=>route.request().method()==='POST'?route.fulfill({status:500,json:{error:{code:'internal'}}}):route.continue());
-   await page.goto('/login?returnTo=%2Flibrary');await page.locator('#auth-email').fill(address);await page.locator('#auth-password').fill(password);await page.getByRole('button',{name:'Войти',exact:true}).click();await page.waitForURL('**/library');await page.locator('.import-notice').waitFor();
+   await page.goto('/login?returnTo=%2Flibrary');await page.waitForLoadState('networkidle');await page.locator('#auth-email').fill(address);await page.locator('#auth-password').fill(password);await page.getByRole('button',{name:'Войти',exact:true}).click();await page.waitForURL('**/library');await page.locator('.import-notice').waitFor();
    const account=(await (await context.request.get('/api/v1/auth/me')).json()).user.id,headers={'X-Qmanga-Account':account};
    assert.equal((await (await context.request.get('/api/v1/auth/guest-import',{headers})).json()).allowed,true);
    await page.unroute('**/api/v1/progress/*');await page.evaluate(()=>window.dispatchEvent(new Event('focus')));
@@ -33,7 +33,7 @@ test('new registration imports automatically, retries a failed transfer and neve
    assert.equal((await (await context.request.get('/api/v1/auth/guest-import',{headers})).json()).allowed,false);
    await page.getByRole('button',{name:'Меню аккаунта',exact:true}).click();await page.locator('.account-menu').getByRole('button',{name:'Выйти',exact:true}).click();await page.waitForURL(url=>url.pathname==='/');assert.deepEqual(errors,[]);
    await seedGuest(page,{...manifest});
-   await page.goto('/login?returnTo=%2Flibrary');await page.locator('#auth-email').fill(address);await page.locator('#auth-password').fill(password);await page.getByRole('button',{name:'Войти',exact:true}).click();await page.waitForURL('**/library');
+   await page.goto('/login?returnTo=%2Flibrary');await page.waitForLoadState('networkidle');await page.locator('#auth-email').fill(address);await page.locator('#auth-password').fill(password);await page.getByRole('button',{name:'Войти',exact:true}).click();await page.waitForURL('**/library');
    const again=await (await context.request.get('/api/v1/progress/'+manifest.title_id,{headers})).json();assert.equal(again.version,progress.version,'ordinary login must not import again');
    // A valid receipt from this browser grants no access to an unrelated existing account.
    const old=await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.owner_email,password:fixture.owner_password}});assert.equal(old.status(),200);

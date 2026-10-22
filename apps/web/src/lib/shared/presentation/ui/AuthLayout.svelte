@@ -1,7 +1,11 @@
 <script lang="ts">
- import type { Snippet } from 'svelte';
- import SectionHeading from './SectionHeading.svelte';
- let { title, description, children, footer }: { title:string; description?:string; children:Snippet; footer?:Snippet } = $props();
+ import type {Snippet} from 'svelte';
+ import {useLocale,text} from '$lib/shared/presentation/locale';
+ import Icon from './Icon.svelte';
+ let {title,description,children,footer}:{title:string;description?:string;children:Snippet;footer?:Snippet}=$props();
+ const {locale}=useLocale();
 </script>
-<section class="auth-layout"><a class="auth-brand" href="/" aria-label="Qmanga"><img src="/favicon.png" alt="" width="48" height="48"/><span aria-hidden="true">manga<span class="brand-dot">.</span></span></a><SectionHeading level={1} {title} {description}/>{@render children()}{#if footer}<div class="auth-footer">{@render footer()}</div>{/if}</section>
-<style>.auth-brand { display:inline-flex; align-items:center; gap:2px; min-height:48px; margin-bottom:24px; color:var(--text); text-decoration:none; font-size:34px; font-weight:850; letter-spacing:-1.4px; line-height:1; } .auth-brand img { flex:none; } .brand-dot { color:var(--accent); } .auth-brand:focus-visible { outline:2px solid var(--accent); outline-offset:4px; border-radius:4px; } .auth-layout { max-width:420px; margin:8px auto 32px; } .auth-footer { margin-top:24px; padding-top:16px; border-top:1px solid var(--line); font-size:14px; color:var(--muted); } @media(min-width:768px) { .auth-layout { margin-top:32px; } }</style>
+<div class="auth-page"><a class="auth-back" href="/"><Icon name="left" size={16}/>{text($locale,'Басты бетке','На главную')}</a><section class="auth-layout"><a class="auth-brand" href="/" aria-label="Qmanga"><img src="/favicon.png" alt="" width="32" height="32"/></a><header><h1>{title}</h1>{#if description}<p>{description}</p>{/if}</header>{@render children()}{#if footer}<div class="auth-footer">{@render footer()}</div>{/if}</section></div>
+<style>
+ .auth-page{max-width:440px;margin:0 auto 32px}.auth-back{display:inline-flex;align-items:center;gap:8px;min-height:44px;margin-bottom:12px;color:var(--muted);font-size:12px;text-decoration:none}.auth-layout{border:1px solid var(--line);background:var(--panel);border-radius:12px;padding:24px 20px}.auth-brand{display:grid;place-items:center;width:44px;min-height:44px;border:1px solid var(--line);border-radius:9px;margin-bottom:20px}.auth-brand img{display:block}header{margin-bottom:24px}h1{font-size:25px;line-height:1.2;margin:0;letter-spacing:-.5px}header p{font-size:13px;line-height:1.6;color:var(--muted);margin:10px 0 0}.auth-footer{border-top:1px solid var(--line);margin-top:24px;padding-top:16px;font-size:12px;line-height:1.7;color:var(--muted)}@media(min-width:768px){.auth-page{margin-top:20px}.auth-layout{padding:30px}}
+</style>

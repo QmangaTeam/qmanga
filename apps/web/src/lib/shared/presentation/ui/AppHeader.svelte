@@ -6,11 +6,12 @@
  import {useLocale,text} from '../locale';
  let {items,currentPath,accountHref,accountLabel,homeLabel,navigationLabel,account,unreadCount=0,unreadBadge=''}:{items:NavigationItem[];currentPath:string;accountHref:string;accountLabel:string;homeLabel:string;navigationLabel:string;account?:Snippet;unreadCount?:number;unreadBadge?:string}=$props();
  const {locale}=useLocale();
+ const compact=$derived(/^\/(login|register|forgot-password|reset-password|verify-email|settings|notifications|users)(\/|$)/.test(currentPath));
  let searchDialog:HTMLDialogElement;
  let searchInput:HTMLInputElement;
  function openSearch(){searchInput.value=page.url.pathname==='/catalog'?(page.url.searchParams.get('q')||''):'';searchDialog.showModal();searchInput.focus();}
 </script>
-<header>
+<header class:compact>
  <div class="header-inner">
   <a class="wordmark" href="/" aria-label={homeLabel}><img src="/favicon.png" alt="" width="40" height="40"/><span class="brand-name" aria-hidden="true">manga<span class="brand-dot">.</span></span></a>
   <nav class="primary-navigation" aria-label={navigationLabel}>
@@ -54,6 +55,7 @@
  .search-field input{flex:1;width:0;padding-inline:0;border:0;border-radius:0;background:none;outline:none}
  .search-field button{color:var(--accent);flex-shrink:0}
  .catalogue-link{margin-top:12px;font-weight:400}
+ @media(max-width:767px){.compact .wordmark{display:inline-flex;align-items:center;gap:2px;flex:none;color:var(--text)}.compact .wordmark img{width:28px;height:28px}.compact .brand-name{font-size:22px;font-weight:850;letter-spacing:-1px;line-height:1}.compact .brand-dot{color:var(--accent)}.compact .primary-navigation{margin-left:auto;width:auto;flex:none}.compact .search-trigger{width:44px;padding:0;justify-content:center;background:none;border-color:transparent}.compact .search-trigger span{display:none}.compact .header-inner{gap:8px}}
  @media(min-width:768px){
   .header-inner{height:64px;padding:0 24px;display:grid;grid-template-columns:1fr auto 1fr}
   .wordmark{display:inline-flex;align-items:center;justify-self:start;gap:2px;color:var(--text)}.wordmark img{width:40px;height:40px;flex:none}

@@ -63,7 +63,7 @@ func TestIdentityFlowWithPostgres(testingTarget *testing.T) {
 	handler := NewIdentityHandler(service, "http://localhost:8080", false)
 	router := NewRouter(nil)
 	handler.Register(router.Group("/api/v1"))
-	send := func(method, path string, body map[string]string, cookies []*http.Cookie, csrf, origin string) *httptest.ResponseRecorder {
+	send := func(method, path string, body any, cookies []*http.Cookie, csrf, origin string) *httptest.ResponseRecorder {
 		encoded, _ := json.Marshal(body)
 		request := httptest.NewRequest(method, "/api/v1/auth/"+path, strings.NewReader(string(encoded)))
 		request.Header.Set("Origin", origin)
@@ -101,6 +101,26 @@ func TestIdentityFlowWithPostgres(testingTarget *testing.T) {
 	for _, cookie := range cookies {
 		if !cookie.HttpOnly || cookie.SameSite != http.SameSiteLaxMode {
 			testingTarget.Fatal("unsafe session cookie")
+		}
+	}
+	shortLogin := send("POST", "login", map[string]any{"email": "reader@example.com", "password": "correct-password-123", "remember": false}, nil, "", origin)
+	expect(shortLogin, 200)
+	for _, cookie := range shortLogin.Result().Cookies() {
+		if cookie.MaxAge != 0 || !cookie.Expires.IsZero() || !cookie.HttpOnly {
+			testingTarget.Fatal("non-remembered login must use session cookies")
+		}
+		if cookie.Name == "qmanga_session" {
+			session, _, err := service.Authenticate(ctx, cookie.Value)
+			if err != nil || time.Until(session.ExpiresAt) > 24*time.Hour || time.Until(session.ExpiresAt) < 23*time.Hour {
+				testingTarget.Fatal("non-remembered server session must expire within24hours", err)
+			}
+		}
+	}
+	remembered := send("POST", "login", map[string]any{"email": "reader@example.com", "password": "correct-password-123", "remember": true}, nil, "", origin)
+	expect(remembered, 200)
+	for _, cookie := range remembered.Result().Cookies() {
+		if cookie.MaxAge < 29*24*60*60 || cookie.Expires.IsZero() {
+			testingTarget.Fatal("remembered login must persist for30days")
 		}
 	}
 	me := send("GET", "me", nil, cookies, "", origin)

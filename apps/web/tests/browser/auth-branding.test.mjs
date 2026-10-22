@@ -21,7 +21,8 @@ test('auth branding and centered mobile Home retain localized navigation and tou
     assert.equal(await brand.getAttribute('aria-label'),'Qmanga');assert.equal(await brand.locator('img').count(),1);
     assert.equal(await brand.locator('img').evaluate(e=>e.complete&&e.naturalWidth>0),true);
     assert.equal(await brand.locator('img').getAttribute('src'),'/favicon.png');
-    assert.equal(await brand.innerText(),'manga.');
+    assert.equal(await brand.innerText(),'');
+    assert.equal(await brand.locator('img').getAttribute('width'),'32');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
     assert.equal(await brand.evaluate(e=>getComputedStyle(e).color),theme==='light'?'rgb(33, 27, 24)':'rgb(239, 237, 241)');
    }
