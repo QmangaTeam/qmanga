@@ -18,7 +18,7 @@ test('team avatar fallback and pending upload remain scoped to the selected team
  const context=await browser.newContext({baseURL,viewport:{width:360,height:800}});let releaseUpload;
  try{await context.addCookies([{name:'qmanga_locale',value:'ru',url:baseURL}]);assert.equal((await context.request.post('/api/v1/auth/login',{headers:{Origin:baseURL},data:{email,password:fixture.owner_password}})).status(),200);
  const csrf=(await(await context.request.get('/api/v1/auth/csrf')).json()).csrf_token;const headers={Origin:baseURL,'X-Qmanga-Account':actor,'X-CSRF-Token':csrf,'Content-Type':'image/png'};
- const page=await context.newPage();page.setDefaultTimeout(8000);await page.goto('/studio/teams');
+ const page=await context.newPage();page.setDefaultTimeout(8000);await page.goto('/studio/teams');await page.locator('.avatar-settings summary').click();
  const png=Buffer.from(await page.evaluate(()=>{const canvas=document.createElement('canvas');canvas.width=320;canvas.height=180;const ctx=canvas.getContext('2d');ctx.fillStyle='#ff873d';ctx.fillRect(0,0,320,180);return canvas.toDataURL('image/png').split(',')[1];}),'base64');
  assert.equal((await context.request.post('/api/v1/avatars/team/'+teams[1],{headers,data:png})).status(),200);
  const selector=page.locator('.team-select select');await selector.selectOption(teams[0]);await page.locator('.avatar-editor .avatar img').waitFor({state:'detached'});
