@@ -1,11 +1,11 @@
 ---
 id: TASK-123
 title: Admin-managed API tokens and headless manga publication
-status: Review
+status: Done
 assignee:
   - codex
 created_date: '2026-10-22 19:06'
-updated_date: '2026-10-22 19:17'
+updated_date: '2026-10-22 19:48'
 labels: []
 dependencies: []
 ordinal: 65005
@@ -14,7 +14,7 @@ ordinal: 65005
 ## Description
 
 <!-- SECTION:DESCRIPTION:BEGIN -->
-Owner wants Codex to upload manga without browser. Clarification23Oct: create/revoke API tokens in admin panel, act as token owner account and publish directly without moderation. Reuse existing catalog/upload/processing pipeline and preserve ordinary user moderation. No deployment requested in this package.
+Headless manga upload through admin-managed owner-bound API tokens, with explicit direct publication scope and ordinary moderation preserved. Owner authorized push/deployment and requested a short Codex guide.
 <!-- SECTION:DESCRIPTION:END -->
 
 ## Acceptance Criteria
@@ -35,9 +35,19 @@ Owner wants Codex to upload manga without browser. Clarification23Oct: create/re
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Owner authorized push+deployment after completion and requested super short Codex API guide. Implemented hashed adminowner tokens, scoped bearer, token-only atomic direct publication/cover and adminUI. Parent integrates CLI/guide and tests; review found CLI chapter409/name, historicalrevision and lostsubmitresponse issues now fixed with regressions. FullGoPG/codecs PASS,168webunit and64UI tests PASS; focusedpublishingHTTPaftercover PASS. End-to-end localDocker/browser in progress before final independent review and release.
+Implemented owner-bound hashed admin API tokens with expiry/revocation/live role checks, scoped bearer imports, atomic privileged publication and cover selection, and once-only admin token UI. Upload CLI supports folder/CBZ, stable page keys, private resumable state and truthful publication checks. Short guide: docs/CODEX-UPLOAD.md.
 
-Local implementation verified:65ea31b UI,322dc27 identity,b8ba023 publication,690b146 cover/currentpointer,96d0825 CLI/guide,a55a967 bootstrap+CI/E2E. Full Go realPG/codecs PASS; post-cover publishing+HTTP realPG PASS;168webunit,64UI,11Pythonclientregressions PASS;productionwebbuild PASS;svelte-check0errors0warnings;architecture/contrastPASS. RealDockerE2E adminUItokencreate -> headlessnewtitle/project/chapter -> PNGprocessing -> selectedcover -> directpublish -> anonymousimage200 -> identicalrepeat -> disallowedadminroute403 -> UIrevoke -> bearer401 PASS.12renderedadminviews kk/ru,light/dark,320/360/1280 PASS; inspected screenshot. Independentidentity/UI/publicationreviews clean; CLI4reviewfindings fixed and regressiontested, stalecoverdocs corrected. No real-user token created; secrets only in test process memory. Owner authorized push/release and mini guide docs/CODEX-UPLOAD.md. ReadyforremoteCI/staging/production exactSHA acceptance; stayReview untilobserved.
+Verified locally: full Go/PostgreSQL/codecs; 168 web unit tests, 64 UI tests, 11 Python regressions; production build; svelte-check zero errors/warnings; architecture and contrast checks. Real Docker browser flow verifies token creation, headless title/project/chapter import, image processing, cover selection, direct publication, idempotent repeat, scope denial, revocation and anonymous image access. Twelve admin views cover kk/ru, dark/light and 320/360/1280 widths. Independent backend/UI/publication/client reviews completed without remaining blockers.
 
-Initial push refused by existing OAuth credential workflow-scope restriction. No privileges changed: removed unpublished workflow edit, moved Pythonclientregressions into new existing-glob browser file. Both browser tests (Python suite plusrealE2E) rerun locally. Integration commit5be741f replaces unpublisheda55a967; productcodeunchanged. Release uses normalfullCI/poller.
+Owner authorized push and deployment. Candidate b7c5578403a7bf0bce27a4860bbc22accb68c773: Verify39840064775 and FastRelease39840064908 succeeded, including 120 browser cases (54+66), zero failures and ARM64 images. Staging runs exact SHA; automatic production promotion pending. No workflow privilege increase or deployment gate bypass.
+
+Explicitly authorized production maintenance completed after fresh off-host verified backup, rollback dry-run and independent SQL review: removed four test accounts, two unwanted titles and three unwanted teams. Retained four accounts (three exceptions and one recent), Haimiya with 12 published chapters, and Qmanga. Team ownership transferred to protected existing administrator. All 206 retained page IDs/checksums/statuses and 12 publication pointers unchanged; public chapter count and sample image200 verified, deleted title routes404. No personal identifiers or secrets recorded here.
+
+Production automatically promoted to blue b7c5578403a7bf0bce27a4860bbc22accb68c773 at 2026-10-22 19:47 UTC after mandatory migration backup/off-host verification. External HTTPS homepage confirms exact SHA; PostgreSQL/S3 health ok; token API guest401 and admin page login redirect verified. Catalog retains exactly Haimiya with12 chapters; Telegram notifier enabled. No owner token created; owner creates secret once in admin panel.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Released admin-managed owner API tokens, scoped headless uploads and direct publication on production b7c5578403a7bf0bce27a4860bbc22accb68c773. Full CI and independent reviews passed;120 remote browser cases. Short guide docs/CODEX-UPLOAD.md. Authorized test-data cleanup completed and verified:4 users,1 title/12 chapters,1 team.
+<!-- SECTION:FINAL_SUMMARY:END -->
