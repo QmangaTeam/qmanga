@@ -22,6 +22,7 @@ test('V4 public UI adapts to locale, theme and viewport while keeping navigation
      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),`${locale}/${theme}/${width} ${path}: overflow`);
      assert.equal(await page.locator('html').getAttribute('data-theme'),theme,`${locale}/${theme}/${width} ${path}: actual theme`);
      assert.equal(await page.locator('main').count(),1);
+     if(width===834)assert.equal(await page.locator('.account-navigation>a[href="/library"]').isVisible(),true,'tablet retains Library shortcut');
      if(path.includes('?tab=chapters')||path.includes('?tab=comments'))assert.equal(await page.locator('.title-heading .tag-list,.title-heading .synopsis,.about-taxonomy').count(),0);
      if(process.env.QMANGA_SCREENSHOT_DIR&&[390,834,1440].includes(width)){
       await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:`${process.env.QMANGA_SCREENSHOT_DIR}/${locale}-${theme}-${width}-${routes.indexOf(path)}.png`});
