@@ -17,7 +17,7 @@ test('cover statuses follow real bookmark updates on home and catalogue and clea
    const href=await page.locator('.cover-shelf .cover-card').first().getAttribute('href');assert.ok(href);
    const title=await (await context.request.get('/api/v1/titles/'+href.split('/').at(-1))).json();
    await page.goto(href);await page.locator('.library-trigger').click();const selection=page.locator('.action-dialog').filter({has:page.locator('.selection')});
-   await selection.getByRole('button',{name:'Брошено',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.library-trigger')?.textContent.includes('Брошено'));await selection.getByRole('button',{name:'Закрыть',exact:true}).click();
+   await selection.getByRole('button',{name:'Брошено',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.library-trigger')?.textContent.includes('Брошено'));await selection.waitFor({state:'hidden'});
    const endpoint='/api/v1/reading/statuses?'+new URLSearchParams({ids:title.id+',absent'});
    const response=await context.request.get(endpoint,{headers:{'X-Qmanga-Account':account}});assert.equal(response.status(),200);assert.equal(response.headers()['cache-control'],'private, no-store');assert.deepEqual((await response.json()).statuses,{[title.id]:'dropped'});
    assert.equal((await context.request.get(endpoint,{headers:{'X-Qmanga-Account':'wrong'}})).status(),409);

@@ -16,8 +16,12 @@ test('status updates the title button immediately and ratings save from ten acce
    await page.locator('.library-trigger').click();const library=page.locator('.action-dialog').filter({has:page.locator('.selection')});
    await library.getByRole('button',{name:'Брошено',exact:true}).click();
    await page.waitForFunction(()=>document.querySelector('.library-trigger')?.textContent.includes('Брошено'));
+   await library.waitFor({state:'hidden'});
+   assert.equal(await page.locator('.library-trigger').evaluate(e=>e===document.activeElement),true);
+   await page.locator('.library-trigger').click();
    const boxes=await library.locator('.status-choices button').evaluateAll(elements=>elements.map(e=>e.getBoundingClientRect()));
    assert.ok(boxes.every(b=>Math.abs(b.x-boxes[0].x)<1),'statuses form one column');
+   assert.equal(await library.getByRole('button',{name:'Брошено',exact:true}).getAttribute('aria-pressed'),'true');
    await library.getByRole('button',{name:'Закрыть',exact:true}).click();
    await page.reload();await page.waitForFunction(()=>document.querySelector('.library-trigger')?.textContent.includes('Брошено'));
    await page.locator('.rating-trigger').click();const dialog=page.locator('.rating-dialog');

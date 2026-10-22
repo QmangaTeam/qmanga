@@ -18,7 +18,7 @@
 </script>
 {#key data.title.id}
 <Title {libraryLabel} title={data.title} chapters={data.chapters} nextURL={data.nextURL} firstChapter={data.firstChapter} chapterFilter={data.chapterFilter} tab={data.tab}>
- {#snippet library()}<LibrarySelection onstatuschange={status=>libraryStatus=status||''} title={data.title} readingGateway={reading.readingGateway} librarySync={reading.librarySync}/>{/snippet}
+ {#snippet library(close)}<LibrarySelection onselected={close} onstatuschange={status=>libraryStatus=status||''} title={data.title} readingGateway={reading.readingGateway} librarySync={reading.librarySync}/>{/snippet}
  {#snippet discussion()}<Discussion titleId={data.title.id} titleSlug={data.title.slug} gateway={community} showReport={false}/>{/snippet}
  {#snippet rating()}<RatingDialog titleId={data.title.id} titleSlug={data.title.slug} score={data.title.score} ratingCount={data.title.ratingCount} gateway={community}/>{/snippet}
  {#snippet report()}<ReportForm titleId={data.title.id} targetId={data.title.id} gateway={community} embedded/>{/snippet}
