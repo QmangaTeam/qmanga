@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 08:22'
-updated_date: '2026-10-22 09:30'
+updated_date: '2026-10-22 09:51'
 labels: []
 dependencies: []
 priority: high
@@ -29,7 +29,7 @@ ordinal: 62005
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-Реализация студии и админки доступна локально, включая модальный просмотр заявок команд. Следующий шаг: приёмка владельцем в dev-браузере и конкретные замечания. Push/deploy только по отдельному запросу.
+Локальная реализация студии и админки готова к дальнейшей приёмке владельцем, включая компактный экран команд и модальный просмотр админ-заявок. Исправлять конкретные замечания, сохранять права/точные ID/черновики. Push/deploy только по отдельному запросу.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -44,6 +44,10 @@ Owner review follow-up: existing approved teams were not visible because origina
 Code commits:4f8805c admin workspace,3b813e8 dictionaries; approved-team/avatar follow-up is the immediately preceding code commit. Final follow-up production build and architecture/contrast checks passed. Local review only; no production release or current production SHA verification.
 
 Owner modal follow-up completed in7555cab: pending team Open request uses native showModal dialog, approved team details remain separate; all available request fields displayed (name/description/status/Telegram/review note/ID/slug). Native focus containment, close/Escape busy+dirty guards, return focus to trigger or pending tab, long mobile content scroll. Backend IDs/payloads unchanged. Regression first failed on missing dialog, then passed after implementation and focus-return fix. Fresh check0errors/0warnings,UI60/843,combined5browser scenarios,build,boundaries,contrast passed. Browser regression covers native :modal, fields,320/360/1280 dark/light bounds, long content, focus,close/Escape discard cancellation, busy rejection Escape,failed reject retaining reason/exact target,hash guard and approved directory refresh. Independent targeted review: no actionable findings. Test application remains pending; real admin decisions not performed. Opened separate local preview tab and captured screenshot under tmp/task120. No push/deploy.
+
+studio/teams owner follow-up: removed duplicate intro card, single-team selector and irrelevant solo hint; one88px identity header with role/status, realTelegram and original project/request/profile/edit actions. Owner sees bounded member list; avatar settings, invitation history and invitation composer collapse independently. Counts remain unknown until successful load. Shared avatar picker now localized, keyboard-focusable and mobile-wrapping; same-actor successful save refreshes header image through versioned URL. Existing mutations, role constraints, stale team-response guards and paging retained. Fresh check0errors/0warnings,UI60tests/843assertions,7browser scenarios (studio3+admin4),production build,boundaries,contrast passed. Both locales/themes and320/360/1280 covered; mock invite failure preserves draft/exact team, team-switch confirmation, member-role restrictions and avatar-save refresh verified without real writes. Independent review and final invitation-wrapper review: no actionable findings. Updated legacy form/avatar-switch tests for intentional collapsed controls and missing single-team select; disposable legacy suites not run against owner data. Screenshot tmp/task120/studio-team-final.png. Local dev/HMR visible in owner tab; no push/deploy/current production SHA verification.
+
+Studio-team compact UI code SHA:3429562. Owner review remains pending; statusReview.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
@@ -52,4 +56,6 @@ Owner modal follow-up completed in7555cab: pending team Open request uses native
 Локально готовы студия и админка по HTML/Figma. Код:a35ed6c,aa3cc39,4f8805c,3b813e8,8b5b1a9. Проверки:check0/0,UI60/843,build,architecture,contrast;responsive/browser5 сценариев и отдельная регрессия последующих team-guard исправлений прошли. Независимый review завершён без оставшихся actionable замечаний. В браузере открыта локальная тестовая заявка, Vite dev/HMR работает. Ожидается приёмка владельцем. Публичный avatar endpoint скрывает изображения неодобренных команд; для заявки отображается fallback. Push/deploy не выполнялись.
 
 7555cab: заявки команд открываются модальным окном с дополнительными доступными полями; проверено локально и независимо reviewed, ожидается приёмка владельцем.
+
+Страница команд студии стала компактнее: единая шапка, видимые участники, раскрываемые настройки/приглашения и локализованный выбор аватара; проверки и независимый review пройдены, ожидается локальная приёмка.
 <!-- SECTION:FINAL_SUMMARY:END -->
