@@ -40,11 +40,12 @@
  const unreadBadge=$derived(badgeText(data.user?.id||null,unreadCount));
  const studioArea=$derived($page.url.pathname==='/studio'||$page.url.pathname.startsWith('/studio/'));
  const adminArea=$derived($page.url.pathname==='/admin'||$page.url.pathname.startsWith('/admin/'));
+ const managementArea=$derived(adminArea||($page.url.pathname.startsWith('/moderation/title-changes')&&data.user?.role==='admin'));
  const localeStore=createLocalePreferences();
  const {locale}=provideLocale(untrack(()=>data.locale),value=>changeLocale(localeStore,value));
  onMount(()=>{initializeTheme(createPreferences()); if($page.url.pathname==='/offline-reader'||$page.url.pathname==='/saved') locale.set(localeStore.read()); localeStore.apply($locale);});
  $effect(()=>{localeStore.apply($locale);});
- const workspaceItems=$derived<NavigationItem[]>(adminArea?[{href:'/admin',label:text($locale,'Шолу','Обзор'),icon:'chart'},{href:'/admin/catalog',label:text($locale,'Тайтлдар және тараулар','Тайтлы и главы'),icon:'catalog'},{href:'/admin/requests',label:text($locale,'Жоба өтінімдері','Заявки на проекты'),icon:'file'},{href:'/admin/teams',label:text($locale,'Командалар','Команды'),icon:'users'},{href:'/admin/taxonomy',label:text($locale,'Таксономия','Таксономия'),icon:'folder'},{href:'/admin/moderation',label:'Модерация',icon:'flag'},{href:'/admin/accounts',label:text($locale,'Пайдаланушылар','Пользователи'),icon:'users'},{href:'/admin/reports',label:text($locale,'Өтініштер','Обращения'),icon:'flag'},{href:'/admin/audit',label:text($locale,'Аудит журналы','Журнал аудита'),icon:'file'}]:[{href:'/studio/projects',label:text($locale,'Жобалар','Проекты'),icon:'folder'},{href:'/studio/requests',label:text($locale,'Өтінімдер','Заявки'),icon:'file'},{href:'/studio/teams',label:text($locale,'Командалар','Команды'),icon:'users'},{href:'/studio/stats',label:text($locale,'Статистика','Статистика'),icon:'chart'}]);
+ const workspaceItems=$derived<NavigationItem[]>(managementArea?[{href:'/admin',label:text($locale,'Жұмыс кезегі','Рабочая очередь'),icon:'shield'},{href:'/admin/catalog',label:text($locale,'Тайтлдар және тараулар','Тайтлы и главы'),icon:'catalog'},{href:'/admin/requests',label:text($locale,'Жоба өтінімдері','Заявки на проекты'),icon:'file'},{href:'/admin/teams',label:text($locale,'Командалар','Команды'),icon:'users'},{href:'/admin/taxonomy',label:text($locale,'Таксономия','Таксономия'),icon:'folder'},{href:'/admin/moderation',label:'Модерация',icon:'flag'},{href:'/admin/accounts',label:text($locale,'Пайдаланушылар','Пользователи'),icon:'users'},{href:'/admin/reports',label:text($locale,'Өтініштер','Обращения'),icon:'flag'},{href:'/admin/audit',label:text($locale,'Аудит журналы','Журнал аудита'),icon:'file'}]:[{href:'/studio/projects',label:text($locale,'Жобалар','Проекты'),icon:'folder'},{href:'/studio/requests',label:text($locale,'Өтінімдер','Заявки'),icon:'file'},{href:'/studio/teams',label:text($locale,'Командалар','Команды'),icon:'users'},{href:'/studio/stats',label:text($locale,'Статистика','Статистика'),icon:'chart'}]);
  const navigation=$derived<NavigationItem[]>([
   {label:text($locale,'Басты бет','Главная'),href:'/',icon:'home'},
   {label:'Каталог',href:'/catalog',icon:'catalog'},
@@ -67,8 +68,8 @@
 {:else if $page.url.pathname.startsWith('/read/') || $page.url.pathname==='/offline-reader'}
  <main id="content">{@render content()}</main>
 {:else}
- {#if adminArea||studioArea}
- <WorkspaceShell {unreadCount} {unreadBadge} items={workspaceItems} currentPath={$page.url.pathname} compact={studioArea&&/^\/studio\/projects\/[^/]+$/.test($page.url.pathname)} label={adminArea?text($locale,'Басқару','Управление'):text($locale,'Жұмыс кеңістігі','Рабочее пространство')}>
+ {#if managementArea||studioArea}
+ <WorkspaceShell management={managementArea} userName={data.user?.displayName||''} {unreadCount} {unreadBadge} items={workspaceItems} currentPath={$page.url.pathname} compact={studioArea&&/^\/studio\/projects\/[^/]+$/.test($page.url.pathname)} label={managementArea?text($locale,'Басқару','Управление'):text($locale,'Жұмыс кеңістігі','Рабочее пространство')}>
  {#snippet account()}{#if data.user}<AccountMenu version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}{/snippet}
  {@render content()}
  </WorkspaceShell>

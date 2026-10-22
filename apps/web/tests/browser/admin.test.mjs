@@ -33,7 +33,7 @@ async function adminPage() {
 test('load and selection are not saved; confirmed write is; rejected write retains input', { timeout: 60000 }, async () => {
  const { context, page } = await adminPage();
  try {
-  await page.goto('/admin/catalog');
+  await page.goto('/admin/catalog');await page.getByRole('button',{name:'Создать тайтл',exact:true}).click();
   const picker = page.locator('select').first();
   await picker.locator(`option[value="${process.env.QMANGA_TITLE_ID}"]`).waitFor({ state: 'attached' });
   assert.equal(await page.getByRole('status').count(), 0, 'opening a form is not a write');
@@ -97,7 +97,7 @@ test('admin tag picker stays closed after a mouse pick and chip removal', { time
 test('admin outside team follows catalogue project link to a read-only card', { timeout: 60000 }, async () => {
  const { context, page } = await adminPage();
  try {
-  await page.goto('/admin/catalog');
+  await page.goto('/admin/catalog');await page.getByRole('button',{name:'Создать тайтл',exact:true}).click();
   const picker = page.locator('select').first();
   await picker.locator(`option[value="${process.env.QMANGA_TITLE_ID}"]`).waitFor({ state: 'attached' });
   await picker.selectOption(process.env.QMANGA_TITLE_ID);
@@ -135,7 +135,7 @@ test('admin outside team follows catalogue project link to a read-only card', { 
 test('creating a project preserves unsaved title metadata and category choices', { timeout: 60000 }, async () => {
  const { context, page } = await adminPage();
  try {
-  await page.goto('/admin/catalog');
+  await page.goto('/admin/catalog');await page.getByRole('button',{name:'Создать тайтл',exact:true}).click();
   const picker=page.locator('select').first();
   await picker.locator(`option[value="${process.env.QMANGA_TITLE_ID}"]`).waitFor({state:'attached'});
   await picker.selectOption(process.env.QMANGA_TITLE_ID);

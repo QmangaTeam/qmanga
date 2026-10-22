@@ -60,3 +60,6 @@ export function createTitleChanges(){const {api,scope}=scopedApi();return new Ht
 
 import {HttpMetadataImports} from '$lib/features/catalog/infrastructure/http-metadata-import';
 export function createMetadataImports(){return new HttpMetadataImports(new ApiClient(globalThis.fetch.bind(globalThis)),globalThis.fetch.bind(globalThis));}
+
+import {ExistingWorkQueueGateway} from '$lib/features/metrics/infrastructure/work-queue-gateway';
+export function createWorkQueue(){return new ExistingWorkQueueGateway(createPublishing(),createTitleChanges(),createProjectRequests(),createTeams(),createCommunity());}
