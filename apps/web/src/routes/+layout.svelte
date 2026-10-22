@@ -13,6 +13,7 @@
  import MobileNavigation from '$lib/shared/presentation/ui/MobileNavigation.svelte';
  import type {NavigationItem} from '$lib/shared/presentation/ui/types';
  import {goto,invalidateAll} from '$app/navigation';
+ import ThemeToggle from '$lib/features/preferences/presentation/ThemeToggle.svelte';
  import AccountMenu from '$lib/features/preferences/presentation/AccountMenu.svelte';
  import SiteFooter from '$lib/features/preferences/presentation/SiteFooter.svelte';
  import {unreadBadge as badgeText} from '$lib/features/notifications/application/unread';
@@ -74,7 +75,7 @@
  {@render content()}
  </WorkspaceShell>
  {:else}
- <AppHeader {unreadBadge} {unreadCount} items={navigation.slice(0,4)} currentPath={$page.url.pathname} accountHref={data.user?'/menu':'/login?returnTo='+encodeURIComponent(loginReturn)} accountLabel={data.user?'Аккаунт':text($locale,'Кіру','Войти')} homeLabel={text($locale,'Qmanga басты бет','Qmanga — главная')} navigationLabel={text($locale,'Негізгі','Основная навигация')}>{#snippet account()}{#if data.user}<AccountMenu preferences={createPreferences()} version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}{/snippet}</AppHeader>
+ <AppHeader {unreadBadge} {unreadCount} items={navigation.slice(0,4)} currentPath={$page.url.pathname} accountHref={data.user?'/menu':'/login?returnTo='+encodeURIComponent(loginReturn)} accountLabel={data.user?'Аккаунт':text($locale,'Кіру','Войти')} homeLabel={text($locale,'Qmanga басты бет','Qmanga — главная')} navigationLabel={text($locale,'Негізгі','Основная навигация')}>{#snippet theme()}<ThemeToggle preferences={createPreferences()}/>{/snippet}{#snippet account()}{#if data.user}<AccountMenu preferences={createPreferences()} version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}{/snippet}</AppHeader>
  <main id="content" class="page-container">{@render content()}</main>
  {#if !/^\/(login|register|forgot-password|reset-password|verify-email|settings|notifications|users)(\/|$)/.test($page.url.pathname)}<SiteFooter version={data.buildVersion}/>{/if}
  <MobileNavigation {unreadBadge} {unreadCount} items={navigation} currentPath={$page.url.pathname} label={text($locale,'Мобильді навигация','Мобильная навигация')}/>

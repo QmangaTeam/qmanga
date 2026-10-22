@@ -1,5 +1,5 @@
 <script lang="ts">
-	import { onMount, tick, untrack } from 'svelte';
+	import { onMount, tick, untrack, type Snippet } from 'svelte';
 	import { goto } from '$app/navigation';
 	import { catalogParams, type CatalogFilter, type Genre, type Collection } from '../application/catalog';
 	import { ageRatings, kinds, originalStatuses, translationStatuses } from '../domain/catalog';
@@ -10,7 +10,7 @@
 	import TagBrowser from './TagBrowser.svelte';
 	import TagGroupPanel from './TagGroupPanel.svelte';
 
-	let { filter, genres, categories = [], collections = [] }: { filter: CatalogFilter; genres: Genre[]; categories?: Genre[]; collections?: Collection[] } = $props();
+	let { filter, genres, categories = [], collections = [],controls }: { filter: CatalogFilter; genres: Genre[]; categories?: Genre[]; collections?: Collection[];controls?:Snippet } = $props();
 	const { locale } = useLocale();
 	const names = $derived(catalogNames($locale));
 	const heading = $derived(text($locale, 'Сүзгілер', 'Фильтры'));
@@ -207,7 +207,9 @@
 
 <svelte:window onkeydown={escape} />
 <div class="filters-shell">
+ <div class="mobile-controls">{#if controls}{@render controls()}{/if}
 	<button class="button subtle filter-trigger" type="button" onclick={open} aria-haspopup="dialog"><Icon name="settings" size={18} />{text($locale, 'Сүзгілер', 'Фильтры')}</button>
+ </div>
 	<aside class="catalogue-filters" aria-label={heading}>
 		<div class="panel-clip">
 			<div class="panel-head">
@@ -270,4 +272,5 @@
 		.catalogue-filters { display: block; position: relative; border: 1px solid var(--line); border-radius: 12px; background: var(--panel); }
 		.panel-clip { display: flex; flex-direction: column; height: calc(100dvh - 166px); min-height: 180px; border-radius: 12px; overflow: hidden; }
 	}
+.mobile-controls{display:flex;align-items:center;gap:8px;min-width:0}.mobile-controls>.filter-trigger{flex:none}@media(min-width:1024px){.mobile-controls{display:none}}
 </style>

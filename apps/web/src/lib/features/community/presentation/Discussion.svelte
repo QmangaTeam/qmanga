@@ -34,7 +34,7 @@
  async function focusEditor(){await tick();editor?.focus({preventScroll:true});}
  function replyTo(item:Comment,trigger:HTMLButtonElement){rememberRoot();revealThread(item.rootId||item.id);composerTrigger=trigger;parent=item.id;editing='';body='';spoiler=false;focusEditor();}
  function editComment(item:Comment,trigger:HTMLButtonElement){rememberRoot();if(item.rootId)revealThread(item.rootId);composerTrigger=trigger;editing=item.id;body=item.body;spoiler=item.spoiler;parent='';focusEditor();}
- function wrapSelection(marker:string){if(body.length+2*marker.length>2000)return;const start=editor?.selectionStart??body.length,end=editor?.selectionEnd??start;const selected=body.slice(start,end);body=body.slice(0,start)+marker+selected+marker+body.slice(end);requestAnimationFrame(()=>{editor?.focus();editor?.setSelectionRange(start+marker.length,end+marker.length);});}
+
  async function submit(){const inline=!!(parent||editing);if(!account||!validComment(body)){message="comment_length";return;}busy=true;try{if(editing)await gateway.edit(account,editing,body,spoiler);else await gateway.comment(account,titleId,releaseId,parent,body,spoiler);if(!parent&&!editing)rootDraft={body:'',spoiler:false};if(parent)revealThread(comments.find(item=>item.id===parent)?.rootId||parent);body=rootDraft.body;parent='';editing='';spoiler=rootDraft.spoiler;rootOpen=false;await load();await invalidateAll();await tick();(inline?composerTrigger:rootTrigger)?.focus({preventScroll:true});}catch(failure){message=failureCode(failure);}finally{busy=false;}}
  async function remove(id:string){if(!account)return;busy=true;try{await gateway.remove(account,id);await load();await invalidateAll();}catch(failure){message=failureCode(failure);}finally{busy=false;}}
  async function replies(root:Comment){busy=true;try{const result=await gateway.replies(root.id,replyCursor(root,comments));comments=mergeReplyPage(comments,root,result.comments);}catch{message="replies_failed";}finally{busy=false;}}
@@ -53,13 +53,12 @@
    <button class="close-composer" type="button" disabled={busy} aria-label={text($locale,'Өңдегішті жабу','Закрыть редактор')} onclick={cancelComposer}>×</button>
   </div>
   <label><span class="sr-only">{editing?copy($locale,"Пікірді өңдеу"):parent?copy($locale,"Жауап жазу"):copy($locale,"Пікір жазу")}</span><textarea disabled={busy} bind:this={editor} bind:value={body} required maxlength="2000" rows="3" placeholder={editing?'':parent?text($locale,'Жауап жазыңыз…','Напишите ответ…'):text($locale,'Пікір жазыңыз…','Напишите комментарий…')}></textarea></label>
+  {#if spoiler}<p class="spoiler-notice" role="status">{text($locale,'Спойлер қосулы — пікір жасырылып көрсетіледі.','Спойлер включён — комментарий будет скрыт.')}</p>{/if}
   <div class="editor-footer">
    <div class="format-actions" aria-label={text($locale,'Мәтін пішімі','Форматирование')}>
-    <button disabled={busy} type="button" title={text($locale,'Қалың қаріп','Жирный')} aria-label={text($locale,'Қалың қаріп','Жирный')} onclick={()=>wrapSelection('**')}><strong>B</strong></button>
-    <button disabled={busy} type="button" title={text($locale,'Курсив','Курсив')} aria-label={text($locale,'Курсив','Курсив')} onclick={()=>wrapSelection('*')}><em>I</em></button>
-    <button disabled={busy} type="button" title={text($locale,'Сызылған','Зачёркнутый')} aria-label={text($locale,'Сызылған','Зачёркнутый')} onclick={()=>wrapSelection('~~')}><s>S</s></button>
-    <button disabled={busy} type="button" aria-pressed={spoiler} onclick={()=>spoiler=!spoiler}>{text($locale,'Спойлер','Спойлер')}</button>
-    <details class="comment-preview"><summary aria-label={text($locale,'Алдын ала көру','Предпросмотр')}><Icon name="eye" size={18}/><span class="preview-label">{text($locale,'Алдын ала көру','Предпросмотр')}</span></summary><CommentBody body={body}/></details>
+    <button disabled={busy} type="button" title={text($locale,'Спойлер','Спойлер')} aria-label={text($locale,'Спойлер','Спойлер')} aria-pressed={spoiler} onclick={()=>spoiler=!spoiler}><Icon name="eye-off"/></button>
+    <details class="emoji-picker"><summary aria-label={text($locale,'Эмодзи қосу','Добавить эмодзи')} title={text($locale,'Эмодзи','Эмодзи')}><Icon name="smile"/></summary><div class="emoji-options" aria-label={text($locale,'Эмодзи','Эмодзи')}>{#each ['😊','❤️','👍','🔥','👏','😂','😮','🎉'] as emoji}<button type="button" disabled={busy} aria-label={text($locale,'Эмодзи қосу: ','Добавить эмодзи: ')+emoji} onclick={async event=>{const picker=event.currentTarget.closest('details');const position=editor?.selectionStart??body.length;if(body.length+emoji.length>2000)return;body=body.slice(0,position)+emoji+body.slice(position);if(picker)picker.open=false;await tick();editor?.focus({preventScroll:true});editor?.setSelectionRange(position+emoji.length,position+emoji.length);}}>{emoji}</button>{/each}</div></details>
+
    </div>
    <div class="submit-actions"><span class="character-count">{body.length}/2000</span>{#if editing||parent}<button type="button" class="cancel-composer" disabled={busy} onclick={cancelComposer}>{copy($locale,"Бас тарту")}</button>{/if}<button class="button primary" disabled={busy}>{copy($locale,"Жіберу")}</button></div>
   </div>
@@ -151,8 +150,6 @@
  label{display:grid;gap:8px;font-size:14px;min-width:0}
  .comment-composer textarea{box-sizing:border-box;width:100%;max-width:100%;min-width:0;min-height:96px;max-height:320px;resize:vertical;border:0;border-radius:0;background:transparent;padding:4px 38px 4px 2px;box-shadow:none}
  .comment-composer textarea:focus,.comment-composer textarea:focus-visible{outline:none;border:0;box-shadow:none}
- .comment-preview{min-width:0;max-width:100%}.comment-preview[open]{flex-basis:100%}.comment-preview summary{display:flex;gap:5px;min-width:44px;padding:0 8px}
- .comment-preview summary{font-size:12px;color:var(--muted)}
  .editor-footer{border-top:1px solid var(--line);padding-top:6px;display:flex;align-items:center;flex-wrap:wrap;gap:8px;min-width:0}
  .format-actions{display:flex;align-items:center;gap:2px;flex-wrap:wrap;min-width:0;flex:1}
  .format-actions button{min-width:44px;min-height:44px;padding:8px;border:0;border-radius:6px;background:transparent;color:var(--text);font:inherit;font-size:13px;cursor:pointer}
@@ -165,5 +162,6 @@
  .comment-composer{animation:composer-enter 160ms ease-out}
  @media(prefers-reduced-motion:reduce){.comment-composer{animation:none}}
  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
- @media(max-width:479px){.preview-label{display:none}.thread-toggle{margin-left:36px}.comment-row{grid-template-columns:28px minmax(0,1fr);gap:8px}.avatar{width:28px;height:28px;font-size:12px}.thread{margin-left:13px;padding-left:10px}.comment-composer{padding:10px}.comment-content .comment-composer{margin-left:-36px}.submit-actions{flex-basis:100%}}
+ @media(max-width:479px){.thread-toggle{margin-left:36px}.comment-row{grid-template-columns:28px minmax(0,1fr);gap:8px}.avatar{width:28px;height:28px;font-size:12px}.thread{margin-left:13px;padding-left:10px}.comment-composer{padding:10px}.comment-content .comment-composer{margin-left:-36px}.submit-actions{flex-basis:100%}}
+.emoji-picker{position:relative}.emoji-picker summary{display:grid;place-items:center;width:44px;height:44px;cursor:pointer;list-style:none;border-radius:6px}.emoji-picker summary::-webkit-details-marker{display:none}.emoji-options{position:absolute;z-index:5;bottom:50px;left:0;display:grid;grid-template-columns:repeat(4,44px);gap:2px;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:0 8px 32px #0004}.emoji-options button{font-size:20px}.spoiler-notice{font-size:12px;color:var(--accent);margin:0;padding:4px 0}.emoji-picker summary:focus-visible{outline:2px solid var(--accent)}
 </style>

@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { goto } from '$app/navigation';
+	import Icon from '$lib/shared/presentation/ui/Icon.svelte';
+ import { goto } from '$app/navigation';
 	import { catalogParams, type CatalogFilter, type Genre, type Collection, type ResultPage, type Summary } from '../application/catalog';
 	import { facetLabel, formatFacets, sourceFacets, countryFacets } from '../domain/facets';
 	import { useLocale, text } from '$lib/shared/presentation/locale';
@@ -38,19 +39,21 @@
 		if (sort === (view.filter.sort || 'updated')) return;
 		goto('/catalog?' + catalogParams({ ...view.filter, sort }), { replaceState: true, noScroll: true, keepFocus: true });
 	}
+ let listView=$state(false);
 </script>
+{#snippet controls()}<label class="sort-control"><span>{text($locale, 'Реттеу', 'Сортировка')}</span><select value={view.filter.sort || 'updated'} onchange={(event) => changeSort(event.currentTarget.value)}><option value="updated">{text($locale, 'Соңғы жаңартулар', 'Недавно обновлённые')}</option><option value="new">{text($locale, 'Жаңа тайтлдар', 'Новые тайтлы')}</option><option value="name">{text($locale, 'Атауы бойынша', 'По названию')}</option></select></label><button class="view-toggle" type="button" aria-pressed={listView} aria-label={listView?text($locale,'Тор түрінде көрсету','Показать сеткой'):text($locale,'Тізім түрінде көрсету','Показать списком')} onclick={()=>listView=!listView}><Icon name={listView?'catalog':'menu'}/></button>{/snippet}
 <svelte:head><title>Каталог — Qmanga</title><meta name="description" content={text($locale, 'Қазақ тіліндегі манга, манхва және маньхуа.', 'Манга, манхва и маньхуа на казахском языке.')}/></svelte:head>
 <SectionHeading level={1} title="Каталог"/>
 <div class="catalogue-layout">
-<CatalogueFilters filter={view.filter} genres={view.genres} categories={view.categories} collections={view.collections}/>
+<CatalogueFilters {controls} filter={view.filter} genres={view.genres} categories={view.categories} collections={view.collections}/>
 <section class="catalogue-results" aria-label={text($locale, 'Каталог нәтижелері', 'Результаты каталога')}>
 <div class="catalogue-toolbar">
 {#if active.length}<div class="active-filters" aria-label={text($locale, 'Қолданылған сүзгілер', 'Применённые фильтры')}>{#each active as label}<span>{label}</span>{/each}<ActionLink href="/catalog">{text($locale, 'Барлығын тазарту', 'Сбросить всё')}</ActionLink></div>{:else}<span class="toolbar-spacer"></span>{/if}
-<label class="sort-control"><span>{text($locale, 'Реттеу', 'Сортировка')}</span><select value={view.filter.sort || 'updated'} onchange={(event) => changeSort(event.currentTarget.value)}><option value="updated">{text($locale, 'Соңғы жаңартулар', 'Недавно обновлённые')}</option><option value="new">{text($locale, 'Жаңа тайтлдар', 'Новые тайтлы')}</option><option value="name">{text($locale, 'Атауы бойынша', 'По названию')}</option></select></label>
+<div class="desktop-controls">{@render controls()}</div>
 </div>
 {#if !view.available}<StateMessage kind="error" title={text($locale, 'Каталог жүктелмеді', 'Каталог не загрузился')}>{#snippet actions()}<ActionLink data-sveltekit-reload href={view.retryURL || '/catalog?'+catalogParams(view.filter)}>{text($locale, 'Қайталау', 'Повторить')}</ActionLink>{/snippet}</StateMessage>
 {:else if !view.page.items.length}<StateMessage kind="empty" title={text($locale, 'Тайтл табылмады', 'Тайтлы не найдены')} description={text($locale, 'Басқа атаумен ізде немесе сүзгілерді тазарт.','Попробуй другое название или сбрось фильтры.')}/>
-{:else}<div class="cover-grid">{#each view.page.items as title,index}<CoverCard readingStatus={statuses[title.id]} ageRating={title.ageRating} href={'/titles/'+encodeURIComponent(title.slug)} name={title.name} coverURL={title.coverURL} metadata={names.kind[title.kind]} tag={title.demo?text($locale,'Үлгі','Пример'):''} score={title.score} ratingCount={title.ratingCount} fallback={text($locale,'Мұқаба жоқ','Нет обложки')} priority={index<2}/>{/each}</div>{/if}
+{:else}<div class="cover-grid" class:list-view={listView}>{#each view.page.items as title,index}<CoverCard readingStatus={statuses[title.id]} ageRating={title.ageRating} href={'/titles/'+encodeURIComponent(title.slug)} name={title.name} coverURL={title.coverURL} metadata={names.kind[title.kind]} tag={title.demo?text($locale,'Үлгі','Пример'):''} score={title.score} ratingCount={title.ratingCount} fallback={text($locale,'Мұқаба жоқ','Нет обложки')} priority={index<2}/>{/each}</div>{/if}
 {#if view.nextURL}<Pager label={text($locale,'Каталог беттері','Страницы каталога')} next={{label:text($locale,'Келесі бет','Следующая страница'),href:view.nextURL}}/>{/if}
 </section></div>
 <style>
@@ -65,4 +68,5 @@
  .sort-control select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
  @media(min-width:1024px){.catalogue-layout{grid-template-columns:minmax(0,1fr) 320px;grid-template-rows:auto;gap:24px}.catalogue-results{grid-column:1;grid-row:1}.catalogue-results .cover-grid{grid-template-columns:repeat(4,minmax(0,1fr))}}
  @media(min-width:1200px){.catalogue-results .cover-grid{grid-template-columns:repeat(6,minmax(0,1fr))}}
+.desktop-controls{display:none;gap:8px;align-items:center}.sort-control{border-radius:8px;min-width:0;margin:0;flex:1;padding-left:8px;overflow:hidden}.sort-control>span{display:none}.sort-control select{border-radius:8px;min-width:0;width:100%;font-size:13px}.view-toggle{min-height:44px;min-width:44px;display:grid;place-items:center;border:1px solid var(--line);border-radius:8px;background:var(--panel);color:var(--muted);cursor:pointer}.view-toggle[aria-pressed=true]{color:var(--accent);border-color:var(--accent)}.cover-grid.list-view{grid-template-columns:minmax(0,1fr)}.list-view :global(.cover-card){display:grid;grid-template-columns:84px minmax(0,1fr);gap:16px;padding:12px;background:var(--panel);border:1px solid var(--line);border-radius:8px}.list-view :global(.cover){grid-row:1 / span 2}.list-view :global(h3){align-self:center;font-size:16px;-webkit-line-clamp:3;line-clamp:3}@media(min-width:1024px){.desktop-controls{display:flex}.sort-control>span{display:inline}}
 </style>

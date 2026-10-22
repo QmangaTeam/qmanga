@@ -4,10 +4,12 @@
  import type {NavigationItem} from './types';
  import Icon from './Icon.svelte';
  import {useLocale,text} from '../locale';
- let {items,currentPath,accountHref,accountLabel,homeLabel,navigationLabel,account,unreadCount=0,unreadBadge=''}:{items:NavigationItem[];currentPath:string;accountHref:string;accountLabel:string;homeLabel:string;navigationLabel:string;account?:Snippet;unreadCount?:number;unreadBadge?:string}=$props();
+ let {items,currentPath,accountHref,accountLabel,homeLabel,navigationLabel,account,theme,unreadCount=0,unreadBadge=''}:{items:NavigationItem[];currentPath:string;accountHref:string;accountLabel:string;homeLabel:string;navigationLabel:string;account?:Snippet;theme?:Snippet;unreadCount?:number;unreadBadge?:string}=$props();
  const {locale}=useLocale();
  const compact=$derived(/^\/(login|register|forgot-password|reset-password|verify-email|settings|notifications|users)(\/|$)/.test(currentPath));
  let searchDialog:HTMLDialogElement;
+ let contribution:HTMLDetailsElement;
+ $effect(()=>{currentPath;if(contribution)contribution.open=false;});
  let searchInput:HTMLInputElement;
  function openSearch(){searchInput.value=page.url.pathname==='/catalog'?(page.url.searchParams.get('q')||''):'';searchDialog.showModal();searchInput.focus();}
 </script>
@@ -17,10 +19,12 @@
   <nav class="primary-navigation" aria-label={navigationLabel}>
    <button class="search-trigger" onclick={openSearch}><Icon name="search"/><span>{text($locale,'Іздеу','Поиск')}</span></button>
    <a href="/catalog" aria-current={currentPath==='/catalog'?'page':undefined}><Icon name="catalog"/><span>Каталог</span></a>
-   <a class="studio-link" href="/studio" aria-current={currentPath.startsWith('/studio')?'page':undefined}><Icon name="upload"/><span>{text($locale,'Аудармашыларға','Переводчикам')}</span></a>
+   <a class="shelf-link" href="/library"><Icon name="bookmark"/><span>{text($locale,'Менің сөрем','Моя библиотека')}</span></a>
   </nav>
   <nav class="account-navigation" aria-label={text($locale,'Жеке бөлім','Личный раздел')}>
    {#each items.filter(item=>item.href==='/library'||item.href==='/notifications') as item}<a class="icon-link" href={item.href} aria-label={item.href==='/notifications'&&!!unreadBadge?item.label+': '+unreadCount:item.label} title={item.label} aria-current={currentPath===item.href?'page':undefined}><Icon name={item.icon}/>{#if item.href==='/notifications'&&!!unreadBadge}<span class="unread-badge" aria-hidden="true">{unreadBadge}</span>{/if}</a>{/each}
+   <details bind:this={contribution} class="contribution-menu"><summary aria-label={text($locale,'Қосу','Добавить')} title={text($locale,'Аудармашыларға','Переводчикам')}><Icon name="plus"/></summary><nav aria-label={text($locale,'Аудармашыларға','Переводчикам')}><a href="/studio/projects">{text($locale,'Жобаларым','Мои проекты')}</a><a href="/studio/teams">{text($locale,'Командаларым','Мои команды')}</a><a href="/studio/requests">{text($locale,'Жобаға өтінім','Заявка на проект')}</a></nav></details>
+   {#if theme}<span class="header-theme">{@render theme()}</span>{/if}
    {#if account}{@render account()}{:else}<a class="account-link" href={accountHref} aria-label={accountLabel} title={accountLabel}><Icon name="user"/></a>{/if}
   </nav>
  </div>
@@ -60,10 +64,12 @@
   .header-inner{height:64px;padding:0 24px;display:grid;grid-template-columns:1fr auto 1fr}
   .wordmark{display:inline-flex;align-items:center;justify-self:start;gap:2px;color:var(--text)}.wordmark img{width:40px;height:40px;flex:none}
   .brand-name{font-size:30px;font-weight:850;letter-spacing:-1.4px;line-height:1;color:var(--text)}.brand-dot{color:var(--accent)}
-  .primary-navigation{width:auto;gap:20px}.primary-navigation>a{display:inline-flex}.primary-navigation .studio-link{display:none}
+  .primary-navigation{width:auto;gap:20px}.primary-navigation>a{display:inline-flex}
   .search-trigger{width:auto;background:var(--panel);border:1px solid var(--line);padding:0 12px}
   .account-navigation>.icon-link{display:inline-flex}.account-navigation{display:flex;justify-content:flex-end;align-items:center;gap:4px}
   .account-link{border:1px solid var(--line);border-radius:50%;background:var(--panel);margin-left:8px;color:var(--text)}
  }
- @media(min-width:1024px){.primary-navigation .studio-link{display:inline-flex}}
+ @media(min-width:1024px){}
+ .contribution-menu{position:relative}.contribution-menu summary{display:grid;place-items:center;min-width:44px;min-height:44px;list-style:none;color:var(--muted);cursor:pointer;border-radius:8px}.contribution-menu summary::-webkit-details-marker{display:none}.contribution-menu nav{position:absolute;right:0;top:52px;width:240px;padding:8px;background:var(--panel);border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 40px #0004;display:grid}.contribution-menu nav a{justify-content:flex-start;padding:8px 12px}.header-theme{display:none}@media(min-width:768px){.header-theme{display:contents}.account-navigation{gap:4px}.account-navigation>.icon-link:first-child{display:none}.primary-navigation .shelf-link{display:inline-flex}.search-trigger{min-width:180px}.header-inner{grid-template-columns:auto minmax(0,1fr) auto;gap:32px}.primary-navigation{justify-content:flex-end;gap:20px}.primary-navigation .search-trigger{order:3;margin-left:auto}}@media(max-width:767px){.contribution-menu{display:none}.header-inner{gap:12px}}
+@media(min-width:768px) and (max-width:1023px){.primary-navigation .shelf-link{display:none}.header-inner{gap:16px}.primary-navigation{gap:12px}.search-trigger{min-width:120px}}
 </style>
