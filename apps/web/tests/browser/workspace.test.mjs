@@ -14,23 +14,23 @@ test('studio sidebar adapts to phone disclosure, supports keyboard and closes af
     await context.addCookies([{name:'qmanga_locale',value:'ru',url:baseURL}]);
     await context.addInitScript(value=>localStorage.setItem('qmanga.theme',value),theme);
     const page=await context.newPage();await page.goto('/studio/projects');
-    const nav=page.getByRole('navigation',{name:'Кабинет переводчика'});
-    const toggle=page.getByRole('button',{name:/Разделы/});
-    if(width<900){
+    const nav=page.locator(width<1000?'.workspace-drawer nav':'.workspace-sidebar nav');
+    const toggle=page.locator('.workspace-menu');
+    if(width<1000){
      assert.equal(await nav.isVisible(),false);
-     await page.waitForFunction(()=>{const toggle=document.querySelector('.section-toggle');return toggle&&!toggle.disabled;});
+     await page.waitForFunction(()=>{const toggle=document.querySelector('.workspace-menu');return toggle&&!toggle.disabled;});
      await toggle.focus();await page.keyboard.press('Enter');
-     await nav.waitFor({state:'visible'});assert.equal(await toggle.getAttribute('aria-expanded'),'true');
-     await page.keyboard.press('Tab');assert.equal(await nav.locator('a').first().evaluate(el=>el===document.activeElement),true);
+     await nav.waitFor({state:'visible'});assert.equal(await page.locator('.workspace-drawer').evaluate(el=>el.open),true);
+     assert.equal(await page.locator('.workspace-drawer button').evaluate(el=>el===document.activeElement),true,'drawer begins at its close action');await page.keyboard.press('Tab');assert.equal(await nav.locator('a').first().evaluate(el=>el===document.activeElement),true);
     }else{assert.equal(await toggle.isVisible(),false);assert.equal(await nav.isVisible(),true);}
     assert.equal(await nav.locator('a').count(),4);
     assert.equal(await nav.locator('a[aria-current="page"]').getAttribute('href'),'/studio/projects');
-    const navBox=await nav.boundingBox();const contentBox=await page.locator('.workspace-content').boundingBox();
-    if(width>=900)assert.ok(navBox.x+navBox.width<=contentBox.x,'desktop navigation is beside content');
+    const navBox=await nav.boundingBox();const contentBox=await page.locator('.workspace-main').boundingBox();
+    if(width>=1000)assert.ok(navBox.x+navBox.width<=contentBox.x,'desktop navigation is beside content');
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),'no page overflow');
     if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:`${process.env.QMANGA_SCREENSHOT_DIR}/workspace-${width}-${theme}.png`});}
     await nav.getByRole('link',{name:'Заявки',exact:true}).click();await page.waitForURL('**/studio/requests');
-    if(width<900){await nav.waitFor({state:'hidden'});assert.equal(await toggle.getAttribute('aria-expanded'),'false');}
+    if(width<1000){await nav.waitFor({state:'hidden'});assert.equal(await page.locator('.workspace-drawer').evaluate(el=>el.open),false);}
    }finally{await context.close();}
   }
  }finally{await browser.close();}
@@ -51,14 +51,14 @@ test('sidebar disclosure waits for hydration before accepting keyboard input',{t
   const page=await context.newPage();
   await page.route(/\/_app\/.*\.js(?:\?|$)/,async route=>{arrived();await blocked;await route.continue();});
   await page.goto('/studio/projects',{waitUntil:'commit'});
-  const toggle=page.getByRole('button',{name:/Разделы/});
+  const toggle=page.locator('.workspace-menu');
   await toggle.waitFor({state:'visible'});await requested;
   assert.equal(await toggle.isDisabled(),true,'SSR disclosure must be disabled while its event handler is unavailable');
-  assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+  assert.equal(await page.locator('.workspace-drawer').evaluate(el=>el.open),false);
   release();
-  await page.waitForFunction(()=>{const toggle=document.querySelector('.section-toggle');return toggle&&!toggle.disabled;});
+  await page.waitForFunction(()=>{const toggle=document.querySelector('.workspace-menu');return toggle&&!toggle.disabled;});
   await toggle.focus();await page.keyboard.press('Enter');
-  await page.getByRole('navigation',{name:'Кабинет переводчика'}).waitFor({state:'visible'});
-  assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+  await page.locator('.workspace-drawer nav').waitFor({state:'visible'});
+  assert.equal(await page.locator('.workspace-drawer').evaluate(el=>el.open),true);
  }finally{release();await browser.close();}
 });

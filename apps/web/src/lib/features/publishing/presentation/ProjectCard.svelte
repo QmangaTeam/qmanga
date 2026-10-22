@@ -8,11 +8,12 @@
 </script>
 <article class="project-card">
  <a class="cover-link" href={href} aria-label={item.titleName}><ProjectCover url={item.coverURL} name={item.titleName}/></a>
- <div class="project-info"><h2><a href={href}>{item.titleName}</a></h2><p class="team">{item.teamName}</p>
+ <div class="project-info"><div class="project-identity"><h2><a href={href}>{item.titleName}</a></h2><p class="team">{item.teamName}</p></div>
  <dl><div><dt>{text($locale,'Жоба тараулары','Глав проекта')}</dt><dd>{item.chapterCount??'—'}</dd></div><div><dt>{text($locale,'Тайтл бағасы','Оценка тайтла')}</dt><dd>{item.ratingCount&&item.score!==undefined?item.score.toFixed(2):'—'}</dd></div></dl>
  <a class="manage" href={href}>{work||text($locale,'Тарауларды басқару','Управлять главами')} <span aria-hidden="true">→</span></a></div>
 </article>
 <style>
- .project-card{display:flex;align-items:start;gap:14px;padding:16px;border:1px solid var(--line);border-radius:12px;background:var(--panel)}.project-info{min-width:0;flex:1}h2{font-size:17px;line-height:1.35;margin:0}h2 a{display:flex;align-items:center;min-height:44px;overflow-wrap:anywhere}.team{color:var(--muted);font-size:13px;margin:0 0 12px}dl{display:flex;flex-wrap:wrap;gap:12px 24px;margin:0}dt{font-size:12px;color:var(--muted)}dd{margin:2px 0 0;font-size:16px;font-weight:650;font-variant-numeric:tabular-nums}.manage{display:flex;align-items:center;gap:8px;min-height:44px;font-size:13px;color:var(--text);margin-top:8px}
- @media(max-width:359px){.project-card{padding:12px;gap:10px}h2{font-size:16px}dl{gap:10px}}
+ .project-card{display:flex;align-items:center;gap:14px;padding:12px 10px;border-bottom:1px solid var(--line);min-width:0}.project-card:hover{background:var(--panel)}.cover-link{width:42px;flex:none}.cover-link :global(.project-cover){width:42px;height:60px}.project-info{display:grid;grid-template-columns:minmax(0,1fr) 150px 180px;align-items:center;gap:20px;min-width:0;flex:1}.project-identity{min-width:0}h2{font-size:14px;line-height:1.4;font-weight:600;margin:0}h2 a{display:flex;align-items:center;min-height:28px;overflow-wrap:anywhere}.team{color:var(--muted);font-size:12px;margin:3px 0 0;overflow-wrap:anywhere}dl{display:flex;gap:16px;margin:0}dt{font-size:10px;color:var(--muted);font-weight:400}dd{margin:4px 0 0;font-size:13px;font-variant-numeric:tabular-nums}.manage{display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:44px;font-size:12px;color:var(--accent)}
+ @media(max-width:899px){.project-info{grid-template-columns:minmax(0,1fr) 140px;gap:4px 16px}.project-identity{grid-column:1/-1}dl{gap:16px}.manage{justify-self:end;max-width:160px}}
+ @media(max-width:479px){.project-card{align-items:start;padding-inline:0;gap:10px}.project-info{grid-template-columns:minmax(0,1fr);gap:8px}.project-identity{grid-column:auto}.manage{justify-self:start;min-height:44px;max-width:none}h2 a{min-height:44px}dl{gap:24px}}
 </style>
