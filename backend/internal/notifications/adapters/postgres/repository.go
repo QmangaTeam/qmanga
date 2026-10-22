@@ -54,7 +54,7 @@ func (repository *Repository) Deliver(ctx context.Context) (bool, error) {
 		_, failure = transaction.Exec(ctx, `INSERT INTO notifications(id,user_id,type,title_kk,body_kk,data,event_id,dedupe_key)
  SELECT gen_random_uuid()::varchar,member.user_id,'publication_'||(event.payload->>'decision'),'Жарияланым туралы шешім',title.name_kk||' · '||chapter.label||'-тарау'||CASE WHEN COALESCE(event.payload->>'reason','')='' THEN '' ELSE E'\n'||(event.payload->>'reason') END,
  jsonb_build_object('project_id',publication.project_id,'title_slug',title.slug),event.id,'decision:'||revision.id||':'||(event.payload->>'decision')
- FROM outbox_events event JOIN revisions revision ON revision.id=event.payload->>'revision_id' JOIN releases publication ON publication.id=revision.release_id JOIN chapters chapter ON chapter.id=publication.chapter_id JOIN titles title ON title.id=chapter.title_id JOIN team_memberships member ON member.team_id=publication.team_id
+ FROM outbox_events event JOIN revisions revision ON revision.id=event.payload->>'revision_id' JOIN releases publication ON publication.id=revision.release_id JOIN chapters chapter ON chapter.id=publication.chapter_id JOIN titles title ON title.id=chapter.title_id JOIN team_memberships member ON member.team_id=publication.team_id JOIN users recipient ON recipient.id=member.user_id AND NOT recipient.is_blocked
  WHERE event.id=$1 ON CONFLICT(user_id,dedupe_key)DO NOTHING`, id)
 	} else if kind == "profile_followed" {
 		_, failure = transaction.Exec(ctx, `INSERT INTO notifications(id,user_id,type,title_kk,body_kk,data,event_id,dedupe_key)

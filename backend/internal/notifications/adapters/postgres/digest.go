@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"github.com/jackc/pgx/v5"
+	"net/url"
 	"qmanga/internal/notifications/application"
 	"strings"
 	"time"
@@ -33,7 +34,7 @@ func (r *Repository) DeliverDigest(ctx context.Context, sender application.Diges
 	}
 	// Digest is based on visible published releases, current library choices and
 	// durable publication events, not notification read status or invented activity.
-	rows, err := tx.Query(ctx, `SELECT DISTINCT t.name_kk,c.label,t.slug FROM library_entries l JOIN titles t ON t.id=l.title_id JOIN chapters c ON c.title_id=t.id JOIN releases r ON r.chapter_id=c.id AND r.status='published' JOIN outbox_events e ON e.event_type='release_published' AND e.payload->>'release_id'=r.id AND e.payload->>'revision_id'=r.current_revision_id WHERE l.user_id=$1 AND NOT l.is_removed AND l.notify_new_releases AND (l.preferred_team_id IS NULL OR l.preferred_team_id=r.team_id) AND e.created_at>$2 AND e.created_at<=now() ORDER BY t.name_kk,c.label,t.slug LIMIT 100`, user, since)
+	rows, err := tx.Query(ctx, `SELECT DISTINCT t.name_kk,c.label,t.slug FROM library_entries l JOIN titles t ON t.id=l.title_id JOIN chapters c ON c.title_id=t.id JOIN releases r ON r.chapter_id=c.id AND r.status='published' JOIN outbox_events e ON e.event_type='release_published' AND e.payload->>'release_id'=r.id AND e.payload->>'revision_id'=r.current_revision_id WHERE l.user_id=$1 AND NOT l.is_removed AND l.notify_new_releases AND (l.preferred_team_id IS NULL OR l.preferred_team_id=r.team_id) AND l.created_at<=e.created_at AND e.created_at>$2 AND e.created_at<=now() ORDER BY t.name_kk,c.label,t.slug LIMIT 100`, user, since)
 	if err != nil {
 		return true, err
 	}
@@ -44,7 +45,7 @@ func (r *Repository) DeliverDigest(ctx context.Context, sender application.Diges
 			rows.Close()
 			return true, err
 		}
-		fmt.Fprintf(&body, "%s · %s-тарау\n%s/titles/%s\n\n", title, label, strings.TrimRight(origin, "/"), slug)
+		fmt.Fprintf(&body, "%s · %s-тарау\n%s/titles/%s\n\n", title, label, strings.TrimRight(origin, "/"), url.PathEscape(slug))
 	}
 	err = rows.Err()
 	rows.Close()
