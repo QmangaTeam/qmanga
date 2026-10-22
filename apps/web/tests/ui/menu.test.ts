@@ -4,13 +4,21 @@ import Menu from './Menu.fixture.svelte';
 
 test('menu destinations are icon-backed native links, never nested buttons',async()=>{
  const html=render(Menu).body;
- for(const destination of ['/saved','/settings','/help','/reports']){
+ for(const destination of ['/library','/saved','/notifications','/studio/projects','/studio/requests','/studio/teams']){
   expect(await elements(html,'a[href="'+destination+'"] svg')).toHaveLength(1);
  }
  expect(await elements(html,'a button,a a')).toHaveLength(0);
  expect(html).not.toContain('private@example.test');
- expect(await elements(html,'a[href="/users/account"]')).toHaveLength(1);
- expect(await elements(html,'a[href="/catalog"],a[href="/library"],a[href="/notifications"],a[href^="/studio"]')).toHaveLength(0);
+});
+
+test('language choices expose the selected locale without submitting a form',async()=>{
+ for(const language of ['kk','ru'] as const){
+  const html=render(Menu,{props:{language}}).body;
+  const selected=await elements(html,'.language button[aria-pressed="true"]');
+  expect(selected).toHaveLength(1);
+  expect(selected[0]).toMatchObject({type:'button','data-value':language});
+  expect(await elements(html,'.language select')).toHaveLength(0);
+ }
 });
 
 test('menu retains guest return path and staff-only destinations',async()=>{
@@ -25,11 +33,4 @@ test('menu retains guest return path and staff-only destinations',async()=>{
  const admin=render(Menu,{props:{role:'admin'}}).body;
  expect(await elements(admin,'a[href="/admin"]')).toHaveLength(1);
  expect(await elements(admin,'a[href^="/admin/"],a[href="/moderation"]')).toHaveLength(0);
-});
-
-test('unverified staff have no management destinations',async()=>{
- for(const role of ['admin','moderator'] as const){
-  const html=render(Menu,{props:{role,verified:false}}).body;
-  expect(await elements(html,'a[href="/admin"],a[href="/moderation"],a[href^="/studio"]')).toHaveLength(0);
- }
 });

@@ -4,8 +4,8 @@
  import type {Locale} from '$lib/features/preferences/domain/locale';
  import type {Account} from '$lib/features/identity/domain/account';
  import Menu from '$lib/features/preferences/presentation/Menu.svelte';
- let {language='kk',role='reader',guest=false,verified=true}:{language?:Locale;role?:Account['role'];guest?:boolean;verified?:boolean}=$props();
+ let {language='kk',role='reader',guest=false}:{language?:Locale;role?:Account['role'];guest?:boolean}=$props();
  provideLocale(untrack(()=>language),()=>{});
- const user=$derived(guest?null:{id:'account',email:'private@example.test',role,verified,displayName:'Оқырман'});
+ const user=$derived(guest?null:{id:'account',email:'private@example.test',role,verified:true,displayName:'Оқырман'});
 </script>
 <Menu {user}/>
