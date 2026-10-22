@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 08:22'
-updated_date: '2026-10-22 10:55'
+updated_date: '2026-10-22 10:58'
 labels: []
 dependencies: []
 priority: high
@@ -58,6 +58,8 @@ Final editor/guard code SHA:5451a3a. Validation above ran against the same saved
 2026-10-22 deployment authorized by owner. Pushed accumulated frontend package. Fast Release39765129545 succeeded for4e4b8d87ac01005883f5d4656992a4fe177aeaa6; VM poller automatically released staging and production to green same SHA, observed2026-10-22T10:54:32Z. External HTTPS health PostgreSQL/S3/status ok and homepage exact SHA confirmed. Staging browser smoke36 responsive views kk/ru dark/light320/360/1280,0runtime errors,guest Studio sign-in passed. Production browser smoke pending final result. Full Verify is not green yet: earlier runs revealed stale UI test assumptions (import disclosure, removed team overview, native admin dialog/mobile navigation, collapsed admin metrics). Test-only fixesca5b27d,4e4b8d8,99fd185 retain real assertions; local project-cards1/1,form-workflow3/3,metrics2/2 pass, independent review no open findings. Superseded verification runs were cancelled only after fixes were queued; latest full Verify39766638560 on99fd185 is queued/running and must be observed before claiming full CI success. Runtime UI code is unchanged by these test-only commits. Keep Review until remaining CI/owner private-workspace acceptance; no production account/data mutations performed.
 
 Final external production browser smoke passed48/48 responsive views,kk/ru,dark/light,320/360/1280,public home/catalog/login/title and guest Studio sign-in;0runtime exceptions. Observed production SHA4e4b8d87ac01005883f5d4656992a4fe177aeaa6. Latest test-only99fd185 remains on automatic release/Verify path; no full-CI success claimed.
+
+Owner logo follow-up99d3049: WorkspaceShell now uses Q favicon + manga with accent dot, removing duplicate literal q in Studio; 2px gap matches public wordmark. Admin uses same suffix, compact text hiding and Qmanga accessible home label retained. Strengthened existing regression failed before fix then passed; UI61/848 and svelte-check0/0 pass. Browser text/accessibility checked and crop inspected locally; independent review no findings. Committed locally only, no push/deploy for this follow-up.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
