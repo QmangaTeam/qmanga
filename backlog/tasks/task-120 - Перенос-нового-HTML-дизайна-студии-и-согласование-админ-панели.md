@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 08:22'
-updated_date: '2026-10-22 10:58'
+updated_date: '2026-10-22 11:17'
 labels: []
 dependencies: []
 priority: high
@@ -60,6 +60,8 @@ Final editor/guard code SHA:5451a3a. Validation above ran against the same saved
 Final external production browser smoke passed48/48 responsive views,kk/ru,dark/light,320/360/1280,public home/catalog/login/title and guest Studio sign-in;0runtime exceptions. Observed production SHA4e4b8d87ac01005883f5d4656992a4fe177aeaa6. Latest test-only99fd185 remains on automatic release/Verify path; no full-CI success claimed.
 
 Owner logo follow-up99d3049: WorkspaceShell now uses Q favicon + manga with accent dot, removing duplicate literal q in Studio; 2px gap matches public wordmark. Admin uses same suffix, compact text hiding and Qmanga accessible home label retained. Strengthened existing regression failed before fix then passed; UI61/848 and svelte-check0/0 pass. Browser text/accessibility checked and crop inspected locally; independent review no findings. Committed locally only, no push/deploy for this follow-up.
+
+Owner-authorized logo release: pushed main0e286f6f038a7caf534d90153e3be65507e1599e (code99d3049). Fresh web build and diff check passed. Fast Release39768295460 succeeded. Staging and production observed green on exact release SHA2026-10-22 11:17UTC; staging postgres/storage health and homepage SHA passed. External production Playwright confirmed HTTPS health200, homepage full SHA, guest Studio brand suffix manga. with one Q image and Qmanga accessible label, zero page errors; screenshot inspected. Verify39768295458 failed browser acceptance: taxonomy CRUD, library/project pagination filters, report queue retry scenarios. Full CI is not green; retain Review and owner private-workspace acceptance. Next step: fix these acceptance regressions separately and rerun full Verify. No production data/account changes.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
