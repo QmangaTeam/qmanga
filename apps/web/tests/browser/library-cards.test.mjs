@@ -45,7 +45,7 @@ test('library cover grid, inline filters and bookmark dialog fit phone and deskt
    await page.locator('dialog[open]').getByRole('button',{name:'Закрыть',exact:true}).click();
    await page.locator('.library-filters').getByRole('button',{name:'В планах',exact:true}).click();await page.locator('.library-card').first().waitFor();
    assert.equal((await (await context.request.get('/api/v1/library/'+fixture.title_id,{headers:{'X-Qmanga-Account':account}})).json()).entry.status,'planned');
-   await page.setViewportSize({width:360,height:850});await page.locator('nav[aria-label="Мобильная навигация"] a[href="/menu"]').click();await page.locator('.menu-page a[href="/saved"]').waitFor();
+   await page.getByRole('button',{name:'Меню аккаунта',exact:true}).click();await page.locator('.account-menu a[href="/saved"]').waitFor();
   }finally{await context.close();}
  }finally{await browser.close();}
 });
