@@ -67,7 +67,7 @@ test('title tab links preserve scroll without a content fragment',async()=>{
  expect(await elements(html,'.metadata .metadata-rail')).toHaveLength(1);
  expect(html).toContain('Издатель');
  expect(await elements(html,'.metadata .contributors')).toHaveLength(0);
- expect(await elements(html,'.title-information>.contributors')).toHaveLength(1);
+ expect(await elements(html,'.title-information .contributors')).toHaveLength(1);
 });
 
 test('title metadata uses field icons, status dots and a team avatar without repeating chapter totals',async()=>{
@@ -101,4 +101,12 @@ test('title information is exclusive to About, leaving chapter and comment views
   expect(await elements(html,'input[name="team"][value="team-7"]')).toHaveLength(1);
   expect(await elements(html,'.translation-avatar img')).toHaveLength(10);
   expect(await elements(render(Title).body,'.translation-teams')).toHaveLength(0);
+ });
+
+ test('title separates genres, tags and collections into their own linked groups',async()=>{
+  const html=render(Title,{props:{tab:'about',genreCount:3,categoryCount:4,collectionCount:2}}).body;
+  expect(await elements(html,'section[aria-labelledby="title-genres-heading"] a[href^="/catalog?genre="]')).toHaveLength(3);
+  expect(await elements(html,'section[aria-labelledby="title-tags-heading"] a.tag[href^="/catalog?category="]')).toHaveLength(4);
+  expect(await elements(html,'section[aria-labelledby="title-collections-heading"] a[href^="/catalog?collection="]')).toHaveLength(2);
+  expect(await elements(html,'.about-taxonomy')).toHaveLength(3);
  });

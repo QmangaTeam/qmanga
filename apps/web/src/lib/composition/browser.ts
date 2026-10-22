@@ -69,3 +69,5 @@ export function createAccountProfiles(){return new HttpAccountProfilesGateway(ne
 
 import {HttpApiTokens} from '$lib/features/identity/infrastructure/http-api-tokens';
 export function createApiTokens(){return new HttpApiTokens(new ApiClient(globalThis.fetch.bind(globalThis)));}
+
+export function createContinuation(){return {...createReading(),readerGateway:new HttpReaderGateway(new ApiClient(globalThis.fetch.bind(globalThis)))};}

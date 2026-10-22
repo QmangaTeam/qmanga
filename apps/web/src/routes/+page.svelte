@@ -1,11 +1,11 @@
 <script lang="ts">
- import {createReading} from '$lib/composition/browser';
+ import {createContinuation} from '$lib/composition/browser';
  import CoverStatuses from '$lib/features/reading/presentation/CoverStatuses.svelte';
  import ContinueReading from '$lib/features/reading/presentation/ContinueReading.svelte';
  import HomeDiscovery from '$lib/features/catalog/presentation/HomeDiscovery.svelte';
  import type {PageData} from './$types';
  import {useLocale,text} from '$lib/shared/presentation/locale';
- const reading=createReading();
+ const reading=createContinuation();
  let {data}:{data:PageData}=$props();
  const {locale}=useLocale();
 </script>

@@ -35,3 +35,23 @@ test('unreachable metadata keeps last-known guest metadata rather than claiming 
  expect(rows[0].availability).toBe('last-known');
  expect(rows[0].coverURL).toBe('/api/v1/media/saved-cover');
 });
+
+test('continuation derives page totals from the matching revision and saved page ID',async()=>{
+ const {continuationProgress}=await import('./continuation');
+ const row={titleId:'title',releaseId:'release',availability:'available',pagePosition:99,progress:{revisionId:'revision',pageId:'p2',fraction:.5}} as import('./continuation').Continuation;
+ const manifest={titleId:'title',releaseId:'release',revisionId:'revision',pages:[{id:'p1'},{id:'p2'},{id:'p3'},{id:'p4'}]} as import('./reader').Manifest;
+ const [enriched]=await continuationProgress([row],{manifest:async()=>manifest});
+ expect(enriched.pagePosition).toBe(2);expect(enriched.pageCount).toBe(4);expect(enriched.chapterProgress).toBe(.375);
+ const [updated]=await continuationProgress([row],{manifest:async()=>({...manifest,revisionId:'new'})});
+ expect(updated.availability).toBe('updated');expect(updated.pageCount).toBeUndefined();
+ const [failed]=await continuationProgress([row],{manifest:async()=>{throw Error('offline');}});
+ expect(failed).toEqual(row);expect(failed.chapterProgress).toBeUndefined();
+});
+
+test('unavailable continuation never fetches or invents a page total',async()=>{
+ const {continuationProgress}=await import('./continuation');
+ for(const availability of ['withdrawn','updated','last-known'] as const){
+  const row={availability} as import('./continuation').Continuation;
+  expect(await continuationProgress([row],{manifest:async()=>{throw Error('must not fetch');}})).toEqual([row]);
+ }
+});

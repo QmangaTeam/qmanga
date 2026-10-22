@@ -1,6 +1,7 @@
 <script lang="ts">
  import TitleBanner from './TitleBanner.svelte';
  import TitleTags from './TitleTags.svelte';
+ import OverflowDetails from '$lib/shared/presentation/ui/OverflowDetails.svelte';
  import AgeRating from './AgeRating.svelte';
  import type {Snippet} from 'svelte';
  import type {TitleDetail,Chapter,ResultPage,ChapterFilter} from '../application/catalog';
@@ -15,7 +16,9 @@
  let {title,chapters,nextURL,library,discussion,report,rating,firstChapter=null,chapterFilter={},tab='chapters',libraryLabel=''}:{libraryLabel?:string;firstChapter?:Chapter|null;chapterFilter?:ChapterFilter;title:TitleDetail;chapters:ResultPage<Chapter>;nextURL:string|null;library?:Snippet<[()=>void]>;discussion?:Snippet;report?:Snippet;rating?:Snippet;tab?:string}=$props();
  const {locale}=useLocale();
  const names=$derived(catalogNames($locale));
- const taxonomy=$derived([...(title.categories||[]).map(item=>({key:'category-'+item.id,href:'/catalog?category='+encodeURIComponent(item.slug),label:$locale==='ru'&&item.nameRu?item.nameRu:item.name})),...(title.collections||[]).map(item=>({key:'collection-'+item.id,href:'/catalog?collection='+encodeURIComponent(item.slug),label:item.name})),...title.genres.map(item=>({key:'genre-'+item.id,href:'/catalog?genre='+encodeURIComponent(item.slug),label:$locale==='ru'&&item.nameRu?item.nameRu:item.name}))]);
+ const genreTags=$derived(title.genres.map(item=>({key:'genre-'+item.id,href:'/catalog?genre='+encodeURIComponent(item.slug),label:$locale==='ru'&&item.nameRu?item.nameRu:item.name})));
+ const categoryTags=$derived((title.categories||[]).map(item=>({key:'category-'+item.id,href:'/catalog?category='+encodeURIComponent(item.slug),label:$locale==='ru'&&item.nameRu?item.nameRu:item.name})));
+ const collectionTags=$derived((title.collections||[]).map(item=>({key:'collection-'+item.id,href:'/catalog?collection='+encodeURIComponent(item.slug),label:item.name})));
  const base=$derived('/titles/'+encodeURIComponent(title.slug));
  let failedTranslationAvatars=$state<string[]>([]);
  const translationTeams=$derived(title.projects.filter((project,index,all)=>all.findIndex(other=>other.teamId===project.teamId)===index));
@@ -91,8 +94,10 @@
     </section>
    {:else if active==='about'}
     <section class="about"><h2>{text($locale,'Сипаттама','Описание')}</h2><p id="title-description" use:observeDescription={title.description} class:description-collapsed={!descriptionExpanded}>{title.description||text($locale,'Сипаттама әлі қосылмаған','Описание пока не добавлено')}</p>{#if descriptionCanExpand}<button class="description-toggle" type="button" aria-expanded={descriptionExpanded} aria-controls="title-description" onclick={()=>descriptionExpanded=!descriptionExpanded}>{descriptionExpanded?text($locale,'Жию','Свернуть'):text($locale,'Толығырақ','Подробнее')}<Icon name={descriptionExpanded?'up':'down'} size={16}/></button>{/if}</section>
-    <section class="about-taxonomy" aria-label={text($locale,'Жанрлар мен тегтер','Жанры и теги')}><h2>{text($locale,'Жанрлар мен тегтер','Жанры и теги')}</h2><TitleTags items={taxonomy} id={'title-tags-'+title.id}/></section>
-    <div class="title-information"><TitleMetadata {title} onStatistics={()=>statsDialog?.showModal()}/></div>
+    {#if genreTags.length}<section class="about-taxonomy" aria-labelledby="title-genres-heading"><h2 id="title-genres-heading">{text($locale,'Жанрлар','Жанры')}</h2><TitleTags items={genreTags} id={'title-genres-'+title.id}/></section>{/if}
+    {#if categoryTags.length}<section class="about-taxonomy" aria-labelledby="title-tags-heading"><h2 id="title-tags-heading">{text($locale,'Тегтер','Теги')}</h2><TitleTags items={categoryTags} id={'title-tags-'+title.id} tags/></section>{/if}
+    {#if collectionTags.length}<section class="about-taxonomy" aria-labelledby="title-collections-heading"><h2 id="title-collections-heading">{text($locale,'Жинақтар','Подборки')}</h2><TitleTags items={collectionTags} id={'title-collections-'+title.id}/></section>{/if}
+    <div class="title-information"><OverflowDetails id={'title-information-'+title.id} label={text($locale,'Тайтл туралы мәлімет','Сведения о тайтле')}><TitleMetadata {title} onStatistics={()=>statsDialog?.showModal()}/></OverflowDetails></div>
     <section class="inline-statistics" aria-label={text($locale,'Тайтл статистикасы','Статистика тайтла')}><h2>{text($locale,'Тайтл статистикасы','Статистика тайтла')}</h2>{@render statistics()}</section>
    {:else if active==='comments'}
     {#if discussion}{@render discussion()}{/if}
