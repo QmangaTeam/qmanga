@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 08:22'
-updated_date: '2026-10-22 10:30'
+updated_date: '2026-10-22 10:55'
 labels: []
 dependencies: []
 priority: high
@@ -54,6 +54,10 @@ Studio-team compact UI code SHA:3429562. Owner review remains pending; statusRev
 Owner-approved project/editor mockup implemented locally in 611d8a2 (overview, internal project navigation, native create dialog, separate resume action), 1524151 (grouped complete metadata, searchable taxonomy with 12/24 limits preserving legacy values), and preceding editor commit (page-focus canvas/filmstrip, native version switch, exact revision failures, preserved list return and stale account guards). Fresh svelte-check: 0 errors/0 warnings; UI:61 tests/846 assertions; production build, dependency boundaries, palette contrast and git diff check pass. Combined browser run:13/13 pass across project navigation/native creation retry and success, account-change during delayed creation, editor preflight/reorder/failed save, exact reader-preview return, 720-option taxonomy and failed-submit draft retention; kk/ru, dark/light and 320/360/1280 plus focus 1440 tested. Separate non-destructive publishing-steps subset:2/2 passed. Screenshots inspected under ignored tmp/task120. All publishing mutations in the new and executed regressions were mocked; destructive legacy create/publish/cover suites were adapted for navigation but not run on owner data. Independent review completed, stale reads and dependent writes guarded, no open findings. Local Vite/HMR remains available; no push/deploy/current production SHA verification. Next: owner checks locally; release only on separate request.
 
 Final editor/guard code SHA:5451a3a. Validation above ran against the same saved product sources before this commit; only acceptance notes changed afterwards.
+
+2026-10-22 deployment authorized by owner. Pushed accumulated frontend package. Fast Release39765129545 succeeded for4e4b8d87ac01005883f5d4656992a4fe177aeaa6; VM poller automatically released staging and production to green same SHA, observed2026-10-22T10:54:32Z. External HTTPS health PostgreSQL/S3/status ok and homepage exact SHA confirmed. Staging browser smoke36 responsive views kk/ru dark/light320/360/1280,0runtime errors,guest Studio sign-in passed. Production browser smoke pending final result. Full Verify is not green yet: earlier runs revealed stale UI test assumptions (import disclosure, removed team overview, native admin dialog/mobile navigation, collapsed admin metrics). Test-only fixesca5b27d,4e4b8d8,99fd185 retain real assertions; local project-cards1/1,form-workflow3/3,metrics2/2 pass, independent review no open findings. Superseded verification runs were cancelled only after fixes were queued; latest full Verify39766638560 on99fd185 is queued/running and must be observed before claiming full CI success. Runtime UI code is unchanged by these test-only commits. Keep Review until remaining CI/owner private-workspace acceptance; no production account/data mutations performed.
+
+Final external production browser smoke passed48/48 responsive views,kk/ru,dark/light,320/360/1280,public home/catalog/login/title and guest Studio sign-in;0runtime exceptions. Observed production SHA4e4b8d87ac01005883f5d4656992a4fe177aeaa6. Latest test-only99fd185 remains on automatic release/Verify path; no full-CI success claimed.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
@@ -66,4 +70,6 @@ Final editor/guard code SHA:5451a3a. Validation above ran against the same saved
 Страница команд студии стала компактнее: единая шапка, видимые участники, раскрываемые настройки/приглашения и локализованный выбор аватара; проверки и независимый review пройдены, ожидается локальная приёмка.
 
 Owner-approved project workspace, focused chapter editor and large searchable genre/tag chooser are implemented and checked locally. Code commits611d8a2,1524151 and latest editor commit; check0/0,UI61/846,browser13/13,build,boundaries,contrast passed. Independent review has no open findings. Review status retains owner local acceptance; no push or release.
+
+Интерфейс выпущен: staging и production наблюдались на4e4b8d87ac01005883f5d4656992a4fe177aeaa6,Fast Release39765129545 success,HTTPS health/SHA и48 внешних responsive views прошли. Test-only99fd185 опубликован после исправления устаревших проверок; полный Verify39766638560 ещё нужно дождаться. Review сохранён из-за оставшегося CI и приёмки приватных рабочих областей владельцем.
 <!-- SECTION:FINAL_SUMMARY:END -->
