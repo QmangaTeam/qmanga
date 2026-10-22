@@ -18,18 +18,19 @@ test('taxonomy admin CRUD, title assignment and public combined URL filters',{ti
   assert.equal((await context.request.post('/api/v1/auth/login',{headers:{Origin:fixture.app_url},data:{email:fixture.admin_email,password:fixture.admin_password}})).status(),200);
   headers={Origin:fixture.app_url,'X-CSRF-Token':(await (await context.request.get('/api/v1/auth/csrf')).json()).csrf_token};
   const page=await context.newPage();page.setDefaultTimeout(10000);
-  await page.goto('/admin/taxonomy');
-  const taxonomyForm=page.locator('section.panel').first().locator('form');
-  await taxonomyForm.getByRole('combobox',{name:'Тип',exact:true}).selectOption('categories');
+  await page.goto('/admin/taxonomy');await page.waitForLoadState('networkidle');
+  await page.locator('.dictionary-tabs button').filter({hasText:'Категории'}).click();
+  await page.waitForFunction(()=>Array.from(document.querySelectorAll('.dictionary-tabs button')).some(button=>button.textContent.includes('Категории')&&button.getAttribute('aria-pressed')==='true'));
+  const taxonomyForm=page.locator('.dictionary-editor form');
   await taxonomyForm.getByRole('textbox',{name:'Название',exact:true}).fill(name);
   await taxonomyForm.getByRole('textbox',{name:'Имя в ссылке',exact:true}).fill(slug);
   await taxonomyForm.getByRole('button',{name:'Сохранить',exact:true}).click();
   await page.getByRole('status').filter({hasText:'Сохранено'}).waitFor();
   category=(await (await context.request.get('/api/v1/admin/taxonomy')).json()).categories.find(item=>item.slug===slug);assert.ok(category);
-  await taxonomyForm.getByRole('combobox',{name:'Выбрать',exact:true}).selectOption(category.id);
+  await page.locator('.dictionary-row').filter({hasText:slug}).click();
   await taxonomyForm.getByRole('textbox',{name:'Название',exact:true}).fill(name+' revised');
   await taxonomyForm.getByRole('button',{name:'Сохранить',exact:true}).click();
-  await page.waitForFunction(({id,value})=>Array.from(document.querySelectorAll('option')).some(option=>option.value===id&&option.textContent.startsWith(value+' ·')),{id:category.id,value:name+' revised'});
+  await page.locator('.dictionary-row').filter({hasText:name+' revised'}).waitFor();
   let response=await context.request.post('/api/v1/admin/genres',{headers,data:{name,slug}});assert.equal(response.status(),201);genre=await response.json();
   titleData={name,slug,kind:'manga',original_status:'ongoing',translation_status:'ongoing',description:'Synthetic taxonomy fixture',direction:'ltr',aliases:[],authors:[],genre_ids:[genre.id],listed:true,demo:true,age_rating:18};
   response=await context.request.post('/api/v1/admin/titles',{headers,data:titleData});assert.equal(response.status(),201);title=await response.json();
@@ -42,7 +43,7 @@ test('taxonomy admin CRUD, title assignment and public combined URL filters',{ti
    await context.addCookies([{name:'qmanga_locale',value:locale,url:fixture.app_url}]);await page.addInitScript(value=>localStorage.setItem('qmanga.theme',value),theme);
    for(const width of [320,360,1280]){
     await page.setViewportSize({width,height:800});
-    await page.goto('/catalog?'+new URLSearchParams({category:slug,collection:slug,genre:slug,age_rating:'18'}));
+    await page.goto('/catalog?'+new URLSearchParams({category:slug,collection:slug,genre:slug,age_rating:'18'}));await page.waitForLoadState('networkidle');
     await page.locator('.cover-grid .cover-card').waitFor();assert.equal(await page.locator('.cover-grid .cover-card').count(),1);
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);
     const triggerName=locale==='ru'?'Фильтры':'Сүзгілер';

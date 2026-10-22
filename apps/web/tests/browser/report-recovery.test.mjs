@@ -24,7 +24,7 @@ test('report queue failure never claims empty and can retry without a reload',{t
   await page.route('**/api/v1/moderation/reports?*',route=>failed?route.abort():route.fulfill({json:{items:[],next:'',has_more:false}}));
   await page.goto('/moderation/reports');await page.getByText('Подключись к сети и попробуй снова.',{exact:true}).waitFor();
   assert.equal(await page.getByText('Необработанных жалоб нет.',{exact:true}).count(),0,'network failure is not an empty queue');
-  failed=false;await page.getByRole('button',{name:'Повторить',exact:true}).click();await page.getByText('Необработанных жалоб нет.',{exact:true}).waitFor();
+  failed=false;await page.getByRole('button',{name:'Повторить',exact:true}).click();await page.getByRole('region',{name:'Очередь обращений'}).getByText('Необработанных жалоб нет.',{exact:true}).waitFor();
   assert.equal(await page.getByText('Подключись к сети и попробуй снова.',{exact:true}).count(),0,'retry clears stale error');
  }finally{await context.close();}
 });
@@ -39,10 +39,10 @@ test('report retry retains loaded rows and repeats the failed continuation curso
    if(after&&failNext)return route.abort();
    return route.fulfill({json:{items:after?[]:[{id:'synthetic-report',title_name:'Synthetic report',target_type:'title',target_id:'synthetic-title',category:'other',reason:'Synthetic report reason',created_at:'2026-10-20T10:00:00Z',history:[]}],next:after?'':'next-report',has_more:!after}});
   });
-  await page.goto('/moderation/reports');await page.getByRole('heading',{name:'Synthetic report',exact:true}).waitFor();
+  await page.goto('/moderation/reports');await page.locator('.reports-list .report-summary').filter({hasText:'Synthetic report'}).waitFor();
   await page.getByRole('button',{name:'Загрузить ещё',exact:true}).click();await page.getByRole('alert').waitFor();
-  assert.equal(await page.getByRole('heading',{name:'Synthetic report',exact:true}).count(),1);
+  assert.equal(await page.locator('.reports-list .report-summary').filter({hasText:'Synthetic report'}).count(),1);
   failNext=false;await page.getByRole('button',{name:'Повторить',exact:true}).click();await page.getByRole('alert').waitFor({state:'hidden'});await page.getByRole('button',{name:'Загрузить ещё',exact:true}).waitFor({state:'hidden'});
-  assert.deepEqual(calls,['','next-report','next-report']);assert.equal(await page.getByRole('heading',{name:'Synthetic report',exact:true}).count(),1);assert.equal(await page.getByRole('button',{name:'Загрузить ещё',exact:true}).count(),0);
+  assert.deepEqual(calls,['','next-report','next-report']);assert.equal(await page.locator('.reports-list .report-summary').filter({hasText:'Synthetic report'}).count(),1);assert.equal(await page.getByRole('button',{name:'Загрузить ещё',exact:true}).count(),0);
  }finally{await context.close();}
 });
