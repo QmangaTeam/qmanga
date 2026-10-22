@@ -32,6 +32,8 @@ test('metadata taxonomy stays compact with 720 options and retains ID selections
   await picker.getByRole('button',{name:locale==='ru'?'Выбрать':'Таңдау',exact:true}).click();
   const search=picker.getByRole('searchbox');await search.fill(locale==='ru'?'Тестовый жанр 719':'Сынақ жанры 719');
   const choice=picker.getByRole('checkbox',{name:locale==='ru'?'Тестовый жанр 719':'Сынақ жанры 719',exact:true});
+  assert.equal(await choice.isDisabled(),true,'over-capacity legacy values are preserved, adding waits for space');
+  for(const i of [0,1])await picker.getByRole('button',{name:(locale==='ru'?'Убрать: Тестовый жанр ':'Алып тастау: Сынақ жанры ')+i,exact:true}).click();
   await choice.focus();await page.keyboard.press('Space');assert.equal(await choice.isChecked(),true);
   await search.fill('no-match-for-synthetic-test');assert.equal(await picker.getByRole('checkbox').count(),0);
   await search.fill('719');assert.equal(await choice.isChecked(),true);
@@ -41,7 +43,7 @@ test('metadata taxonomy stays compact with 720 options and retains ID selections
   await page.getByRole('textbox',{name:locale==='ru'?'Что и почему нужно изменить?':'Нені және не үшін өзгертесіз?',exact:true}).fill('Synthetic taxonomy retention regression');
   await page.getByRole('textbox',{name:locale==='ru'?'Ссылки на источники, по одной на строке':'Дереккөз сілтемелері, әр жолға біреуі',exact:true}).fill('https://example.org/synthetic');
   const sent=new Promise(resolve=>page.route('**/api/v1/studio/projects/*/title-changes',async route=>{if(route.request().method()!=='POST')return route.continue();resolve(route.request().postData());await route.fulfill({status:503,json:{error:{code:'unavailable'}}});}));
-  await submit.click();const payload=await sent;assert.match(payload,/synthetic-genre-719/,'ID selection survives collapsing and search');for(let i=0;i<13;i++)assert.ok(payload.includes('\"synthetic-genre-'+i+'\"'),'existing selection survives beyond twelve IDs');
+  await submit.click();const payload=await sent;assert.match(payload,/synthetic-genre-719/,'ID selection survives collapsing and search');for(let i=2;i<13;i++)assert.ok(payload.includes('\"synthetic-genre-'+i+'\"'),'existing selection survives beyond twelve IDs');
  }finally{await context.close();}
  }
 });
