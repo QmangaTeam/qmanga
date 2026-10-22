@@ -162,8 +162,47 @@ func TestUnreadCountIsolationAndRead(t *testing.T) {
 	if err != nil || worked {
 		t.Fatalf("digest weekly scheduling=%v %v", worked, err)
 	}
+	// Nonempty digests use the exact public release/revision/project visibility contract.
+	_, err = database.Pool().Exec(ctx, `
+ INSERT INTO titles(id,slug,name_kk) VALUES('digest-title','digest-title','Digest title'),('other-title','other-title','Other');
+ INSERT INTO teams(id,slug,name) VALUES('digest-team','digest-team','Digest team');
+ INSERT INTO projects(id,title_id,team_id) VALUES('digest-project','digest-title','digest-team'),('other-project','other-title','digest-team');
+ INSERT INTO chapters(id,title_id,label,order_num) SELECT 'digest-chapter-'||n,'digest-title',CASE n WHEN 1 THEN 'VISIBLE' WHEN 2 THEN 'FOREIGN' WHEN 3 THEN 'PRIVATE' WHEN 4 THEN 'WITHDRAWN' WHEN 5 THEN 'INCONSISTENT' ELSE 'WRONG-REVISION' END,n FROM generate_series(1,6)n;
+ INSERT INTO releases(id,chapter_id,project_id,team_id,language,status) SELECT 'digest-release-'||n,'digest-chapter-'||n,CASE WHEN n=5 THEN 'other-project' ELSE 'digest-project' END,'digest-team',CASE WHEN n=2 THEN 'ru' ELSE 'kk' END,CASE WHEN n=4 THEN 'withdrawn' ELSE 'published' END FROM generate_series(1,6)n;
+ INSERT INTO revisions(id,release_id,status) SELECT 'digest-revision-'||n,'digest-release-'||n,CASE WHEN n=3 THEN 'ready' ELSE 'published' END FROM generate_series(1,6)n;
+ UPDATE releases SET current_revision_id=CASE WHEN id='digest-release-6' THEN 'digest-revision-1' ELSE replace(id,'release','revision') END WHERE id LIKE 'digest-release-%';
+ INSERT INTO library_entries(id,user_id,title_id,created_at) VALUES('digest-library','one','digest-title',now()-interval '1 day');
+ INSERT INTO outbox_events(id,event_type,payload) SELECT 'digest-event-'||n,'release_published',jsonb_build_object('release_id','digest-release-'||n,'revision_id',CASE WHEN n=6 THEN 'digest-revision-1' ELSE 'digest-revision-'||n END) FROM generate_series(1,6)n;
+ UPDATE notification_digest_state SET available_at=now(),last_sent_at=now()-interval '1 day' WHERE user_id='one';
+ UPDATE account_preferences SET email_digest=false WHERE user_id='one';`)
+	if err != nil {
+		t.Fatal(err)
+	}
+	worked, err = repository.DeliverDigest(ctx, mailer, "https://qmanga.test")
+	if err != nil || worked || mailer.sent != 0 {
+		t.Fatalf("opted-out digest=%v %v", worked, err)
+	}
+	if _, err = database.Pool().Exec(ctx, `UPDATE account_preferences SET email_digest=true WHERE user_id='one'`); err != nil {
+		t.Fatal(err)
+	}
+	worked, err = repository.DeliverDigest(ctx, mailer, "https://qmanga.test")
+	if err != nil || !worked || mailer.sent != 1 || !strings.Contains(mailer.body, "VISIBLE") || strings.Contains(mailer.body, "FOREIGN") || strings.Contains(mailer.body, "PRIVATE") || strings.Contains(mailer.body, "WITHDRAWN") || strings.Contains(mailer.body, "INCONSISTENT") || strings.Contains(mailer.body, "WRONG-REVISION") {
+		t.Fatalf("public digest=%v %v sends=%d body=%s", worked, err, mailer.sent, mailer.body)
+	}
+	worked, err = repository.DeliverDigest(ctx, mailer, "https://qmanga.test")
+	if err != nil || worked || mailer.sent != 1 {
+		t.Fatalf("sent-week replay=%v %v sends=%d", worked, err, mailer.sent)
+	}
+
 }
 
-type digestMailProbe struct{ sent int }
+type digestMailProbe struct {
+	sent int
+	body string
+}
 
-func (p *digestMailProbe) Send(context.Context, string, string, string) error { p.sent++; return nil }
+func (p *digestMailProbe) Send(_ context.Context, _, _, body string) error {
+	p.sent++
+	p.body = body
+	return nil
+}
