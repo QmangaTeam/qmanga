@@ -1,0 +1,69 @@
+name: Migrate Qmanga registry
+
+# One-time copy of the active and rollback images after the organization transfer.
+# No rebuilds, deployment, or removal of the original packages.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  copy-images:
+    if: github.repository == 'QmangaTeam/qmanga' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+      packages: write
+    concurrency:
+      group: component-image-${{ github.repository }}-${{ matrix.component }}
+      cancel-in-progress: false
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - component: gateway
+            tags: 7899ab0c08be3e068eb1a7c1e7a86ee0e0c425f5
+          - component: api
+            tags: 5be741f9a39a6af779b32f2656608fc696846d2e 2a4ef25f9ac15eeeaca4792f58180e34132a9d6d
+          - component: web
+            tags: b7c5578403a7bf0bce27a4860bbc22accb68c773 dfa6096f9a1cbd196885b9ac024ae3277365d327
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Copy immutable images and verify digests
+        shell: bash
+        env:
+          COMPONENT: ${{ matrix.component }}
+          TAGS: ${{ matrix.tags }}
+        run: |
+          set -euo pipefail
+          source="ghcr.io/maqsatto/qmanga-$COMPONENT"
+          target="ghcr.io/${GITHUB_REPOSITORY,,}-$COMPONENT"
+          first=${TAGS%% *}
+          # A fresh package can return denied before its first publication.
+          # Initialize it with a unique run tag, without overwriting any SHA tag.
+          docker buildx imagetools create --prefer-index=false \
+            --tag "$target:bootstrap-$GITHUB_RUN_ID-$GITHUB_RUN_ATTEMPT" "$source:$first"
+          for tag in $TAGS; do
+            [[ "$tag" =~ ^[0-9a-f]{40}$ ]]
+            status=$(bash scripts/publish-component-alias.sh --head-status "$target" "$tag")
+            if test "$status" = missing; then
+              docker buildx imagetools create --prefer-index=false --tag "$target:$tag" "$source:$tag"
+            fi
+            source_digest=$(docker buildx imagetools inspect --raw "$source:$tag" | sha256sum | cut -d' ' -f1)
+            target_digest=$(docker buildx imagetools inspect --raw "$target:$tag" | sha256sum | cut -d' ' -f1)
+            test "$source_digest" = "$target_digest" || {
+              echo "Digest mismatch for $COMPONENT:$tag; refusing to replace an existing image" >&2
+              exit 1
+            }
+            echo "Verified $target:$tag sha256:$target_digest"
+          done
