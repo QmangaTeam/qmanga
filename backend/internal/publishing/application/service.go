@@ -183,3 +183,15 @@ func (worker *Worker) process(ctx context.Context, job Job) error {
 func (service *Service) FilteredModerationQueue(ctx context.Context, actor, team, kind string, offset ...int) ([]StudioRevision, error) {
 	return service.repository.FilteredModerationQueue(ctx, actor, team, kind, offset...)
 }
+
+// DirectPublish requires an authenticated API token owned by the actor. Persistence
+// rechecks its current privileges atomically with the publication.
+func (service *Service) DirectPublish(ctx context.Context, actor, tokenID, id string, version int64) error {
+	if actor == "" || tokenID == "" {
+		return domain.ErrForbidden
+	}
+	if version < 1 {
+		return domain.ErrConflict
+	}
+	return service.repository.DirectPublish(ctx, actor, tokenID, id, version)
+}

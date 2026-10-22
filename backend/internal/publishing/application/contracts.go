@@ -105,6 +105,7 @@ type Repository interface {
 	Reorder(context.Context, string, string, int64, []string) error
 	DeletePage(context.Context, string, string, string, int64) error
 	SaveAttribution(context.Context, string, string, int64, domain.Attribution) error
+	DirectPublish(context.Context, string, string, string, int64) error
 	Submit(context.Context, string, string, int64) error
 	Review(context.Context, string, string, string, string) error
 	Withdraw(context.Context, string, string, string) error

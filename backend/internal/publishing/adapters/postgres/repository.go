@@ -331,31 +331,7 @@ func (repository *Repository) Review(ctx context.Context, actor, id, decision, r
 		if !confirmed {
 			return domain.ErrTransition
 		}
-		var release domain.Release
-		if failure := transaction.QueryRow(ctx, "SELECT id,project_id,chapter_id FROM releases WHERE id=$1 FOR UPDATE", revision.ReleaseID()).Scan(&release.ID, &release.ProjectID, &release.ChapterID); failure != nil {
-			return failure
-		}
-		if failure := release.Publish(&revision); failure != nil {
-			return failure
-		}
-		if failure := persist(ctx, transaction, revision); failure != nil {
-			return failure
-		}
-		if _, failure := transaction.Exec(ctx, "UPDATE releases SET current_revision_id=$2,status='published',updated_at=now() WHERE id=$1", release.ID, id); failure != nil {
-			return failure
-		}
-		if failure := ensureDefaultCover(ctx, transaction, actor, release.ChapterID, id); failure != nil {
-			return failure
-		}
-
-		payload, _ := json.Marshal(map[string]string{"release_id": release.ID, "revision_id": id})
-		if _, failure := transaction.Exec(ctx, "INSERT INTO outbox_events(id,event_type,payload)VALUES($1,'release_published',$2)", uuid.NewString(), payload); failure != nil {
-			return failure
-		}
-		if failure := publicationDecision(ctx, transaction, id, "published", reason); failure != nil {
-			return failure
-		}
-		return audit(ctx, transaction, actor, "publish", release.ID, reason)
+		return publishRevision(ctx, transaction, actor, revision, reason)
 	})
 }
 func (repository *Repository) Withdraw(ctx context.Context, actor, releaseID, reason string) error {
@@ -391,4 +367,35 @@ func publicationDecision(ctx context.Context, transaction pgx.Tx, revisionID, de
 	}
 	_, failure = transaction.Exec(ctx, "INSERT INTO outbox_events(id,event_type,payload)VALUES($1,'publication_decision',$2)", uuid.NewString(), payload)
 	return failure
+}
+
+// publishRevision is shared by moderation and the explicitly privileged bearer path.
+// The caller has locked and authorized the revision in the same transaction.
+func publishRevision(ctx context.Context, transaction pgx.Tx, actor string, revision domain.Revision, reason string) error {
+	id := revision.ID()
+	var release domain.Release
+	if failure := transaction.QueryRow(ctx, "SELECT id,project_id,chapter_id FROM releases WHERE id=$1 FOR UPDATE", revision.ReleaseID()).Scan(&release.ID, &release.ProjectID, &release.ChapterID); failure != nil {
+		return failure
+	}
+	if failure := release.Publish(&revision); failure != nil {
+		return failure
+	}
+	if failure := persist(ctx, transaction, revision); failure != nil {
+		return failure
+	}
+	if _, failure := transaction.Exec(ctx, "UPDATE releases SET current_revision_id=$2,status='published',updated_at=now() WHERE id=$1", release.ID, id); failure != nil {
+		return failure
+	}
+	if failure := ensureDefaultCover(ctx, transaction, actor, release.ChapterID, id); failure != nil {
+		return failure
+	}
+
+	payload, _ := json.Marshal(map[string]string{"release_id": release.ID, "revision_id": id})
+	if _, failure := transaction.Exec(ctx, "INSERT INTO outbox_events(id,event_type,payload)VALUES($1,'release_published',$2)", uuid.NewString(), payload); failure != nil {
+		return failure
+	}
+	if failure := publicationDecision(ctx, transaction, id, "published", reason); failure != nil {
+		return failure
+	}
+	return audit(ctx, transaction, actor, "publish", release.ID, reason)
 }

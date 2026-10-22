@@ -51,6 +51,7 @@ func (handler *PublishingHandler) Register(router *gin.Engine, identity *Identit
 	studio.PUT("/revisions/:id/order", handler.reorder)
 	studio.DELETE("/revisions/:id/pages/:page_id", handler.deletePage)
 	studio.POST("/revisions/:id/submit", handler.submit)
+	studio.POST("/revisions/:id/publish", handler.directPublish)
 	studio.PUT("/revisions/:id/attribution", handler.attribution)
 	studio.GET("/revisions/:id/manifest", handler.preview)
 	moderation := api.Group("/moderation", identity.RequireUser(), RequireRole("admin", "moderator"))
@@ -335,6 +336,25 @@ func (handler *PublishingHandler) uploadCover(request *gin.Context) {
 }
 func (handler *PublishingHandler) retryPage(request *gin.Context) {
 	if err := handler.service.RetryPage(request.Request.Context(), handler.actor(request), request.Param("id"), request.Param("page_id")); err != nil {
+		publicationError(request, err)
+		return
+	}
+	request.Status(204)
+}
+
+func (handler *PublishingHandler) directPublish(request *gin.Context) {
+	tokenID, allowed := DirectPublishToken(request)
+	if !allowed {
+		publicationError(request, domain.ErrForbidden)
+		return
+	}
+	var input struct {
+		Version int64 `json:"version"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	if err := handler.service.DirectPublish(request.Request.Context(), handler.actor(request), tokenID, request.Param("id"), input.Version); err != nil {
 		publicationError(request, err)
 		return
 	}
