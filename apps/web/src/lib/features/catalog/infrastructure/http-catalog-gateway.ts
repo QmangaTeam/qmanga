@@ -88,6 +88,7 @@ export class HttpCatalogGateway implements CatalogGateway {
   const query=new URLSearchParams();
   if(cursor)query.set('cursor',cursor);
   if(filter.query)query.set('q',filter.query);
+  if(filter.team)query.set('team',filter.team);
   if(filter.sort)query.set('sort',filter.sort);
   if(filter.limit)query.set('limit',String(filter.limit));
   return page(await this.api.call('/api/v1/titles/'+encodeURIComponent(slug)+'/chapters?'+query),chapter);

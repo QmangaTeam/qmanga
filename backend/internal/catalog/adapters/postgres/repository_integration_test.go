@@ -228,6 +228,49 @@ func TestCatalogueVisibilityAliasesAndChapterOrder(testingTarget *testing.T) {
 	if failure != nil || len(chapterPage.Items) != 2 || chapterPage.Items[0].Label != "1.10" || chapterPage.NextOrder != nil {
 		testingTarget.Fatalf("fractional labels reordered or private revision exposed: %+v %v", chapterPage, failure)
 	}
+	testingTarget.Run("team selection isolates alternate editions before pagination", func(t *testing.T) {
+		execute("INSERT INTO teams(id,name,slug,is_approved) VALUES('alternate-team','Alternate','alternate',true)")
+		execute("INSERT INTO projects(id,title_id,team_id,status) VALUES('alternate-project',$1,'alternate-team','active')", title.ID)
+		execute("INSERT INTO releases(id,chapter_id,project_id,team_id,status,current_revision_id) VALUES('alternate-release',$1,'alternate-project','alternate-team','published','alternate-revision')", chapters[2])
+		execute("INSERT INTO revisions(id,release_id,status) VALUES('alternate-revision','alternate-release','published')")
+		selected, err := service.Chapters(ctx, title.Slug, 0, 1, application.ChapterFilter{Team: "alternate"})
+		if err != nil || len(selected.Items) != 1 || selected.NextOrder != nil || len(selected.Items[0].Releases) != 1 || selected.Items[0].Releases[0].ID != "alternate-release" {
+			t.Fatalf("alternate selection mixed editions or paginated before team filtering: %+v %v", selected, err)
+		}
+		absent, err := service.Chapters(ctx, title.Slug, 0, 10, application.ChapterFilter{Team: "alternate", Query: "no-match"})
+		if err != nil || len(absent.Items) != 0 {
+			t.Fatalf("team and search must combine: %+v %v", absent, err)
+		}
+		execute("UPDATE releases SET current_revision_id=NULL WHERE id='alternate-release'")
+		execute("DELETE FROM revisions WHERE id='alternate-revision'")
+		execute("DELETE FROM releases WHERE id='alternate-release'")
+		execute("DELETE FROM projects WHERE id='alternate-project'")
+		execute("DELETE FROM teams WHERE id='alternate-team'")
+	})
+	for _, teamSlug := range []string{"dala", "pending", "missing-team"} {
+		filtered, err := service.Chapters(ctx, title.Slug, 0, 1, application.ChapterFilter{Team: teamSlug, Sort: "desc"})
+		if err != nil {
+			testingTarget.Fatal(err)
+		}
+		if teamSlug != "dala" {
+			if len(filtered.Items) != 0 || filtered.NextOrder != nil {
+				testingTarget.Fatalf("unavailable team leaked chapters: %+v", filtered)
+			}
+			continue
+		}
+		if len(filtered.Items) != 1 || filtered.NextOrder == nil {
+			testingTarget.Fatalf("team filter pagination: %+v", filtered)
+		}
+		for _, release := range filtered.Items[0].Releases {
+			if release.TeamSlug != teamSlug {
+				testingTarget.Fatalf("wrong team release: %+v", release)
+			}
+		}
+		next, err := service.Chapters(ctx, title.Slug, *filtered.NextOrder, 1, application.ChapterFilter{Team: teamSlug, Sort: "desc"})
+		if err != nil || len(next.Items) != 1 || next.Items[0].Order >= filtered.Items[0].Order {
+			testingTarget.Fatalf("team filter continuation: %+v %v", next, err)
+		}
+	}
 	searchPage, failure := service.Chapters(ctx, title.Slug, 0, 1, application.ChapterFilter{Query: "1.1", Sort: "desc"})
 	if failure != nil || len(searchPage.Items) != 1 || searchPage.Items[0].Label != "1.10" || searchPage.NextOrder == nil {
 		testingTarget.Fatalf("descending chapter search failed: %+v %v", searchPage, failure)

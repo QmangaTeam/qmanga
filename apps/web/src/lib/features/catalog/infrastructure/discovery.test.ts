@@ -29,3 +29,15 @@ test('ranked shelves request the actual type endpoint and preserve score and cov
  expect(result.items[0]).toMatchObject({kind:'manhwa',score:8.5,ratingCount:2,coverURL:'/api/v1/media/cover'});
  expect(result.nextCursor).toBeNull();
 });
+
+test('chapter translation filter is sent together with search, sort and continuation',async()=>{
+ let requested='';
+ const request=(async(url:RequestInfo|URL)=>{requested=String(url);return new Response(JSON.stringify({items:[],next_cursor:null}));}) as typeof fetch;
+ const gateway=new HttpCatalogGateway(new ApiClient(request));
+ await gateway.chapters('example','51',{team:'exact-team',query:'1.5',sort:'desc'});
+ const url=new URL(requested,'http://localhost');
+ expect(url.searchParams.get('team')).toBe('exact-team');
+ expect(url.searchParams.get('q')).toBe('1.5');
+ expect(url.searchParams.get('sort')).toBe('desc');
+ expect(url.searchParams.get('cursor')).toBe('51');
+});

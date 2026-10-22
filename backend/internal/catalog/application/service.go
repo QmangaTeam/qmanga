@@ -83,8 +83,8 @@ type ChapterPage struct {
 	NextOrder *int
 }
 type ChapterFilter struct {
-	Query, Sort  string
-	After, Limit int
+	Query, Sort, Team string
+	After, Limit      int
 }
 type PublicMember struct{ Name, Role string }
 type Team struct {
@@ -268,7 +268,7 @@ func (service *Service) Chapters(ctx context.Context, slug string, after, limit 
 	if filter.Sort == "" {
 		filter.Sort = "asc"
 	}
-	if utf8.RuneCountInString(filter.Query) > 80 || (filter.Sort != "asc" && filter.Sort != "desc") {
+	if utf8.RuneCountInString(filter.Query) > 80 || (filter.Sort != "asc" && filter.Sort != "desc") || (filter.Team != "" && !domain.ValidSlug(filter.Team)) {
 		return ChapterPage{}, domain.ErrInvalid
 	}
 	if limit == 0 {

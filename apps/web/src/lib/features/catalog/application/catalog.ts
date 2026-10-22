@@ -14,7 +14,7 @@ export function catalogParams(filter:CatalogFilter):URLSearchParams {
  for(const [key,value] of [['chapters_min',filter.chaptersMin],['chapters_max',filter.chaptersMax],['year_min',filter.yearMin],['year_max',filter.yearMax]] as const) if(value&&value>0)params.set(key,String(value));
  return params;
 }
-export interface ChapterFilter { query?:string; sort?:'asc'|'desc'; limit?:number }
+export interface ChapterFilter { team?:string; query?:string; sort?:'asc'|'desc'; limit?:number }
 export interface Genre { id: string; name: string; slug: string; nameRu?:string; categorySlug?:string; parentSlug?:string; position?:number }
 export interface Summary {
  ageRating?:AgeRating;

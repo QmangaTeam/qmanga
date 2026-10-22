@@ -92,3 +92,13 @@ test('title information is exclusive to About, leaving chapter and comment views
  for(const tab of ['chapters','comments']){const html=render(Title,{props:{tab}}).body;expect(await elements(html,'.title-information,.metadata,.contributors')).toHaveLength(0);}
  expect(await elements(render(Title,{props:{tab:'about'}}).body,'.title-information')).toHaveLength(1);
 });
+
+ test('title team selector keeps exact team URLs and selected filter through search',async()=>{
+  const html=render(Title,{props:{teamCount:10,selectedTeam:'team-7'}}).body;
+  expect(await elements(html,'.translation-team')).toHaveLength(11);
+  expect((await elements(html,'.translation-team[aria-current]'))[0].href).toContain('team=team-7');
+  expect((await elements(html,'.translation-team[aria-current]'))[0].href).not.toContain('cursor=');
+  expect(await elements(html,'input[name="team"][value="team-7"]')).toHaveLength(1);
+  expect(await elements(html,'.translation-avatar img')).toHaveLength(10);
+  expect(await elements(render(Title).body,'.translation-teams')).toHaveLength(0);
+ });

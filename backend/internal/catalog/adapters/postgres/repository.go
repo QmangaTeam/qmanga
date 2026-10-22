@@ -333,7 +333,7 @@ func (repository *Repository) Chapters(ctx context.Context, slug string, filter 
 		comparison, direction = "<", "DESC"
 	}
 	escaped := strings.NewReplacer(`\`, `\\`, `%`, `\%`, `_`, `\_`).Replace(filter.Query)
-	rows, failure := repository.pool.Query(ctx, `SELECT outer_chapter.id,outer_chapter.label,outer_chapter.volume,outer_chapter.title_kk,outer_chapter.order_num FROM chapters outer_chapter WHERE outer_chapter.title_id=$1 AND ($2=0 OR outer_chapter.order_num`+comparison+`$2) AND ($4='' OR lower(outer_chapter.label) LIKE $5 OR lower(outer_chapter.title_kk) LIKE $5) AND EXISTS(SELECT 1`+publicationJoins+`WHERE chapter.id=outer_chapter.id AND `+publicationVisible+`) ORDER BY outer_chapter.order_num `+direction+` LIMIT $3`, titleID, after, limit+1, filter.Query, "%"+escaped+"%")
+	rows, failure := repository.pool.Query(ctx, `SELECT outer_chapter.id,outer_chapter.label,outer_chapter.volume,outer_chapter.title_kk,outer_chapter.order_num FROM chapters outer_chapter WHERE outer_chapter.title_id=$1 AND ($2=0 OR outer_chapter.order_num`+comparison+`$2) AND ($4='' OR lower(outer_chapter.label) LIKE $5 OR lower(outer_chapter.title_kk) LIKE $5) AND EXISTS(SELECT 1`+publicationJoins+`WHERE chapter.id=outer_chapter.id AND ($6='' OR team.slug=$6) AND `+publicationVisible+`) ORDER BY outer_chapter.order_num `+direction+` LIMIT $3`, titleID, after, limit+1, filter.Query, "%"+escaped+"%", filter.Team)
 	if failure != nil {
 		return page, failure
 	}
@@ -361,7 +361,7 @@ func (repository *Repository) Chapters(ctx context.Context, slug string, filter 
 		chapterIDs = append(chapterIDs, item.ID)
 		positions[item.ID] = position
 	}
-	rows, failure = repository.pool.Query(ctx, `SELECT chapter.id,publication.id,publication.project_id,team.id,team.name,team.slug,revision.updated_at`+publicationJoins+`WHERE chapter.id=ANY($1::text[]) AND `+publicationVisible+` ORDER BY team.name,publication.id`, chapterIDs)
+	rows, failure = repository.pool.Query(ctx, `SELECT chapter.id,publication.id,publication.project_id,team.id,team.name,team.slug,revision.updated_at`+publicationJoins+`WHERE chapter.id=ANY($1::text[]) AND ($2='' OR team.slug=$2) AND `+publicationVisible+` ORDER BY team.name,publication.id`, chapterIDs, filter.Team)
 	if failure != nil {
 		return page, failure
 	}

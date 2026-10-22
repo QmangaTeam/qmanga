@@ -28,13 +28,13 @@ func (repository *chapterRepository) Chapters(ctx context.Context, slug string, 
 func TestChapterSearchValidation(testingTarget *testing.T) {
 	repository := &chapterRepository{}
 	service := New(repository, func() string { return "unused" })
-	if _, failure := service.Chapters(context.Background(), "title", 0, 0, ChapterFilter{Query: "  ӘЛЕМ ", Sort: "desc"}); failure != nil {
+	if _, failure := service.Chapters(context.Background(), "title", 0, 0, ChapterFilter{Query: "  ӘЛЕМ ", Sort: "desc", Team: "dala"}); failure != nil {
 		testingTarget.Fatal(failure)
 	}
-	if repository.filter.Query != "әлем" || repository.filter.Sort != "desc" || repository.filter.Limit != 50 {
+	if repository.filter.Query != "әлем" || repository.filter.Sort != "desc" || repository.filter.Limit != 50 || repository.filter.Team != "dala" {
 		testingTarget.Fatalf("incorrect chapter search defaults: %+v", repository.filter)
 	}
-	for _, filter := range []ChapterFilter{{Query: strings.Repeat("ә", 81)}, {Sort: "raw sql"}} {
+	for _, filter := range []ChapterFilter{{Query: strings.Repeat("ә", 81)}, {Sort: "raw sql"}, {Team: "bad/sl ug"}} {
 		if _, failure := service.Chapters(context.Background(), "title", 0, 50, filter); !errors.Is(failure, domain.ErrInvalid) {
 			testingTarget.Fatalf("invalid chapter query accepted: %+v", filter)
 		}
