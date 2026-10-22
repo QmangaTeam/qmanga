@@ -27,12 +27,12 @@ test('project cards display scoped server statistics and covers without a duplic
     await context.addInitScript(value=>localStorage.setItem('qmanga.theme',value),theme);
     await page.setViewportSize({width,height:900});await page.goto('/studio/teams');
     await page.locator('section.team').waitFor();
-    const overview=page.locator('.team-overview');
-    assert.equal(await overview.getByRole('heading',{level:1}).count(),1);
-    assert.equal(await overview.getByRole('combobox').count(),1);
-    assert.equal(await overview.getByRole('button').count(),1);
-    await page.locator('details.management>summary').click();
-    assert.ok(await page.locator('.member-row').count()>0);
+    assert.equal(await page.locator('main h1').count(),1);
+    assert.equal(await page.locator('.team-overview').count(),0,'team identity replaces duplicate overview');
+    const teams=(await (await context.request.get('/api/v1/studio/teams?offset=0')).json()).items;
+    assert.equal(await page.locator('.team-select select').count(),teams.length>1||teams.length===100?1:0);
+    await page.locator('details.management[open] .member-row').first().waitFor({state:'visible'});
+    assert.equal(await page.locator('.avatar-settings').getAttribute('open'),null);
     assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
     await page.evaluate(()=>scrollTo(0,0));
     if(process.env.QMANGA_SCREENSHOT_DIR)await page.screenshot({path:`${process.env.QMANGA_SCREENSHOT_DIR}/teams-${theme}-${width}.png`});

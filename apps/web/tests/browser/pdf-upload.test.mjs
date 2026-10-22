@@ -38,13 +38,13 @@ test('production PDF bundle previews locally and uploads ordered images through 
   page.on('request',request=>{if(request.method()==='PUT'&&request.url().includes('/pages?'))uploads++;});
   page.on('response',response=>{if(response.status()>=400&&(response.url().includes('pdf.worker')||response.url().includes('_pdf-assets')))assetFailures.push(response.status());});
   await page.goto('/studio/projects/'+fixture.project_id+'?revision='+revision);
-  const input=page.locator('input[accept*=".pdf"]');await input.waitFor();
+  await page.locator('.studio-import-pages summary').click();const input=page.locator('input[accept*=".pdf"]');await input.waitFor();
   await input.setInputFiles({name:'synthetic.pdf',mimeType:'application/pdf',buffer:syntheticPdf()});
   await page.locator('.import-preview').waitFor();
   assert.deepEqual(await page.locator('.import-preview li').allTextContents(),['pdf-page-001.png','pdf-page-002.png']);
   assert.equal(uploads,0);assert.deepEqual(assetFailures,[]);
   await page.getByRole('button',{name:'Добавить страницы в главу',exact:true}).click();
-  await page.waitForFunction(()=>document.querySelectorAll('[id^=studio-page-]').length===2);
+  await page.waitForFunction(()=>document.querySelectorAll('.studio-pages-grid button').length===2);
   const current=await(await context.request.get('/api/v1/studio/revisions/'+revision)).json();
   assert.deepEqual(current.pages.map(page=>page.original_name),['pdf-page-001.png','pdf-page-002.png']);
   assert.equal(uploads,2);
@@ -66,7 +66,7 @@ test('cold PDF decoder download can be cancelled before chunks finish without ch
   const image=await readFile(join(dirname(process.env.QMANGA_FIXTURE_FILE),'pages','page-01.png'));
   assert.equal((await context.request.put('/api/v1/studio/revisions/'+revision+'/pages?key=cold-cancel-existing&position=1&name=existing.png',{headers:{...headers,'Content-Type':'application/octet-stream'},data:image})).status(),201);
   const before=await(await context.request.get('/api/v1/studio/revisions/'+revision)).json();assert.equal(before.pages.length,1);
-  const page=await context.newPage();await page.goto('/studio/projects/'+fixture.project_id+'?revision='+revision);const input=page.locator('input[accept*=".pdf"]');await input.waitFor();
+  const page=await context.newPage();await page.goto('/studio/projects/'+fixture.project_id+'?revision='+revision);await page.locator('.studio-import-pages summary').click();const input=page.locator('input[accept*=".pdf"]');await input.waitFor();
   let hit;const requested=new Promise(resolve=>hit=resolve),held=new Promise(resolve=>release=resolve);let uploads=0;page.on('request',r=>{if(r.method()==='PUT'&&r.url().includes('/pages?'))uploads++;});
   await page.route('**/_app/immutable/chunks/*.js',async route=>{hit();await held;await route.continue().catch(()=>{});});
   await input.setInputFiles({name:'cold.pdf',mimeType:'application/pdf',buffer:syntheticPdf()});await requested;
