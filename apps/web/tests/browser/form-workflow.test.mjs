@@ -16,7 +16,7 @@ test('team edit cancellation preserves fields and selected-team application link
  const page=await context.newPage();page.setDefaultTimeout(5000);await page.goto('/studio/teams');
  await page.getByRole('button',{name:'Изменить команду',exact:true}).click();const input=page.getByRole('textbox',{name:'Название команды',exact:true});await input.fill('Unsaved team name');
  const dismiss=page.waitForEvent('dialog').then(d=>d.dismiss());await Promise.all([dismiss,page.locator('.team-form').getByRole('button',{name:'Закрыть',exact:true}).click()]);assert.equal(await input.inputValue(),'Unsaved team name');
- const cancelLeave=page.waitForEvent('dialog').then(d=>d.dismiss());await Promise.all([cancelLeave,page.getByRole('link',{name:'Вернуться на сайт',exact:true}).click()]);assert.equal(new URL(page.url()).pathname,'/studio/teams');assert.equal(await input.inputValue(),'Unsaved team name');
+ const cancelLeave=page.waitForEvent('dialog').then(d=>d.dismiss());await Promise.all([cancelLeave,page.locator('.workspace-catalog').click()]);assert.equal(new URL(page.url()).pathname,'/studio/teams');assert.equal(await input.inputValue(),'Unsaved team name');
  const link=page.getByRole('link',{name:'Запросить проект',exact:true});const team=(await(await context.request.get('/api/v1/studio/teams')).json()).items[0].id;assert.equal(new URL(await link.getAttribute('href'),fixture.app_url).searchParams.get('team'),team);
  const accept=page.waitForEvent('dialog').then(d=>d.accept());await Promise.all([accept,page.locator('.team-form').getByRole('button',{name:'Закрыть',exact:true}).click()]);assert.equal(await page.locator('.team-form').count(),0);
  }finally{await context.close();}
