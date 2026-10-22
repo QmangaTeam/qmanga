@@ -67,7 +67,10 @@ services:
     profiles: [worker]
     image: ${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}-api:${IMAGE_TAG_API:?set IMAGE_TAG_API}
     pull_policy: missing
-    environment: *api-environment
+    environment:
+      <<: *api-environment
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_CHAT_ID: ${TELEGRAM_CHAT_ID:-}
     entrypoint: ["/usr/local/bin/qmanga-worker"]
     depends_on:
       api: {condition: service_healthy}

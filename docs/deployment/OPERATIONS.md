@@ -138,3 +138,9 @@ bash /opt/qmanga/repo/deploy/rollback.sh production
 ```
 
 Откат меняет приложение/маршрут, **не БД и не пользовательские записи**. Не делать schema rollback, `down -v`, удаление volumes, restore поверх живой БД или force-push. Restore — отдельная maintenance-операция с решением владельца; drill только в новых изолированных volumes. Не удалять/перезаписывать media вне существующего backup guard. Один VM остаётся единой точкой отказа.
+
+## Telegram moderation notifications
+
+The existing Docker worker sends moderation notices when both `TELEGRAM_BOT_TOKEN` and `TELEGRAM_CHAT_ID` are configured in the private production env file. Leave both blank in staging/local review; no token is passed to API/web. After `/start` in the bot, record the owner's confirmed private chat ID through the secret configuration channel. Never log Bot API URLs, tokens, raw responses or message bodies.
+
+Migration000036 snapshots submissions for chapter revisions, team applications/resubmissions, project requests, title changes and reports into a separate durable queue, including outstanding items once at migration. Delivery retries with exponential delay up to one hour; Telegram failure never changes moderation state. A crash after Telegram accepts a message but before database acknowledgement can cause a duplicate (at-least-once). Messages contain bounded plain text and the exact entity ID; chapters/title changes link directly, while team/project/report buttons explicitly open their corresponding paginated queue. Review and decisions still require site authentication. Queue delivery and pending counts can be inspected without reading message bodies or secrets; worker logs use sanitized errors. Releasing a new SHA recreates the worker and applies changed env; the existing blue/green worker stop/start and rollback lifecycle remains authoritative.

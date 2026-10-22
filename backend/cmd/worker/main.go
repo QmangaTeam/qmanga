@@ -9,6 +9,9 @@ import (
 	"time"
 
 	"qmanga/internal/bootstrap"
+	notificationPostgres "qmanga/internal/notifications/adapters/postgres"
+	"qmanga/internal/notifications/adapters/telegram"
+	notificationApp "qmanga/internal/notifications/application"
 )
 
 func main() {
@@ -19,6 +22,33 @@ func main() {
 		log.Fatal(failure)
 	}
 	defer app.Close()
+	// Telegram is optional and configured only on the production worker.
+	token, chat := os.Getenv("TELEGRAM_BOT_TOKEN"), os.Getenv("TELEGRAM_CHAT_ID")
+	if token != "" || chat != "" {
+		sender, err := telegram.New(token, chat, app.Config.AppOrigin)
+		if err != nil {
+			log.Fatal("invalid Telegram configuration")
+		}
+		notifier := notificationApp.NewModerationNotifier(notificationPostgres.New(app.PostgresClient.Pool()), sender)
+		log.Print("Telegram moderation notifier enabled")
+		go func() {
+			for ctx.Err() == nil {
+				worked, err := notifier.Deliver(ctx)
+				if err != nil && ctx.Err() == nil {
+					log.Print("Telegram moderation delivery failed; queued for retry")
+				}
+				pause := time.Second
+				if !worked || err != nil {
+					pause = 5 * time.Second
+				}
+				select {
+				case <-ctx.Done():
+					return
+				case <-time.After(pause):
+				}
+			}
+		}()
+	}
 	// Retry durable avatar cleanup even when no new upload or image job arrives.
 	avatarTicker := time.NewTicker(time.Minute)
 	defer avatarTicker.Stop()
