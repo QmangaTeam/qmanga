@@ -35,9 +35,9 @@ test('studio sidebar adapts to phone disclosure, supports keyboard and closes af
   }
  }finally{await browser.close();}
 });
-test('settings keep appearance after account in the visible page order',{timeout:15000},async()=>{
+test('settings expose the reference tabs and appearance by default',{timeout:15000},async()=>{
  const browser=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});
- try{const page=await browser.newPage({baseURL});await page.goto('/settings');const headings=await page.locator('.settings>section>h2').allTextContents();assert.deepEqual(headings,['Аккаунт','Сыртқы көрініс','Оқу']);}finally{await browser.close();}
+ try{const page=await browser.newPage({baseURL});await page.goto('/settings');const tabs=page.locator('.settings-tabs a');await tabs.first().waitFor();assert.deepEqual(await tabs.allTextContents(),['Көрініс','Аккаунт','Құпиялық','Хабарлар','Оқу']);assert.equal(await tabs.first().getAttribute('aria-current'),'page');await tabs.last().click();await page.waitForURL('**/settings?section=reading');assert.equal(await tabs.last().getAttribute('aria-current'),'page');}finally{await browser.close();}
 });
 
 test('sidebar disclosure waits for hydration before accepting keyboard input',{timeout:30000},async()=>{
