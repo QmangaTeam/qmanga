@@ -63,3 +63,6 @@ export function createMetadataImports(){return new HttpMetadataImports(new ApiCl
 
 import {ExistingWorkQueueGateway} from '$lib/features/metrics/infrastructure/work-queue-gateway';
 export function createWorkQueue(){return new ExistingWorkQueueGateway(createPublishing(),createTitleChanges(),createProjectRequests(),createTeams(),createCommunity());}
+
+import {HttpAccountProfilesGateway} from '$lib/features/preferences/infrastructure/http-account-profiles-gateway';
+export function createAccountProfiles(){return new HttpAccountProfilesGateway(new ApiClient(globalThis.fetch.bind(globalThis)));}
