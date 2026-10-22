@@ -13,7 +13,7 @@ async function login(admin){const context=await browser.newContext({baseURL,view
 test('private metrics periods render the same server data as a readable table on phone and desktop',{timeout:60000},async()=>{
  const context=await login(true),page=await context.newPage();try{
   const guest=await browser.newContext({baseURL});assert.equal((await guest.request.get('/api/v1/admin/metrics')).status(),401);await guest.close();
-  await page.goto('/admin');await page.getByRole('heading',{name:'Обзор сайта',exact:true}).waitFor();
+  await page.goto('/admin');await page.locator('.site-metrics > summary').click();await page.getByRole('heading',{name:'Обзор сайта',exact:true}).waitFor();
   for(const period of [7,30,90]){
    const received=page.waitForResponse(response=>response.url().endsWith('/admin/metrics?days='+period));await page.getByRole('button',{name:period+' дней',exact:true}).click();const response=await received;assert.equal(response.status(),200);assert.match(response.headers()['cache-control'],/no-store/);const report=await response.json();assert.equal(report.days.length,period);assert.equal(JSON.stringify(report).includes('@'),false);await page.locator('tbody tr').nth(period-1).waitFor();assert.equal(await page.locator('tbody tr').count(),period);const first=page.locator('tbody tr').first();assert.equal(await first.locator('th').innerText(),report.days[0].date);assert.equal(Number(await first.locator('td').nth(2).innerText()),report.days[0].completions);const heights=await page.locator('.bars span').evaluateAll(nodes=>nodes.map(node=>node.getBoundingClientRect().height));report.days.forEach((day,index)=>{if(day.completions===0)assert.equal(heights[index],0,'a day with no completions must have no visible activity bar');});
   }
