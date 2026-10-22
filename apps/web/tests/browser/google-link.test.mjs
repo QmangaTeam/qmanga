@@ -13,7 +13,7 @@ test('settings Google link control uses rendered account, CSRF and private statu
  const requests=[];
  await context.route('**/api/v1/auth/google/link',async route=>{requests.push(route.request());await route.fulfill({json:{enabled:true,linked:false}});});
  await context.route('**/api/v1/auth/google/link/start',async route=>{requests.push(route.request());await route.fulfill({status:409,json:{error:{code:'account_changed'}}});});
- const page=await context.newPage();await page.goto('/settings');
+ const page=await context.newPage();await page.goto('/settings?section=account');
  const link=page.getByRole('button',{name:'Привязать Google'});await link.waitFor();
  assert.equal(await link.isEnabled(),true);await link.click();await page.getByRole('alert').waitFor();
  assert.equal(requests.length,2);assert.ok(requests.every(request=>request.headers()['x-qmanga-account']===actor.id));assert.equal(requests[1].method(),'POST');assert.ok(requests[1].headers()['x-csrf-token']);
@@ -22,6 +22,6 @@ test('settings Google link control uses rendered account, CSRF and private statu
  await context.route('**/api/v1/auth/google/link',route=>route.fulfill({json:{enabled:true,linked:true}}));
  await page.goto('/settings?google_link=success');await page.getByText('Google привязан. Теперь можно входить в этот аккаунт через Google.').waitFor();assert.equal(await page.getByRole('button',{name:'Привязать Google'}).count(),0);
  for(const theme of ['light','dark'])for(const width of [320,360,1280]){await page.evaluate(theme=>document.documentElement.dataset.theme=theme,theme);await page.setViewportSize({width,height:800});assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true);}
- await context.addCookies([{name:'qmanga_locale',value:'kk',url:baseURL}]);await page.goto('/settings');await page.getByText('Google байланыстырылған. Осы аккаунтқа Google арқылы кіре аласың.').waitFor();
+ await context.addCookies([{name:'qmanga_locale',value:'kk',url:baseURL}]);await page.goto('/settings?section=account');await page.getByText('Google байланыстырылған. Осы аккаунтқа Google арқылы кіре аласың.').waitFor();
  }finally{await context.close();await browser.close();}
 });

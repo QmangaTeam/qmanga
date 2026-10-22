@@ -24,7 +24,7 @@
  let {user,auth,preferences,avatars,googleLink,accountProfiles,reading}:{user:Account|null;auth:AuthGateway;preferences:ThemeStore;avatars?:AvatarGateway;googleLink?:GoogleLinkGateway;accountProfiles:AccountProfilesGateway;reading?:Pick<ReaderPlatform,'preferences'|'savePreferences'>}=$props();
  const {locale,change}=useLocale();
  const tabs=[['appearance','Көрініс','Вид'],['account','Аккаунт','Аккаунт'],['privacy','Құпиялық','Приватность'],['notifications','Хабарлар','Уведомления'],['reading','Оқу','Чтение']];
- let section=$derived(page.url.searchParams.get('section')||'appearance');
+ let section=$derived(page.url.searchParams.get('section')||(page.url.searchParams.has('google_link')?'account':'appearance'));
  let accountPrefs=$state<AccountPreferences|null>(null),prefsError=$state(''),prefsSaved=$state(false),prefsBusy=$state(false),readerPrefs=$state<ReaderPreferences|null>(null);
  let generation=0;
  let activeAccountId:string|undefined;
