@@ -113,6 +113,7 @@ func Initialize(parentContext context.Context) (*Application, error) {
 	identityService := identityApp.New(identityPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)
 	identityHandler := transport.NewIdentityHandler(identityService, appConfig.AppOrigin, appConfig.Environment == "production")
 	identityHandler.Register(httpRouter.Group("/api/v1"))
+	identityHandler.RegisterAPITokens(httpRouter.Group("/api/v1"))
 	transport.NewProfileHandler(identityApp.NewProfiles(identityPostgres.New(postgresClient.Pool())), identityHandler).Register(httpRouter.Group("/api/v1"))
 	teamService := teamApp.New(teamPostgres.New(postgresClient.Pool()), identityCrypto.New(), mailer, appConfig.AppOrigin)
 	avatarService := identityApp.NewAvatars(identityPostgres.New(postgresClient.Pool()), storageClient, avatarimage.New(), teamService, uuid.NewString)
