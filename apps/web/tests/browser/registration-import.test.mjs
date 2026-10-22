@@ -31,7 +31,7 @@ test('new registration imports automatically, retries a failed transfer and neve
    assert.equal(await page.getByRole('heading',{name:'Прочитано гостем',exact:true}).count(),0);
    const progress=await (await context.request.get('/api/v1/progress/'+manifest.title_id,{headers})).json();assert.equal(progress.release_id,manifest.release_id);assert.equal(progress.fraction,.5);
    assert.equal((await (await context.request.get('/api/v1/auth/guest-import',{headers})).json()).allowed,false);
-   await page.getByRole('button',{name:'Меню аккаунта',exact:true}).click();await page.locator('.account-menu').getByRole('button',{name:'Выйти',exact:true}).click();await page.waitForURL(url=>url.pathname==='/');assert.deepEqual(errors,[]);
+   await page.locator('nav[aria-label="Мобильная навигация"] a[href="/menu"]').click();await page.locator('.menu-page').getByRole('button',{name:'Выйти',exact:true}).click();await page.waitForURL(url=>url.pathname==='/');assert.deepEqual(errors,[]);
    await seedGuest(page,{...manifest});
    await page.goto('/login?returnTo=%2Flibrary');await page.waitForLoadState('networkidle');await page.locator('#auth-email').fill(address);await page.locator('#auth-password').fill(password);await page.getByRole('button',{name:'Войти',exact:true}).click();await page.waitForURL('**/library');
    const again=await (await context.request.get('/api/v1/progress/'+manifest.title_id,{headers})).json();assert.equal(again.version,progress.version,'ordinary login must not import again');

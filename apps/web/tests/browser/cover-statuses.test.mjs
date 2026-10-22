@@ -33,7 +33,7 @@ test('cover statuses follow real bookmark updates on home and catalogue and clea
    await page.goto(href);await page.locator('.library-trigger').click();await selection.getByRole('button',{name:'Читаю',exact:true}).click();await page.waitForFunction(()=>document.querySelector('.library-trigger')?.textContent.includes('Читаю'));
    await page.goto('/');await page.locator(`.cover-card[href="${href}"] .reading-status`).first().getByText('Читаю',{exact:true}).waitFor();
    await context.addCookies([{name:'qmanga_locale',value:'kk',url:fixture.app_url}]);await page.reload();await page.locator(`.cover-card[href="${href}"] .reading-status`).first().getByText('Оқып жүрмін',{exact:true}).waitFor();
-   await page.getByRole('button',{name:'Аккаунт мәзірі',exact:true}).click();await page.locator('.account-menu').getByRole('button',{name:'Шығу',exact:true}).click();await page.waitForFunction(()=>document.querySelectorAll('.reading-status').length===0);
+   await page.locator('nav[aria-label="Мобильді навигация"] a[href="/menu"]').click();await page.locator('.menu-page').getByRole('button',{name:'Шығу',exact:true}).click();await page.waitForURL(url=>url.pathname==='/');await page.waitForFunction(()=>document.querySelectorAll('.reading-status').length===0);
    assert.equal((await context.request.get(endpoint,{headers:{'X-Qmanga-Account':account}})).status(),401);
    await page.reload();assert.equal(await page.locator('.reading-status').count(),0);
   }finally{await context.close();}
