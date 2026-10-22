@@ -27,3 +27,12 @@ test('changing unread mode discards delayed history responses and shows honest f
  await feed.setUnread(true);finish({items:[item('history')],hasMore:true});await pending;
  expect(feed.items).toEqual([]);expect(feed.error).toBe('notification_failed');expect(feed.unreadOnly).toBe(true);
 });
+
+test('server category filter starts a fresh page and bulk-read preserves account isolation',async()=>{
+ const f=fixture();let allRead=0,kindSeen='';f.gateway.list=async(_account,_after,_unread,kind)=>{kindSeen=kind||'';return {items:[item('reply')],hasMore:false};};f.gateway.readAll=async()=>{allRead++;};
+ const feed=new NotificationFeed(f.gateway);await feed.setFilter(false,'replies');expect(kindSeen).toBe('replies');await feed.readAll();expect(allRead).toBe(1);expect(feed.items[0].read).toBe(true);
+ f.setAccount('B');await feed.readAll();expect(allRead).toBe(1);expect(feed.items).toEqual([]);expect(feed.error).toBe('account_changed');
+});
+test('bulk-read response cannot overwrite a newly loaded account',async()=>{
+ const f=fixture();let finish!:()=>void;f.gateway.readAll=()=>new Promise<void>(done=>finish=done);const feed=new NotificationFeed(f.gateway);await feed.load();const pending=feed.readAll();await Promise.resolve();feed.reset();f.setAccount('B');await feed.load();finish();await pending;expect(feed.account).toBe('B');expect(feed.items[0].id).toBe('B');expect(feed.items[0].read).toBe(false);
+});

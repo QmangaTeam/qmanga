@@ -48,6 +48,7 @@ type Application struct {
 	Teams          *teamApp.Service
 	Avatars        *identityApp.AvatarService
 	Notifications  *notificationApp.Service
+	Digest         *notificationApp.Digest
 }
 
 func Initialize(parentContext context.Context) (*Application, error) {
@@ -152,6 +153,7 @@ func Initialize(parentContext context.Context) (*Application, error) {
 		Teams:          teamService,
 		Avatars:        avatarService,
 		Notifications:  notifications,
+		Digest:         notificationApp.NewDigest(notificationPostgres.New(postgresClient.Pool()), mailer, appConfig.AppOrigin),
 	}
 
 	return appInstance, nil

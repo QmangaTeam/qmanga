@@ -70,6 +70,10 @@ func main() {
 	}()
 	for ctx.Err() == nil {
 		notified, notificationError := app.Notifications.Deliver(ctx)
+		digested, digestError := app.Digest.Deliver(ctx)
+		if digestError != nil {
+			log.Printf("weekly digest delivery failed: %T", digestError)
+		}
 		if notificationError != nil {
 			log.Printf("notification delivery failure: %T", notificationError)
 		}
@@ -77,7 +81,7 @@ func main() {
 		if failure != nil {
 			log.Printf("image job failure: %T", failure)
 		}
-		if (!worked && !notified) || failure != nil || notificationError != nil {
+		if (!worked && !notified && !digested) || failure != nil || notificationError != nil || digestError != nil {
 			select {
 			case <-ctx.Done():
 				return
