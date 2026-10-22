@@ -35,3 +35,9 @@ test('Back closes the drawer and removes its history listener exactly once',()=>
  globalThis.history={state:{},pushState(value:unknown){this.state=value;},back(){this.state={};window.dispatchEvent(new Event('popstate'));}} as History;
  try{const stop=new BrowserReaderPlatform().panel(new FakeDialog(),()=>closed++);history.back();expect(closed).toBe(1);expect(listeners).toBe(0);stop();expect(listeners).toBe(0);}finally{globalThis.window=oldWindow;globalThis.history=oldHistory;globalThis.HTMLDialogElement=oldDialog;}
 });
+
+test('reader opt-outs survive persisted preference round-trip with safe existing defaults',()=>{
+ const original=globalThis.localStorage;const values=new Map<string,string>();
+ globalThis.localStorage={getItem:(key:string)=>values.get(key)||null,setItem:(key:string,value:string)=>{values.set(key,value);}} as Storage;
+ try{const platform=new BrowserReaderPlatform();expect(platform.preferences('manga').saveProgress).toBe(true);expect(platform.preferences('manga').prefetchNext).toBe(true);platform.savePreferences({...platform.preferences('manga'),saveProgress:false,prefetchNext:false});expect(platform.preferences('manga').saveProgress).toBe(false);expect(platform.preferences('manga').prefetchNext).toBe(false);}finally{globalThis.localStorage=original;}
+});

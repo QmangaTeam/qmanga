@@ -56,28 +56,28 @@
  const shownChapters=$derived(chapters);
  const qualityNames=$derived({auto:copy($locale,"Автоматты"),eco:copy($locale,"Үнемді"),standard:copy($locale,"Қалыпты"),high:copy($locale,"Жоғары")});
  $effect(()=>{if(!mounted||!queue||switching)return;const items=sheet.items;const wanted=[...items.slice(current.start,current.end+1),...items.slice(current.end+1,current.end+3),...items.slice(Math.max(0,current.start-1),current.start)];untrack(()=>queue?.want(wanted));});
- $effect(()=>{if(!mounted||!positionReady||!current.position.pageId||preview)return;const position=current.position,finished=current.pageIndex===manifest.pages.length-1&&viewport.top+viewport.height>=sheet.total*viewport.width-20;untrack(()=>saver?.offer({manifest,position:finished?{pageId:position.pageId,fraction:1}:position,completed:finished}));});
+ $effect(()=>{if(!mounted||!positionReady||!current.position.pageId||preview||preferences.saveProgress===false)return;const position=current.position,finished=current.pageIndex===manifest.pages.length-1&&viewport.top+viewport.height>=sheet.total*viewport.width-20;untrack(()=>saver?.offer({manifest,position:finished?{pageId:position.pageId,fraction:1}:position,completed:finished}));});
  $effect(()=>{if(mounted)platform.savePreferences(offlineTier?{...preferences,quality:onlineQuality}:preferences);});
  onMount(()=>{
   const linkedIndex=manifest.pages.findIndex(page=>page.id===initialPage);if(linkedIndex>=0)userNavigated=true;
   queue=new ImageQueue(images(firstImage,!preview&&!offlineTier),timer,()=>version++);
-  saver=new ThrottledSave(timer,async value=>{if(session){if(value.completed)completedForSuggestion=true;await session.record(value.manifest,value.position,value.completed);if(value.completed)void checkLibraryPrompt();}else if(!readingGateway)platform.savePosition(value.manifest.releaseId,value.position);});mounted=true;
+  saver=new ThrottledSave(timer,async value=>{if(preferences.saveProgress===false)return;if(session){if(value.completed)completedForSuggestion=true;await session.record(value.manifest,value.position,value.completed);if(value.completed)void checkLibraryPrompt();}else if(!readingGateway)platform.savePosition(value.manifest.releaseId,value.position);});mounted=true;
   let observed=false;const stopObserve=platform.observe(stage,value=>{const position=current.position,resized=observed&&Math.abs(value.width-viewport.width)>.5;observed=true;viewport=value;if(preferences.mode==='strip'){navigation.observe(visible(sheet.items,value).pageIndex);pageIndex=navigation.index;}if(resized&&position.pageId)void tick().then(()=>platform.scroll(stage,anchorOffset(sheet.items,position,value.width)));}),stopVisibility=platform.visibility(hidden=>{queue?.pause(hidden);if(hidden)void saver?.flush().then(()=>session?.flush());}),stopKeyboard=platform.keyboard(action=>{if(panel)return;if(action==='menu')void openPanel('settings');else step(pageStep(action,direction));});
   preferences=platform.preferences(manifest.kind);onlineQuality=preferences.quality;
   if(offlineTier){preferences={...preferences,quality:offlineTier};tier=offlineTier;}
   const prefetchController=new AbortController();
   const stopPrefetch=timer.later(()=>{
    const connection=platform.connection();
-   if(!mounted||preview||offlineTier||!manifest.nextId||connection.saveData||connection.slowConnection||connection.lowMemory)return;
+   if(!mounted||preview||offlineTier||preferences.prefetchNext===false||!manifest.nextId||connection.saveData||connection.slowConnection||connection.lowMemory)return;
    void (async()=>{
     const next=await platform.prefetchRelease?.(manifest.nextId)||await gateway.manifest(manifest.nextId);
     if(prefetchController.signal.aborted||next.releaseId!==manifest.nextId)return;
     await prefetchChapter(next,tier,images(),prefetchController.signal);
    })().catch(()=>{/* Background preloading must never interrupt reading. */});
   },1500);
-  const saved=preview||readingGateway?null:platform.loadPosition(manifest.releaseId);
+  const saved=preview||readingGateway||preferences.saveProgress===false?null:platform.loadPosition(manifest.releaseId);
   if(!preview&&!offlineTier&&readingGateway)suggestion=new LibrarySuggestion(readingGateway,platform,manifest.titleId,()=>suggestionVersion++);
-  if(!preview&&readingGateway&&progressStorage)session=new ReadingSession(readingGateway,progressStorage,timer,()=>{progressVersion++;if(session?.notice==='account_changed')suggestion?.close();if(session?.notice==='progress_cloud_saved')void checkLibraryPrompt();});
+  if(!preview&&preferences.saveProgress!==false&&readingGateway&&progressStorage)session=new ReadingSession(readingGateway,progressStorage,timer,()=>{progressVersion++;if(session?.notice==='account_changed')suggestion?.close();if(session?.notice==='progress_cloud_saved')void checkLibraryPrompt();});
   void initializeReaderPosition(linkedIndex>=0?{pageId:manifest.pages[linkedIndex].id,fraction:0}:null,async()=>{
    if(!mounted)return null;
    if(!session)return saved;

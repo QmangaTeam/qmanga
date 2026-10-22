@@ -66,3 +66,5 @@ input[type=checkbox],input[type=radio] { accent-color:var(--accent); }
 @media(prefers-reduced-motion:reduce) { *,*::before,*::after { scroll-behavior:auto!important; animation:none!important; transition:none!important; } }
 
 /* CSS-only acceptance release: harmless spacing marker. */
+
+html[data-motion=reduce] *,html[data-motion=reduce] *::before,html[data-motion=reduce] *::after{scroll-behavior:auto!important;animation:none!important;transition:none!important;}
