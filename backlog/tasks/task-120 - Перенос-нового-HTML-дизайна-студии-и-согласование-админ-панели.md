@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 08:22'
-updated_date: '2026-10-22 09:51'
+updated_date: '2026-10-22 10:30'
 labels: []
 dependencies: []
 priority: high
@@ -30,6 +30,8 @@ ordinal: 62005
 
 <!-- SECTION:PLAN:BEGIN -->
 Локальная реализация студии и админки готова к дальнейшей приёмке владельцем, включая компактный экран команд и модальный просмотр админ-заявок. Исправлять конкретные замечания, сохранять права/точные ID/черновики. Push/deploy только по отдельному запросу.
+
+Owner-approved project/editor mockup: 1. Project overview with internal sections and explicit chapter-version editor links; keep global Studio navigation. 2. Native new-chapter dialog and focused page/details/preflight editor using existing publishing operations. 3. Searchable taxonomy with limits and grouped complete title metadata form. 4. Mocked-write browser regressions, responsive/localized checks, independent review, small verified commits. Local only; no push/deploy.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -48,6 +50,10 @@ Owner modal follow-up completed in7555cab: pending team Open request uses native
 studio/teams owner follow-up: removed duplicate intro card, single-team selector and irrelevant solo hint; one88px identity header with role/status, realTelegram and original project/request/profile/edit actions. Owner sees bounded member list; avatar settings, invitation history and invitation composer collapse independently. Counts remain unknown until successful load. Shared avatar picker now localized, keyboard-focusable and mobile-wrapping; same-actor successful save refreshes header image through versioned URL. Existing mutations, role constraints, stale team-response guards and paging retained. Fresh check0errors/0warnings,UI60tests/843assertions,7browser scenarios (studio3+admin4),production build,boundaries,contrast passed. Both locales/themes and320/360/1280 covered; mock invite failure preserves draft/exact team, team-switch confirmation, member-role restrictions and avatar-save refresh verified without real writes. Independent review and final invitation-wrapper review: no actionable findings. Updated legacy form/avatar-switch tests for intentional collapsed controls and missing single-team select; disposable legacy suites not run against owner data. Screenshot tmp/task120/studio-team-final.png. Local dev/HMR visible in owner tab; no push/deploy/current production SHA verification.
 
 Studio-team compact UI code SHA:3429562. Owner review remains pending; statusReview.
+
+Owner-approved project/editor mockup implemented locally in 611d8a2 (overview, internal project navigation, native create dialog, separate resume action), 1524151 (grouped complete metadata, searchable taxonomy with 12/24 limits preserving legacy values), and preceding editor commit (page-focus canvas/filmstrip, native version switch, exact revision failures, preserved list return and stale account guards). Fresh svelte-check: 0 errors/0 warnings; UI:61 tests/846 assertions; production build, dependency boundaries, palette contrast and git diff check pass. Combined browser run:13/13 pass across project navigation/native creation retry and success, account-change during delayed creation, editor preflight/reorder/failed save, exact reader-preview return, 720-option taxonomy and failed-submit draft retention; kk/ru, dark/light and 320/360/1280 plus focus 1440 tested. Separate non-destructive publishing-steps subset:2/2 passed. Screenshots inspected under ignored tmp/task120. All publishing mutations in the new and executed regressions were mocked; destructive legacy create/publish/cover suites were adapted for navigation but not run on owner data. Independent review completed, stale reads and dependent writes guarded, no open findings. Local Vite/HMR remains available; no push/deploy/current production SHA verification. Next: owner checks locally; release only on separate request.
+
+Final editor/guard code SHA:5451a3a. Validation above ran against the same saved product sources before this commit; only acceptance notes changed afterwards.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
@@ -58,4 +64,6 @@ Studio-team compact UI code SHA:3429562. Owner review remains pending; statusRev
 7555cab: заявки команд открываются модальным окном с дополнительными доступными полями; проверено локально и независимо reviewed, ожидается приёмка владельцем.
 
 Страница команд студии стала компактнее: единая шапка, видимые участники, раскрываемые настройки/приглашения и локализованный выбор аватара; проверки и независимый review пройдены, ожидается локальная приёмка.
+
+Owner-approved project workspace, focused chapter editor and large searchable genre/tag chooser are implemented and checked locally. Code commits611d8a2,1524151 and latest editor commit; check0/0,UI61/846,browser13/13,build,boundaries,contrast passed. Independent review has no open findings. Review status retains owner local acceptance; no push or release.
 <!-- SECTION:FINAL_SUMMARY:END -->
