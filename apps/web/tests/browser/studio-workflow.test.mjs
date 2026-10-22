@@ -1,6 +1,6 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {readFile} from 'node:fs/promises';
+import {readFile,mkdir} from 'node:fs/promises';
 import {chromium} from 'playwright';
 if(!process.env.QMANGA_FIXTURE_FILE)throw Error('QMANGA_FIXTURE_FILE required');
 const fixture=JSON.parse(await readFile(process.env.QMANGA_FIXTURE_FILE,'utf8'));
@@ -17,12 +17,12 @@ test('preflight, processing summary and page overview follow actual revision sta
  await page.getByRole('button',{name:'Исправь страницы с ошибками',exact:true}).click();
  assert.match(await page.locator('.processing-summary').innerText(),/Готово: 1 · Обработка: 1 · Ошибки: 1/);
  await page.getByRole('button',{name:'К странице с ошибкой 2',exact:true}).click();assert.equal(await page.locator('#studio-page-workflow-page-1').evaluate(el=>el===document.activeElement),true);
- await page.getByRole('button',{name:'Сетка страниц',exact:true}).click();assert.equal(await page.locator('.page-overview button').count(),3);await page.locator('.page-overview button').nth(2).click();assert.equal(await page.locator('#studio-page-workflow-page-2').evaluate(el=>el===document.activeElement),true);
+ assert.equal(await page.locator('.studio-pages-grid button').count(),3);await page.locator('.studio-pages-grid button').nth(2).click();assert.equal(await page.locator('#studio-page-workflow-page-2').evaluate(el=>el===document.activeElement),true);
  ready=true;await page.locator('.processing-summary').getByRole('button',{name:'Обновить состояние'}).click();await page.waitForFunction(()=>document.querySelector('.processing-summary')?.textContent.includes('Готово: 3'));
  await page.locator('.draft-steps a[href="#draft-preview"]').click();assert.equal(await page.getByRole('button',{name:'Отправить на проверку',exact:true}).isEnabled(),true,'refresh adopts saved external metadata when the local form is clean');
  await page.reload();await page.locator('.preflight').waitFor();assert.equal(await page.getByRole('button',{name:'Отправить на проверку',exact:true}).isEnabled(),true);
  const href=await page.getByRole('link',{name:'Предпросмотр',exact:true}).getAttribute('href');const url=new URL(href,fixture.app_url);assert.equal(url.searchParams.get('preview'),'workflow-revision');assert.match(url.searchParams.get('returnTo'),new RegExp('^/studio/projects/'+fixture.project_id+'\\?revision=workflow-revision&step=draft-preview&position=\\d+$'));
- for(const locale of ['kk','ru'])for(const theme of ['dark','light'])for(const width of [320,360,1280]){await context.addCookies([{name:'qmanga_locale',value:locale,url:fixture.app_url}]);await page.setViewportSize({width,height:850});await page.reload();await page.locator('.draft-panel h2').waitFor();await page.evaluate(value=>document.documentElement.dataset.theme=value,theme);await page.locator('.draft-steps a[href="#draft-pages"]').click();await page.locator('#draft-pages button[aria-pressed]').click();assert.equal(await page.locator('.page-overview button').count(),3);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
+ for(const locale of ['kk','ru'])for(const theme of ['dark','light'])for(const width of [320,360,1280]){await context.addCookies([{name:'qmanga_locale',value:locale,url:fixture.app_url}]);await page.setViewportSize({width,height:850});await page.reload();await page.locator('.draft-panel h2').waitFor();await page.evaluate(value=>document.documentElement.dataset.theme=value,theme);await page.locator('.draft-steps a[href="#draft-pages"]').click();assert.equal(await page.locator('.studio-pages-grid button').count(),3);assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));}
  }finally{await context.close();await browser.close();}
 });
 test('project return restores applied criteria and loaded pages without applying a draft query',{timeout:45000},async()=>{
@@ -54,5 +54,32 @@ test('selecting a revision and step updates the reload context without navigatin
  await page.goto('/studio/projects/'+fixture.project_id+'?revision=context-a&step=draft-pages');await page.locator('.draft-panel h2').filter({hasText:'Context A'}).waitFor();await page.getByRole('button',{name:'Выбрать главу',exact:true}).click();await page.locator('.revision-option').nth(1).click();await page.locator('.draft-panel h2').filter({hasText:'Context B'}).waitFor();await page.waitForURL(url=>url.searchParams.get('revision')==='context-b');await page.locator('.draft-steps a[href="#draft-preview"]').click();await page.waitForURL(url=>url.searchParams.get('step')==='draft-preview');
  await page.reload();await page.locator('.draft-panel h2').filter({hasText:'Context B'}).waitFor();await page.locator('#draft-preview').waitFor({state:'visible'});assert.equal(new URL(page.url()).searchParams.get('revision'),'context-b');
  let confirmations=0;page.on('dialog',dialog=>{confirmations++;void dialog.dismiss();});await page.locator('.draft-steps a[href="#draft-details"]').click();await page.getByRole('textbox',{name:'Источник и основание права публикации'}).fill('Unsaved source text');await page.locator('.draft-steps a[href="#draft-preview"]').click();await page.waitForURL(url=>url.searchParams.get('step')==='draft-preview');await page.locator('.draft-steps a[href="#draft-details"]').click();assert.equal(await page.getByRole('textbox',{name:'Источник и основание права публикации'}).inputValue(),'Unsaved source text');assert.equal(confirmations,0);
+ }finally{await context.close();await browser.close();}
+});
+
+test('page canvas keeps geometry, inspector focus, order and failed metadata drafts',{timeout:45000},async()=>{
+ const {browser,context}=await session();try{
+  const page=await context.newPage();let failSave=true;const writes=[];
+  let data={id:'canvas-revision',release_id:fixture.release_id,project_id:fixture.project_id,chapter_id:'canvas-chapter',title_id:fixture.title_id,title_name:'Synthetic canvas',chapter_label:'Canvas',team_name:'Synthetic team',state:'ready',note:'',version:1,source_note:'Synthetic source',credits:'Synthetic credits',rights_confirmed:true,pages:Array.from({length:12},(_,i)=>({id:'canvas-page-'+i,position:i+1,width:600,height:900,bytes:100,status:'ready',failure:'',upload_key:'key-'+i,thumbnail_id:'canvas-thumb',original_name:'Long synthetic page '+i+'.webp'}))};
+  await page.route('**/api/v1/media/canvas-thumb',route=>route.fulfill({contentType:'image/svg+xml',body:'<svg xmlns="http://www.w3.org/2000/svg" width="600" height="900"><rect width="600" height="900" fill="#ddd"/></svg>'}));
+  await page.route('**/api/v1/studio/projects/*/revisions?*',route=>route.fulfill({json:{items:[data]}}));
+  await page.route('**/api/v1/studio/revisions/canvas-revision**',async route=>{
+   const req=route.request();if(req.method()==='GET')return route.fulfill({json:data});
+   writes.push({path:new URL(req.url()).pathname,body:req.postDataJSON()});
+   if(req.url().endsWith('/order')){const ids=req.postDataJSON().page_ids;data={...data,version:data.version+1,pages:ids.map((id,i)=>({...data.pages.find(p=>p.id===id),position:i+1}))};return route.fulfill({status:204});}
+   if(req.url().endsWith('/attribution')){if(failSave)return route.fulfill({status:500,json:{error:{code:'unavailable',message:'Synthetic failure'}}});data={...data,...req.postDataJSON(),version:data.version+1};return route.fulfill({status:204});}
+   throw Error('Unexpected synthetic mutation');
+  });
+  await page.setViewportSize({width:1440,height:1000});await page.goto('/studio/projects/'+fixture.project_id+'?revision=canvas-revision');
+  const tiles=page.locator('.studio-pages-grid button');await tiles.first().waitFor();assert.equal(await tiles.count(),12);
+  if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:process.env.QMANGA_SCREENSHOT_DIR+'/studio-canvas-1440.png'});}
+  const image=await tiles.first().locator('.page-image').boundingBox();assert.ok(Math.abs(image.width/image.height-4/3)<0.02,'portrait artwork cannot stretch the tile');
+  await tiles.nth(1).click();const inspector=page.locator('#studio-page-canvas-page-1');assert.equal(await inspector.evaluate(el=>el===document.activeElement),true);
+  await inspector.locator('input[type=number]').fill('1');await inspector.locator('input[type=number]').dispatchEvent('change');
+  await Promise.all([page.waitForResponse(r=>r.url().endsWith('/order')),page.getByRole('button',{name:'Сохранить порядок',exact:true}).click()]);await page.locator('.order-notice').waitFor({state:'hidden'});assert.equal(writes[0].body.page_ids[0],'canvas-page-1');assert.equal(await tiles.first().getAttribute('data-studio-page'),'canvas-page-1');
+  await page.setViewportSize({width:360,height:900});await tiles.nth(2).click();if(process.env.QMANGA_SCREENSHOT_DIR)await page.screenshot({path:process.env.QMANGA_SCREENSHOT_DIR+'/studio-inspector-360.png'});await page.getByRole('button',{name:'Закрыть сведения страницы',exact:true}).click();assert.equal(await tiles.nth(2).evaluate(el=>el===document.activeElement),true);
+  await page.locator('.draft-steps a[href="#draft-details"]').click();const source=page.getByRole('textbox',{name:'Источник и основание права публикации'});await source.fill('Changed synthetic source');
+  const save=page.getByRole('button',{name:'Сохранить и проверить',exact:true});await save.click();await page.getByRole('alert').waitFor();assert.equal(await source.inputValue(),'Changed synthetic source');
+  failSave=false;await save.click();await page.locator('#draft-preview').waitFor({state:'visible'});assert.equal(writes.filter(w=>w.path.endsWith('/attribution')).length,2);assert.equal(writes.at(-1).body.source_note,'Changed synthetic source');
  }finally{await context.close();await browser.close();}
 });
