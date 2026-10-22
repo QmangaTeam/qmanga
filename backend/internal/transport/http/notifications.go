@@ -14,11 +14,17 @@ func (handler *NotificationHandler) Register(api *gin.RouterGroup, identity *Ide
 	group := api.Group("/notifications", identity.RequireUser(), expectedAccount())
 	group.GET("", handler.list)
 	group.GET("/unread-count", handler.unread)
+	group.PUT("/read-all", handler.readAll)
 	group.PUT("/:id/read", handler.read)
 }
 func (handler *NotificationHandler) list(request *gin.Context) {
 	account, _ := CurrentAccount(request)
-	items, failure := handler.service.List(request.Request.Context(), account.ID, request.Query("after"), request.Query("unread") == "true")
+	kind := request.Query("kind")
+	if kind != "" && kind != "chapters" && kind != "replies" {
+		Error(request, 400, "invalid_kind", "Хабар санаты жарамсыз")
+		return
+	}
+	items, failure := handler.service.ListFiltered(request.Request.Context(), account.ID, request.Query("after"), request.Query("unread") == "true", kind)
 	if failure != nil {
 		Error(request, 503, "unavailable", "Хабарлар уақытша қолжетімсіз")
 		return
@@ -46,4 +52,13 @@ func (handler *NotificationHandler) unread(request *gin.Context) {
 		return
 	}
 	request.JSON(200, gin.H{"count": count})
+}
+
+func (handler *NotificationHandler) readAll(request *gin.Context) {
+	account, _ := CurrentAccount(request)
+	if err := handler.service.ReadAll(request.Request.Context(), account.ID); err != nil {
+		Error(request, 503, "unavailable", "Хабарларды белгілеу мүмкін болмады")
+		return
+	}
+	request.Status(204)
 }

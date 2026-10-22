@@ -12,8 +12,10 @@ type Repository struct{ pool *pgxpool.Pool }
 
 func New(pool *pgxpool.Pool) *Repository { return &Repository{pool} }
 func (repository *Repository) List(ctx context.Context, user, after string, unread ...bool) ([]application.Notification, error) {
-	unreadOnly := len(unread) > 0 && unread[0]
-	rows, failure := repository.pool.Query(ctx, `SELECT id,type,title_kk,body_kk,COALESCE(data->>'release_id',''),COALESCE(data->>'title_slug',''),COALESCE(data->>'project_id',''),COALESCE(NULLIF(data->>'comment_id',''),CASE WHEN type='comment_reply' AND dedupe_key LIKE 'reply:%' THEN substring(dedupe_key from 7) ELSE '' END),is_read,created_at FROM notifications WHERE user_id=$1 AND (NOT $3::boolean OR NOT is_read) AND ($2::varchar='' OR (created_at,id)<(SELECT created_at,id FROM notifications WHERE id=$2::varchar AND user_id=$1)) ORDER BY created_at DESC,id DESC LIMIT 50`, user, after, unreadOnly)
+	return repository.ListFiltered(ctx, user, after, len(unread) > 0 && unread[0], "")
+}
+func (repository *Repository) ListFiltered(ctx context.Context, user, after string, unreadOnly bool, kind string) ([]application.Notification, error) {
+	rows, failure := repository.pool.Query(ctx, `SELECT id,type,title_kk,body_kk,COALESCE(data->>'release_id',''),COALESCE(data->>'title_slug',''),COALESCE(data->>'project_id',''),COALESCE(NULLIF(data->>'comment_id',''),CASE WHEN type='comment_reply' AND dedupe_key LIKE 'reply:%' THEN substring(dedupe_key from 7) ELSE '' END),is_read,created_at FROM notifications WHERE user_id=$1 AND (NOT $3::boolean OR NOT is_read) AND ($4='' OR ($4='chapters' AND type='new_release') OR ($4='replies' AND type='comment_reply')) AND ($2::varchar='' OR (created_at,id)<(SELECT created_at,id FROM notifications WHERE id=$2::varchar AND user_id=$1)) ORDER BY created_at DESC,id DESC LIMIT 50`, user, after, unreadOnly, kind)
 	if failure != nil {
 		return nil, failure
 	}
@@ -39,7 +41,7 @@ func (repository *Repository) Deliver(ctx context.Context) (bool, error) {
 	}
 	defer transaction.Rollback(ctx)
 	var id, kind string
-	failure = transaction.QueryRow(ctx, `SELECT id,event_type FROM outbox_events WHERE status='pending' AND event_type IN('release_published','comment_reply','publication_decision')ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1`).Scan(&id, &kind)
+	failure = transaction.QueryRow(ctx, `SELECT id,event_type FROM outbox_events WHERE status='pending' AND event_type IN('release_published','comment_reply','publication_decision','profile_followed')ORDER BY created_at,id FOR UPDATE SKIP LOCKED LIMIT 1`).Scan(&id, &kind)
 	if errors.Is(failure, pgx.ErrNoRows) {
 		return false, nil
 	}
@@ -47,15 +49,22 @@ func (repository *Repository) Deliver(ctx context.Context) (bool, error) {
 		return false, failure
 	}
 	if kind == "release_published" {
-		_, failure = transaction.Exec(ctx, `INSERT INTO notifications(id,user_id,type,title_kk,body_kk,data,event_id,dedupe_key) SELECT gen_random_uuid()::varchar,library.user_id,'new_release','Жаңа тарау',title.name_kk||' · '||chapter.label||'-тарау',jsonb_build_object('release_id',release.id,'title_slug',title.slug),event.id,CASE WHEN library.preferred_team_id IS NULL THEN 'chapter:'||chapter.id ELSE 'chapter:'||chapter.id||':team:'||release.team_id END FROM outbox_events event JOIN releases release ON release.id=event.payload->>'release_id' AND release.current_revision_id=event.payload->>'revision_id' AND release.status='published' JOIN chapters chapter ON chapter.id=release.chapter_id JOIN titles title ON title.id=chapter.title_id JOIN library_entries library ON library.title_id=title.id AND NOT library.is_removed AND library.notify_new_releases AND library.created_at<=event.created_at AND (library.preferred_team_id IS NULL OR library.preferred_team_id=release.team_id) WHERE event.id=$1 AND NOT EXISTS(SELECT 1 FROM notifications old JOIN releases sent ON sent.id=old.data->>'release_id' WHERE old.user_id=library.user_id AND old.type='new_release' AND sent.chapter_id=chapter.id AND (library.preferred_team_id IS NULL OR sent.team_id=library.preferred_team_id)) ON CONFLICT(user_id,dedupe_key)DO NOTHING`, id)
+		_, failure = transaction.Exec(ctx, `INSERT INTO notifications(id,user_id,type,title_kk,body_kk,data,event_id,dedupe_key) SELECT gen_random_uuid()::varchar,library.user_id,'new_release','Жаңа тарау',title.name_kk||' · '||chapter.label||'-тарау',jsonb_build_object('release_id',release.id,'title_slug',title.slug),event.id,CASE WHEN library.preferred_team_id IS NULL THEN 'chapter:'||chapter.id ELSE 'chapter:'||chapter.id||':team:'||release.team_id END FROM outbox_events event JOIN releases release ON release.id=event.payload->>'release_id' AND release.current_revision_id=event.payload->>'revision_id' AND release.status='published' JOIN chapters chapter ON chapter.id=release.chapter_id JOIN titles title ON title.id=chapter.title_id JOIN library_entries library ON library.title_id=title.id AND NOT library.is_removed AND library.notify_new_releases AND library.created_at<=event.created_at AND (library.preferred_team_id IS NULL OR library.preferred_team_id=release.team_id) JOIN users recipient ON recipient.id=library.user_id AND NOT recipient.is_blocked LEFT JOIN account_preferences preference ON preference.user_id=recipient.id WHERE event.id=$1 AND COALESCE(preference.notify_releases,true) AND NOT EXISTS(SELECT 1 FROM notifications old JOIN releases sent ON sent.id=old.data->>'release_id' WHERE old.user_id=library.user_id AND old.type='new_release' AND sent.chapter_id=chapter.id AND (library.preferred_team_id IS NULL OR sent.team_id=library.preferred_team_id)) ON CONFLICT(user_id,dedupe_key)DO NOTHING`, id)
 	} else if kind == "publication_decision" {
 		_, failure = transaction.Exec(ctx, `INSERT INTO notifications(id,user_id,type,title_kk,body_kk,data,event_id,dedupe_key)
  SELECT gen_random_uuid()::varchar,member.user_id,'publication_'||(event.payload->>'decision'),'Жарияланым туралы шешім',title.name_kk||' · '||chapter.label||'-тарау'||CASE WHEN COALESCE(event.payload->>'reason','')='' THEN '' ELSE E'\n'||(event.payload->>'reason') END,
  jsonb_build_object('project_id',publication.project_id,'title_slug',title.slug),event.id,'decision:'||revision.id||':'||(event.payload->>'decision')
  FROM outbox_events event JOIN revisions revision ON revision.id=event.payload->>'revision_id' JOIN releases publication ON publication.id=revision.release_id JOIN chapters chapter ON chapter.id=publication.chapter_id JOIN titles title ON title.id=chapter.title_id JOIN team_memberships member ON member.team_id=publication.team_id
  WHERE event.id=$1 ON CONFLICT(user_id,dedupe_key)DO NOTHING`, id)
+	} else if kind == "profile_followed" {
+		_, failure = transaction.Exec(ctx, `INSERT INTO notifications(id,user_id,type,title_kk,body_kk,data,event_id,dedupe_key)
+ SELECT gen_random_uuid()::varchar,recipient.id,'profile_followed','Жаңа оқырман','Сізге жаңа оқырман жазылды', '{}'::jsonb,event.id,'follow:'||event.id
+ FROM outbox_events event JOIN users recipient ON recipient.id=event.payload->>'user_id' AND NOT recipient.is_blocked
+ JOIN account_preferences preference ON preference.user_id=recipient.id AND preference.notify_followers
+ JOIN account_follows follow ON follow.followee_id=recipient.id AND follow.follower_id=event.payload->>'actor_id' AND follow.created_at<=event.created_at
+ JOIN users actor ON actor.id=follow.follower_id AND NOT actor.is_blocked WHERE event.id=$1 ON CONFLICT(user_id,dedupe_key) DO NOTHING`, id)
 	} else {
-		_, failure = transaction.Exec(ctx, `INSERT INTO notifications(id,user_id,type,title_kk,body_kk,data,event_id,dedupe_key)SELECT gen_random_uuid()::varchar,recipient.id,'comment_reply','Пікіріңізге жауап берілді',title.name_kk,jsonb_build_object('release_id',COALESCE(event.payload->>'release_id',''),'title_slug',title.slug,'comment_id',comment.id),event.id,'reply:'||(event.payload->>'comment_id') FROM outbox_events event JOIN users recipient ON recipient.id=event.payload->>'user_id' JOIN titles title ON title.id=event.payload->>'title_id' JOIN comments comment ON comment.id=event.payload->>'comment_id' AND NOT comment.is_hidden AND comment.deleted_at IS NULL WHERE event.id=$1 ON CONFLICT(user_id,dedupe_key)DO NOTHING`, id)
+		_, failure = transaction.Exec(ctx, `INSERT INTO notifications(id,user_id,type,title_kk,body_kk,data,event_id,dedupe_key)SELECT gen_random_uuid()::varchar,recipient.id,'comment_reply','Пікіріңізге жауап берілді',title.name_kk,jsonb_build_object('release_id',COALESCE(event.payload->>'release_id',''),'title_slug',title.slug,'comment_id',comment.id),event.id,'reply:'||(event.payload->>'comment_id') FROM outbox_events event JOIN users recipient ON recipient.id=event.payload->>'user_id' AND NOT recipient.is_blocked LEFT JOIN account_preferences preference ON preference.user_id=recipient.id JOIN titles title ON title.id=event.payload->>'title_id' JOIN comments comment ON comment.id=event.payload->>'comment_id' AND NOT comment.is_hidden AND comment.deleted_at IS NULL WHERE event.id=$1 AND COALESCE(preference.notify_replies,true) ON CONFLICT(user_id,dedupe_key)DO NOTHING`, id)
 	}
 	if failure != nil {
 		return false, failure
@@ -71,4 +80,9 @@ func (repository *Repository) Unread(ctx context.Context, user string) (int, err
 	var count int
 	failure := repository.pool.QueryRow(ctx, `SELECT count(*) FROM notifications WHERE user_id=$1 AND NOT is_read`, user).Scan(&count)
 	return count, failure
+}
+
+func (repository *Repository) ReadAll(ctx context.Context, user string) error {
+	_, err := repository.pool.Exec(ctx, `UPDATE notifications SET is_read=true WHERE user_id=$1 AND NOT is_read`, user)
+	return err
 }
