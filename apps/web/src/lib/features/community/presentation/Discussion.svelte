@@ -4,6 +4,7 @@
  import {page} from '$app/state';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import {copy,noticeText,failureCode} from '$lib/shared/presentation/copy';
+ let emojiOpen=$state(false);
  const {locale,change:changeLanguage}=useLocale();
  import type {CommunityGateway,Comment} from '../application/community';
  import {validComment} from '../domain/content';
@@ -57,7 +58,7 @@
   <div class="editor-footer">
    <div class="format-actions" aria-label={text($locale,'Мәтін пішімі','Форматирование')}>
     <button disabled={busy} type="button" title={text($locale,'Спойлер','Спойлер')} aria-label={text($locale,'Спойлер','Спойлер')} aria-pressed={spoiler} onclick={()=>spoiler=!spoiler}><Icon name="eye-off"/></button>
-    <details class="emoji-picker"><summary aria-label={text($locale,'Эмодзи қосу','Добавить эмодзи')} title={text($locale,'Эмодзи','Эмодзи')}><Icon name="smile"/></summary><div class="emoji-options" aria-label={text($locale,'Эмодзи','Эмодзи')}>{#each ['😊','❤️','👍','🔥','👏','😂','😮','🎉'] as emoji}<button type="button" disabled={busy} aria-label={text($locale,'Эмодзи қосу: ','Добавить эмодзи: ')+emoji} onclick={async event=>{const picker=event.currentTarget.closest('details');const position=editor?.selectionStart??body.length;if(body.length+emoji.length>2000)return;body=body.slice(0,position)+emoji+body.slice(position);if(picker)picker.open=false;await tick();editor?.focus({preventScroll:true});editor?.setSelectionRange(position+emoji.length,position+emoji.length);}}>{emoji}</button>{/each}</div></details>
+    <div class="emoji-picker"><button type="button" disabled={busy} aria-expanded={emojiOpen} onclick={()=>emojiOpen=!emojiOpen} aria-label={text($locale,'Эмодзи қосу','Добавить эмодзи')} title={text($locale,'Эмодзи','Эмодзи')}><Icon name="smile"/></button>{#if emojiOpen}<div class="emoji-options" aria-label={text($locale,'Эмодзи','Эмодзи')}>{#each ['😊','❤️','👍','🔥','👏','😂','😮','🎉'] as emoji}<button type="button" disabled={busy} aria-label={text($locale,'Эмодзи қосу: ','Добавить эмодзи: ')+emoji} onclick={async event=>{const position=editor?.selectionStart??body.length;if(body.length+emoji.length>2000)return;body=body.slice(0,position)+emoji+body.slice(position);emojiOpen=false;await tick();editor?.focus({preventScroll:true});editor?.setSelectionRange(position+emoji.length,position+emoji.length);}}>{emoji}</button>{/each}</div>{/if}</div>
 
    </div>
    <div class="submit-actions"><span class="character-count">{body.length}/2000</span>{#if editing||parent}<button type="button" class="cancel-composer" disabled={busy} onclick={cancelComposer}>{copy($locale,"Бас тарту")}</button>{/if}<button class="button primary" disabled={busy}>{copy($locale,"Жіберу")}</button></div>
@@ -163,5 +164,5 @@
  @media(prefers-reduced-motion:reduce){.comment-composer{animation:none}}
  button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
  @media(max-width:479px){.thread-toggle{margin-left:36px}.comment-row{grid-template-columns:28px minmax(0,1fr);gap:8px}.avatar{width:28px;height:28px;font-size:12px}.thread{margin-left:13px;padding-left:10px}.comment-composer{padding:10px}.comment-content .comment-composer{margin-left:-36px}.submit-actions{flex-basis:100%}}
-.emoji-picker{position:relative}.emoji-picker summary{display:grid;place-items:center;width:44px;height:44px;cursor:pointer;list-style:none;border-radius:6px}.emoji-picker summary::-webkit-details-marker{display:none}.emoji-options{position:absolute;z-index:5;bottom:50px;left:0;display:grid;grid-template-columns:repeat(4,44px);gap:2px;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:0 8px 32px #0004}.emoji-options button{font-size:20px}.spoiler-notice{font-size:12px;color:var(--accent);margin:0;padding:4px 0}.emoji-picker summary:focus-visible{outline:2px solid var(--accent)}
+.emoji-picker{position:relative}.emoji-picker>button{display:grid;place-items:center;width:44px;height:44px;cursor:pointer;list-style:none;border-radius:6px}.emoji-options{position:absolute;z-index:5;bottom:50px;left:0;display:grid;grid-template-columns:repeat(4,44px);gap:2px;padding:6px;border:1px solid var(--line);border-radius:10px;background:var(--panel);box-shadow:0 8px 32px #0004}.emoji-options button{font-size:20px}.spoiler-notice{font-size:12px;color:var(--accent);margin:0;padding:4px 0}.emoji-picker>button:focus-visible{outline:2px solid var(--accent)}
 </style>

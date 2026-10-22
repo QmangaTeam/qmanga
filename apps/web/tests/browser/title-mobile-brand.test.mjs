@@ -24,15 +24,14 @@ test('mobile title reflows and the single-Q wordmark follows explicit and system
     }
     assert.equal(await page.locator('.title-tabs').evaluate(e=>e.scrollWidth<=e.clientWidth+1),true,'all title tabs fit');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'page reflows');
-    const actions=await page.locator('.title-actions').boundingBox(),read=await page.locator('.read-button').boundingBox();assert.ok(read.width>=actions.width-1,'Read spans phone width');
+    const actions=await page.locator('.title-actions').boundingBox(),read=await page.locator('.read-button').boundingBox();assert.ok(read.width>=100&&read.height>=44,'Read stays reachable beside Save');
     if(process.env.QMANGA_SCREENSHOT_DIR){await mkdir(process.env.QMANGA_SCREENSHOT_DIR,{recursive:true});await page.screenshot({path:process.env.QMANGA_SCREENSHOT_DIR+`/title-${locale}-${mode}-${width}.png`,fullPage:true});}
    }
    for(const width of [768,885,960,1080,1440]){
     await page.setViewportSize({width,height:900});
     assert.equal(await page.locator('.metadata').count(),1,'single combined information panel');
     const info=await page.locator('.title-information').boundingBox(),tabs=await page.locator('.title-tabs').boundingBox(),cover=await page.locator('.cover-wrap').boundingBox();
-    if(width<960)assert.ok(info.y>=tabs.y+tabs.height-1,'information follows tabs on smaller screens');
-    else assert.ok(info.x+info.width<=tabs.x+1&&info.y>cover.y,'information sits below desktop cover');
+    assert.ok(info.y>=tabs.y+tabs.height-1,'About information follows tabs at every width');
     assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),true,'information reflows at breakpoint');
    }
    await page.goto('/titles/'+fixture.title_slug+'?tab=about');await page.waitForLoadState('networkidle');

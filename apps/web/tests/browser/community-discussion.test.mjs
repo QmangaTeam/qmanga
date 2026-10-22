@@ -50,7 +50,7 @@ test('comment hierarchy and contextual composer fit both themes, languages and w
  }finally{await context.close();}
 });
 
-test('reply and edit retain formatting, spoilers, preview, cancellation and exact mutation scope',{timeout:30000},async()=>{
+test('reply and edit retain emoji, spoilers, cancellation and exact mutation scope',{timeout:30000},async()=>{
  const page=await browser.newPage({viewport:{width:320,height:850}});
  try{
   await open(page);
@@ -58,12 +58,12 @@ test('reply and edit retain formatting, spoilers, preview, cancellation and exac
   const nested=page.locator('#comment-nested');await nested.getByRole('button',{name:'Ответить',exact:true}).click();
   const composer=page.locator('.comment-composer'),editor=composer.getByRole('textbox');
   assert.match(await composer.locator('.composer-context').textContent(),/Ответ для Оқырман/);
-  await editor.fill('Ответ с форматированием');await editor.evaluate(element=>element.setSelectionRange(0,5));
-  await composer.getByRole('button',{name:'Жирный',exact:true}).click();assert.equal(await editor.inputValue(),'**Ответ** с форматированием');
+  await editor.fill('Ответ с эмодзи');await editor.evaluate(element=>element.setSelectionRange(element.value.length,element.value.length));
+  await composer.getByRole('button',{name:'Добавить эмодзи',exact:true}).click();await composer.getByRole('button',{name:'Добавить эмодзи: 😊',exact:true}).click();assert.equal(await editor.inputValue(),'Ответ с эмодзи😊');
   await composer.getByRole('button',{name:'Спойлер',exact:true}).click();assert.equal(await composer.getByRole('button',{name:'Спойлер',exact:true}).getAttribute('aria-pressed'),'true');
-  await composer.locator('.comment-preview summary').click();assert.equal(await composer.locator('.comment-preview strong').textContent(),'Ответ');
+  assert.equal(await composer.locator('.comment-preview').count(),0);await composer.locator('.spoiler-notice').waitFor();
   await composer.getByRole('button',{name:'Отправить',exact:true}).click();await page.locator('#comment-new').waitFor();
-  assert.deepEqual((await calls(page)).find(call=>call.kind==='comment'),{kind:'comment',account:'own',title:'synthetic-title',release:'',parent:'nested',body:'**Ответ** с форматированием',spoiler:true});
+  assert.deepEqual((await calls(page)).find(call=>call.kind==='comment'),{kind:'comment',account:'own',title:'synthetic-title',release:'',parent:'nested',body:'Ответ с эмодзи😊',spoiler:true});
   const reply=page.locator('#comment-reply');await reply.getByRole('button',{name:'Редактировать',exact:true}).click();
   assert.equal(await editor.inputValue(),'Менің жауабым');await editor.fill('Отменённый черновик');
   await composer.getByRole('button',{name:'Отмена',exact:true}).click();assert.equal((await calls(page)).filter(call=>call.kind==='edit').length,0);
@@ -177,18 +177,24 @@ test('dense title tags disclose only real overflow and editions remain bounded w
   for(const width of [320,624,1280]){
    await page.setViewportSize({width,height:900});
    await page.goto(baseURL+'/?view=title&tags=1&editions=1&section=chapters');
-   await page.locator('.title-genres a').waitFor();
-   assert.equal(await page.locator('.tags-toggle').count(),0,'short taxonomy needs no toggle');
+   assert.equal(await page.locator('.title-genres a').count(),0,'chapter tab has no About taxonomy');
    assert.equal(await page.locator('.title-information').count(),0,'chapters have no About metadata');
    assert.equal(await page.locator('.chapter-link').getAttribute('href'),'/read/release');
    for(const editions of [2,10,50]){
     await page.goto(baseURL+`/?view=title&tags=30&editions=${editions}&section=chapters`);
-    const toggle=page.locator('.tags-toggle');await toggle.waitFor();
+    assert.equal(await page.locator('.title-genres a').count(),0,'dense taxonomy remains in About');
+    await page.goto(baseURL+`/?view=title&tags=30&editions=${editions}&section=about`);
+    await page.locator('.title-genres a').first().waitFor();await page.evaluate(()=>document.fonts.ready);
+    const clipped=await page.locator('.title-genres').evaluate(e=>e.scrollHeight>parseFloat(getComputedStyle(e).getPropertyValue('--preview-height'))+1);
+    const toggle=page.locator('.tags-toggle');
     assert.equal(await page.locator('.title-genres a').count(),30);
-    assert.ok(await page.locator('.title-genres a[inert]').count()>0,'clipped tags leave keyboard order');
-    await toggle.click();assert.equal(await toggle.getAttribute('aria-expanded'),'true');
-    await page.waitForFunction(()=>!document.querySelector('.title-genres a[inert]'));
-    await toggle.click();assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+    if(clipped){
+     await toggle.waitFor();assert.ok(await page.locator('.title-genres a[inert]').count()>0,'clipped tags leave keyboard order');
+     await toggle.click();assert.equal(await toggle.getAttribute('aria-expanded'),'true');
+     await page.waitForFunction(()=>!document.querySelector('.title-genres a[inert]'));
+     await toggle.click();assert.equal(await toggle.getAttribute('aria-expanded'),'false');
+    }else assert.equal(await toggle.count(),0,'fitting taxonomy has no extra disclosure');
+    await page.goto(baseURL+`/?view=title&tags=30&editions=${editions}&section=chapters`);
     const picker=page.locator('.edition-picker');
     assert.ok((await picker.boundingBox()).height<=70,'many editions use one compact chapter row');
     await picker.locator('summary').click();

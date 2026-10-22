@@ -30,8 +30,8 @@ test('auth branding and centered mobile Home retain localized navigation and tou
    const nav=page.locator('nav[aria-label="'+(locale==='kk'?'Мобильді навигация':'Мобильная навигация')+'"]');
    for(const width of [320,360]){
     await page.setViewportSize({width,height:900});
-    assert.deepEqual(await nav.locator('a').evaluateAll(links=>links.map(link=>link.getAttribute('href'))),['/catalog','/library','/','/notifications','/menu']);
-    assert.equal(await nav.locator('a').nth(2).getAttribute('aria-label'),locale==='kk'?'Басты бет':'Главная');
+    assert.deepEqual(await nav.locator('a').evaluateAll(links=>links.map(link=>link.getAttribute('href'))),['/catalog','/','/library','/notifications']);
+    assert.equal(await nav.locator('a').nth(1).getAttribute('aria-label'),locale==='kk'?'Басты бет':'Главная');
     assert.equal(await nav.locator('a[href="/"] img').count(),1);assert.equal(await nav.locator('a[href="/"] svg').count(),0);
     for(const link of await nav.locator('a').all()){const box=await link.boundingBox();assert.ok(box.width>=44&&box.height>=44);}
     const home=nav.locator('a[href="/"]');await home.focus();assert.equal(await home.evaluate(e=>e===document.activeElement),true);
