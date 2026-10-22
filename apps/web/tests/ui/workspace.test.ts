@@ -20,6 +20,8 @@ test('workspace shell retains real destinations, single-Q brand and a hydration-
  const html=render(Shell,{props:{compact:true}}).body;
  expect(await elements(html,'main#content h1')).toHaveLength(1);
  expect((await elements(html,'.workspace-brand img'))[0].src).toBe('/favicon.png');
+ expect(html).toMatch(/<strong[^>]*>manga/);
+ expect(html).not.toMatch(/<strong[^>]*>qmanga/);
  expect(await elements(html,'.workspace-sidebar a[aria-current="page"]')).toHaveLength(1);
  expect(await elements(html,'button.workspace-menu[disabled][aria-haspopup="dialog"]')).toHaveLength(1);
  expect((await elements(html,'.workspace-catalog'))[0].href).toBe('/catalog');
