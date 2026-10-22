@@ -14,6 +14,7 @@ export class HttpTeamsGateway implements TeamsGateway {
  async update(id:string,input:NewTeam){await this.api.call('/api/v1/studio/teams/'+encodeURIComponent(id),'PUT',this.input(input));}
  private input(value:NewTeam){return {name:value.name,slug:value.slug,description:value.description,telegram_url:value.telegramURL?.trim()||''};}
  async list(offset=0) { return items(await this.api.call('/api/v1/studio/teams?offset='+offset)).map(team); }
+ async approved(offset=0){return items(await this.api.call('/api/v1/admin/catalog-teams?offset='+offset)).map(value=>{if(!object(value)||typeof value.id!=='string'||typeof value.name!=='string'||typeof value.slug!=='string')throw new Error('Invalid team directory');return {id:value.id,name:value.name,slug:value.slug,description:'',approved:true,reviewStatus:'approved'};});}
  async pending(offset=0) { return items(await this.api.call('/api/v1/admin/teams/pending?offset='+offset)).map(team); }
  async create(input: NewTeam) { return team(await this.api.call('/api/v1/studio/teams', 'POST', this.input(input))); }
  async approve(id: string) { await this.api.call('/api/v1/admin/teams/' + encodeURIComponent(id) + '/approve', 'POST', {}); }

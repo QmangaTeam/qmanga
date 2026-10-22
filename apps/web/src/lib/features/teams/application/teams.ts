@@ -12,6 +12,7 @@ export interface TeamsGateway {
  revokeInvitation(teamId:string,id:string):Promise<void>;
  remove(teamId: string, userId: string): Promise<void>;
  accept(token: string): Promise<void>;
+ approved(offset?:number): Promise<Team[]>;
  pending(offset?:number): Promise<Team[]>;
  approve(teamId: string): Promise<void>;
 }
