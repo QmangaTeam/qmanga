@@ -69,7 +69,7 @@
  <main id="content">{@render content()}</main>
 {:else}
  {#if managementArea||studioArea}
- <WorkspaceShell management={managementArea} userName={data.user?.displayName||''} {unreadCount} {unreadBadge} items={workspaceItems} currentPath={$page.url.pathname} compact={studioArea&&/^\/studio\/projects\/[^/]+$/.test($page.url.pathname)} label={managementArea?text($locale,'Басқару','Управление'):text($locale,'Жұмыс кеңістігі','Рабочее пространство')}>
+ <WorkspaceShell management={managementArea} userName={data.user?.displayName||''} {unreadCount} {unreadBadge} items={workspaceItems} currentPath={$page.url.pathname} compact={studioArea&&/^\/studio\/projects\/[^/]+$/.test($page.url.pathname)&&$page.url.searchParams.has('revision')} label={managementArea?text($locale,'Басқару','Управление'):text($locale,'Жұмыс кеңістігі','Рабочее пространство')}>
  {#snippet account()}{#if data.user}<AccountMenu version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}{/snippet}
  {@render content()}
  </WorkspaceShell>

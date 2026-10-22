@@ -12,10 +12,11 @@ test('missing card data and unrated titles do not invent zero votes or covers',a
 });
 test('project action names the real revision and deep-links to it without guessing from counts',async()=>{
  const html=render(Card,{props:{item:{id:'project',titleName:'Тайтл',teamName:'Команда',nextRevisionId:'draft-id',nextRevisionState:'processing'}}}).body;
- expect((await elements(html,'a.manage'))[0].href).toBe('/studio/projects/project?revision=draft-id');
+ expect((await elements(html,'a.manage'))[0].href).toBe('/studio/projects/project');
+ expect((await elements(html,'a.resume'))[0].href).toBe('/studio/projects/project?revision=draft-id');
  expect(html).toContain('Өңделуде');
 });
 test('unknown work state keeps a neutral action and list return is explicit',async()=>{
  const html=render(Card,{props:{item:{id:'project',titleName:'Тайтл',teamName:'Команда',nextRevisionId:'revision',nextRevisionState:'future-state'},returnTo:'/studio/projects?q=Applied&pages=2'}}).body;
- expect(html).not.toContain('Тексеруге жіберу');expect((await elements(html,'a.manage'))[0].href).toBe('/studio/projects/project?revision=revision&amp;projectsReturn=%2Fstudio%2Fprojects%3Fq%3DApplied%26pages%3D2');
+ expect(html).not.toContain('Тексеруге жіберу');expect((await elements(html,'a.manage'))[0].href).toBe('/studio/projects/project?projectsReturn=%2Fstudio%2Fprojects%3Fq%3DApplied%26pages%3D2');
 });
