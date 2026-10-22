@@ -98,7 +98,14 @@ func lockRevision(ctx context.Context, transaction pgx.Tx, id string) (domain.Re
 	var state domain.State
 	var version, bytes int64
 	var count, ready int
-	failure := transaction.QueryRow(ctx, `SELECT revision.release_id,revision.status,revision.version,(SELECT count(*) FROM pages WHERE revision_id=revision.id),(SELECT count(*) FROM pages WHERE revision_id=revision.id AND status='ready'),coalesce((SELECT sum(byte_size) FROM pages WHERE revision_id=revision.id),0) FROM revisions revision WHERE revision.id=$1 FOR UPDATE OF revision`, id).Scan(&releaseID, &state, &version, &count, &ready, &bytes)
+	// Acquire the aggregate root lock before starting the page-count statement.
+	// Under READ COMMITTED a statement waiting for FOR UPDATE can see a newer
+	// revision tuple but retain its original snapshot for page subqueries.
+	failure := transaction.QueryRow(ctx, "SELECT release_id,status,version FROM revisions WHERE id=$1 FOR UPDATE", id).Scan(&releaseID, &state, &version)
+	if failure != nil {
+		return domain.Revision{}, translate(failure)
+	}
+	failure = transaction.QueryRow(ctx, "SELECT count(*),count(*) FILTER(WHERE status='ready'),coalesce(sum(byte_size),0) FROM pages WHERE revision_id=$1", id).Scan(&count, &ready, &bytes)
 	if failure != nil {
 		return domain.Revision{}, translate(failure)
 	}
