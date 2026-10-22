@@ -66,3 +66,6 @@ export function createWorkQueue(){return new ExistingWorkQueueGateway(createPubl
 
 import {HttpAccountProfilesGateway} from '$lib/features/preferences/infrastructure/http-account-profiles-gateway';
 export function createAccountProfiles(){return new HttpAccountProfilesGateway(new ApiClient(globalThis.fetch.bind(globalThis)));}
+
+import {HttpApiTokens} from '$lib/features/identity/infrastructure/http-api-tokens';
+export function createApiTokens(){return new HttpApiTokens(new ApiClient(globalThis.fetch.bind(globalThis)));}

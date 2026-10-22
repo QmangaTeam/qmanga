@@ -1,0 +1,6 @@
+import {test,expect} from 'bun:test';
+import ApiTokens from '../../src/lib/features/identity/presentation/ApiTokens.svelte';
+import {render,elements} from './markup';
+const gateway={list:async()=>[],create:async()=>{throw new Error('must not create on render');},revoke:async()=>{}};
+test('verified admin sees own-account token form with bounded lifetime and no impersonation',async()=>{const html=render(ApiTokens,{props:{user:{id:'admin',email:'admin@example.test',role:'admin',verified:true},gateway}}).body;const inputs=await elements(html,'input');expect(inputs.some(input=>input.type==='number'&&input.min==='1'&&input.max==='365')).toBe(true);expect(inputs.some(input=>input.type==='checkbox')).toBe(true);expect(html).toContain('QMANGA_API_TOKEN');expect(html).not.toContain('admin@example.test');expect(await elements(html,'select')).toHaveLength(0);expect(html).toContain('Модерациясыз жариялау');});
+test('moderator and unverified admin cannot see creation controls',async()=>{for(const user of [{id:'mod',email:'m@example.test',role:'moderator',verified:true},{id:'admin',email:'a@example.test',role:'admin',verified:false}]){const html=render(ApiTokens,{props:{user,gateway}}).body;expect(await elements(html,'form')).toHaveLength(0);expect(html).not.toContain('QMANGA_API_TOKEN');}});
