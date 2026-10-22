@@ -3,7 +3,7 @@ set -euo pipefail
 
 QMANGA_REPO_ROOT=${QMANGA_REPO_ROOT:-$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)}
 QMANGA_HOST_ROOT=${QMANGA_HOST_ROOT:-/opt/qmanga}
-IMAGE_PREFIX=${IMAGE_PREFIX:-ghcr.io/maqsatto/qmanga}
+IMAGE_PREFIX=${IMAGE_PREFIX:-ghcr.io/qmangateam/qmanga}
 export QMANGA_HOST_ROOT IMAGE_PREFIX
 
 target_config() {

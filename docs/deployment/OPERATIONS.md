@@ -30,7 +30,7 @@
 
 | Назначение | Адрес / путь |
 | --- | --- |
-| Репозиторий | https://github.com/maqsatto/qmanga |
+| Репозиторий | https://github.com/QmangaTeam/qmanga |
 | Локальный checkout владельца | `/home/maqsatto/Documents/projects/qmanga` |
 | Production | https://qmanga.maqsatto.dev |
 | Staging | Только на VM: `127.0.0.1:18280` (blue) или `127.0.0.1:18281` (green); цвет в `staging.active` |
