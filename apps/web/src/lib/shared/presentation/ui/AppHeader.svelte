@@ -37,7 +37,7 @@
  header{position:sticky;top:0;z-index:30;background:var(--bg);border-bottom:1px solid var(--line)}
  .header-inner{max-width:1280px;min-height:60px;margin:auto;padding:8px 16px;display:flex;align-items:center;justify-content:space-between;gap:16px}
  .wordmark,.primary-navigation>a,.account-navigation>.icon-link{display:none}
- .account-navigation{display:flex;align-items:center;flex:none}.primary-navigation{min-width:0}
+ .account-navigation{display:none;align-items:center;flex:none}.primary-navigation{min-width:0}
  .icon-link{position:relative}.unread-badge{position:absolute;top:0;right:0;min-width:18px;padding:1px 4px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:10px;line-height:16px}
  .primary-navigation{width:100%;display:flex;align-items:center;gap:24px}
  a,button{min-height:44px;min-width:44px;display:inline-flex;align-items:center;justify-content:center;gap:8px;color:var(--muted);font-size:14px;font-weight:550;text-decoration:none}

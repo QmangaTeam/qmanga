@@ -1,7 +1,9 @@
 <script lang="ts">
  import Icon from './Icon.svelte';
+ let avatarFailed=$state(false);
+ $effect(()=>{avatarURL;avatarVersion;avatarFailed=false;});
  import type { NavigationItem } from './types';
- let { items, currentPath, label, unreadCount=0, unreadBadge='' }: {items:NavigationItem[];currentPath:string;label:string;unreadCount?:number;unreadBadge?:string} = $props();
+ let { items, currentPath, label, unreadCount=0, unreadBadge='', avatarURL, avatarVersion=0 }: {items:NavigationItem[];currentPath:string;label:string;unreadCount?:number;unreadBadge?:string;avatarURL?:string;avatarVersion?:number} = $props();
  const mobileItems = $derived.by(() => {
   const home = items.find(item => item.href === '/');
   const destinations = items.filter(item => item.href !== '/');
@@ -14,7 +16,7 @@
  <div class="active-indicator" aria-hidden="true" style:--active-index={Math.max(0, activeIndex)} class:visible={activeIndex >= 0}></div>
  {#each mobileItems as item}
   <a href={item.href} aria-label={item.href==='/notifications'&&!!unreadBadge?item.label+': '+unreadCount:item.label} aria-current={currentPath===item.href?'page':undefined}>
-   <div class="nav-icon">{#if item.href==='/'}<img class="home-logo" src="/favicon.png" alt="" width="24" height="24"/>{:else}<Icon name={item.icon}/>{/if}{#if item.href==='/notifications'&&!!unreadBadge}<b class="unread-badge" aria-hidden="true">{unreadBadge}</b>{/if}</div><span>{item.shortLabel||item.label}</span>
+   <div class="nav-icon">{#if item.href==='/'}<img class="home-logo" src="/favicon.png" alt="" width="24" height="24"/>{:else if item.href==='/menu'&&avatarURL&&!avatarFailed}<img class="account-avatar" src={avatarURL+'?v='+avatarVersion} alt="" width="24" height="24" onerror={()=>avatarFailed=true}/>{:else}<Icon name={item.icon}/>{/if}{#if item.href==='/notifications'&&!!unreadBadge}<b class="unread-badge" aria-hidden="true">{unreadBadge}</b>{/if}</div><span>{item.shortLabel||item.label}</span>
   </a>
  {/each}
 </nav>
@@ -26,7 +28,7 @@
  a[aria-current] { color:var(--accent); }
  a:active { transform:scale(.94); }
  a:focus-visible { outline:2px solid var(--accent); outline-offset:-2px; }
- .home-logo{display:block;flex:none}.nav-icon{position:relative;display:flex}.unread-badge{position:absolute;top:-6px;left:14px;min-width:18px;padding:1px 4px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:10px;line-height:16px}
+ .account-avatar{width:24px;height:24px;border-radius:50%;object-fit:cover}.home-logo{display:block;flex:none}.nav-icon{position:relative;display:flex}.unread-badge{position:absolute;top:-6px;left:14px;min-width:18px;padding:1px 4px;border-radius:12px;background:var(--accent);color:var(--accent-ink);font-size:10px;line-height:16px}
  span { max-width:100%; white-space:nowrap; text-align:center; }
  @media(prefers-reduced-motion:reduce) { .active-indicator,a { transition:none; } a:active { transform:none; } }
  @media(min-width:768px) { nav { display:none; } }

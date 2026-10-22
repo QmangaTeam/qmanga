@@ -51,7 +51,7 @@
   {label:'Каталог',href:'/catalog',icon:'catalog'},
   {label:text($locale,'Кітапхана','Библиотека'),shortLabel:text($locale,'Сөре','Списки'),href:'/library',icon:'bookmark'},
   {label:text($locale,'Хабарлар','Уведомления'),shortLabel:text($locale,'Хабарлар','События'),href:'/notifications',icon:'bell'},
-  {label:text($locale,'Мәзір','Меню'),href:'/menu',icon:'menu'}
+  {label:'Аккаунт',href:'/menu',icon:'user'}
  ]);
  const loginReturn=$derived($page.url.pathname==='/saved'?'/saved':safeReturnPath(/^\/(login|register|forgot-password|reset-password|verify-email)(\/|$)/.test($page.url.pathname)?$page.url.searchParams.get('returnTo'):$page.url.pathname+$page.url.search));
 </script>
@@ -70,15 +70,15 @@
 {:else}
  {#if managementArea||studioArea}
  <WorkspaceShell management={managementArea} userName={data.user?.displayName||''} {unreadCount} {unreadBadge} items={workspaceItems} currentPath={$page.url.pathname} compact={studioArea&&/^\/studio\/projects\/[^/]+$/.test($page.url.pathname)&&$page.url.searchParams.has('revision')} label={managementArea?text($locale,'Басқару','Управление'):text($locale,'Жұмыс кеңістігі','Рабочее пространство')}>
- {#snippet account()}{#if data.user}<AccountMenu preferences={createPreferences()} version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}{/snippet}
+ {#snippet account()}<a class="workspace-mobile-account" href="/menu">Аккаунт</a><span class="workspace-desktop-account">{#if data.user}<AccountMenu preferences={createPreferences()} version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}</span>{/snippet}
  {@render content()}
  </WorkspaceShell>
  {:else}
  <AppHeader {unreadBadge} {unreadCount} items={navigation.slice(0,4)} currentPath={$page.url.pathname} accountHref={data.user?'/menu':'/login?returnTo='+encodeURIComponent(loginReturn)} accountLabel={data.user?'Аккаунт':text($locale,'Кіру','Войти')} homeLabel={text($locale,'Qmanga басты бет','Qmanga — главная')} navigationLabel={text($locale,'Негізгі','Основная навигация')}>{#snippet account()}{#if data.user}<AccountMenu preferences={createPreferences()} version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}{/snippet}</AppHeader>
  <main id="content" class="page-container">{@render content()}</main>
- {#if !/^\/(login|register|forgot-password|reset-password|verify-email|settings|notifications|users)(\/|$)/.test($page.url.pathname)}<SiteFooter version={data.buildVersion}/>{/if}
- <MobileNavigation {unreadBadge} {unreadCount} items={navigation} currentPath={$page.url.pathname} label={text($locale,'Мобильді навигация','Мобильная навигация')}/>
+ {#if !/^\/(login|register|forgot-password|reset-password|verify-email|settings|notifications|users|menu)(\/|$)/.test($page.url.pathname)}<SiteFooter version={data.buildVersion}/>{/if}
+ <MobileNavigation avatarURL={data.user?.avatarURL} avatarVersion={avatarVersion} {unreadBadge} {unreadCount} items={navigation} currentPath={$page.url.pathname} label={text($locale,'Мобильді навигация','Мобильная навигация')}/>
  {/if}
 {/if}
 
-<style>.guest-login{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--text);font-size:14px}</style>
+<style>.workspace-mobile-account{display:none}.workspace-desktop-account{display:contents}@media(max-width:767px){.workspace-desktop-account{display:none}.workspace-mobile-account{display:flex;align-items:center;min-height:44px;padding:0 8px;color:var(--text);font-size:13px}}.guest-login{display:flex;align-items:center;justify-content:center;min-width:44px;min-height:44px;color:var(--text);font-size:14px}</style>
