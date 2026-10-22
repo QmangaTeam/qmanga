@@ -84,6 +84,10 @@ func (handler *IdentityHandler) CheckOrigin() gin.HandlerFunc {
 }
 func (handler *IdentityHandler) RequireUser() gin.HandlerFunc {
 	return func(request *gin.Context) {
+		if _, present := request.Request.Header["Authorization"]; present {
+			handler.authenticateBearer(request)
+			return
+		}
 		raw, failure := request.Cookie("qmanga_session")
 		if failure != nil {
 			Error(request, 401, "unauthorized", "Алдымен кіріңіз")
