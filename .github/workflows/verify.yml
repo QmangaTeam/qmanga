@@ -66,6 +66,7 @@ jobs:
           bash scripts/test-internal-staging-route.sh
           bash scripts/test-offsite-oci.sh
           bash scripts/test-component-alias.sh
+          bun test scripts/image-references.test.ts
           export RELEASE_SHA=0123456789abcdef0123456789abcdef01234567 GATEWAY_PORT=18280 DEPLOY_TARGET=staging
           export IMAGE_TAG_GATEWAY=$RELEASE_SHA IMAGE_TAG_API=$RELEASE_SHA IMAGE_TAG_WEB=$RELEASE_SHA
           docker compose --env-file deploy/host.env.example -f deploy/compose.data.yaml config --quiet
@@ -199,10 +200,14 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Resolve image repository
+        id: image
+        shell: bash
+        run: echo "repository=ghcr.io/${GITHUB_REPOSITORY,,}-${{ matrix.component }}" >> "$GITHUB_OUTPUT"
       - name: Check immutable HEAD image
         id: head-image
         run: |
-          status=$(bash scripts/publish-component-alias.sh --head-status "ghcr.io/${{ github.repository }}-${{ matrix.component }}" "${{ github.sha }}")
+          status=$(bash scripts/publish-component-alias.sh --head-status "${{ steps.image.outputs.repository }}" "${{ github.sha }}")
           echo "status=$status" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         if: steps.head-image.outputs.status == 'missing'
@@ -211,8 +216,8 @@ jobs:
           file: infra/${{ matrix.component }}.Dockerfile
           platforms: linux/arm64
           push: true
-          tags: ghcr.io/${{ github.repository }}-${{ matrix.component }}:${{ github.sha }}
+          tags: ${{ steps.image.outputs.repository }}:${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.component }}
           cache-to: type=gha,mode=max,scope=${{ matrix.component }}
       - name: Publish immutable component input alias
-        run: bash scripts/publish-component-alias.sh "${{ matrix.component }}" "ghcr.io/${{ github.repository }}-${{ matrix.component }}" "${{ github.sha }}"
+        run: bash scripts/publish-component-alias.sh "${{ matrix.component }}" "${{ steps.image.outputs.repository }}" "${{ github.sha }}"
