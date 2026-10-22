@@ -5,7 +5,7 @@ status: Review
 assignee:
   - codex
 created_date: '2026-10-22 19:06'
-updated_date: '2026-10-22 19:16'
+updated_date: '2026-10-22 19:17'
 labels: []
 dependencies: []
 ordinal: 65005
@@ -38,4 +38,6 @@ Owner wants Codex to upload manga without browser. Clarification23Oct: create/re
 Owner authorized push+deployment after completion and requested super short Codex API guide. Implemented hashed adminowner tokens, scoped bearer, token-only atomic direct publication/cover and adminUI. Parent integrates CLI/guide and tests; review found CLI chapter409/name, historicalrevision and lostsubmitresponse issues now fixed with regressions. FullGoPG/codecs PASS,168webunit and64UI tests PASS; focusedpublishingHTTPaftercover PASS. End-to-end localDocker/browser in progress before final independent review and release.
 
 Local implementation verified:65ea31b UI,322dc27 identity,b8ba023 publication,690b146 cover/currentpointer,96d0825 CLI/guide,a55a967 bootstrap+CI/E2E. Full Go realPG/codecs PASS; post-cover publishing+HTTP realPG PASS;168webunit,64UI,11Pythonclientregressions PASS;productionwebbuild PASS;svelte-check0errors0warnings;architecture/contrastPASS. RealDockerE2E adminUItokencreate -> headlessnewtitle/project/chapter -> PNGprocessing -> selectedcover -> directpublish -> anonymousimage200 -> identicalrepeat -> disallowedadminroute403 -> UIrevoke -> bearer401 PASS.12renderedadminviews kk/ru,light/dark,320/360/1280 PASS; inspected screenshot. Independentidentity/UI/publicationreviews clean; CLI4reviewfindings fixed and regressiontested, stalecoverdocs corrected. No real-user token created; secrets only in test process memory. Owner authorized push/release and mini guide docs/CODEX-UPLOAD.md. ReadyforremoteCI/staging/production exactSHA acceptance; stayReview untilobserved.
+
+Initial push refused by existing OAuth credential workflow-scope restriction. No privileges changed: removed unpublished workflow edit, moved Pythonclientregressions into new existing-glob browser file. Both browser tests (Python suite plusrealE2E) rerun locally. Integration commit5be741f replaces unpublisheda55a967; productcodeunchanged. Release uses normalfullCI/poller.
 <!-- SECTION:NOTES:END -->
