@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 08:22'
-updated_date: '2026-10-22 09:25'
+updated_date: '2026-10-22 09:30'
 labels: []
 dependencies: []
 priority: high
@@ -29,7 +29,7 @@ ordinal: 62005
 ## Implementation Plan
 
 <!-- SECTION:PLAN:BEGIN -->
-Реализация студии и админки завершена локально. Проверка владельцем в dev-браузере; исправлять конкретные замечания, сохранять права/точные ID/черновики, повторять затронутые проверки и независимый review. Push/deploy только по отдельному запросу.
+Реализация студии и админки доступна локально, включая модальный просмотр заявок команд. Следующий шаг: приёмка владельцем в dev-браузере и конкретные замечания. Push/deploy только по отдельному запросу.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -42,10 +42,14 @@ ordinal: 62005
 Owner review follow-up: existing approved teams were not visible because original screen read only pending requests. Added approved-directory tab from existing admin/catalog-teams API, pending requests remain separate; real team avatars use existing public endpoint with fallback,56px list/88px inspector. Owner requested one local team application: created clearly labeled local UI demo, left pending, uploaded ownedQlogo for it. Public backend intentionally hides unapproved-team avatars; pending preview currently uses fallback (no access policy weakened). All admin API reads verified200:3approved/1pending teams,16titles,7accounts; audit50+; report/project/publication queues empty. Reviewer found approved-directory refresh and hash dirty-guard issues; both fixed and reviewed again without findings. New mocked browser regression passes directory/pending separation, avatar/fallback size, same-route deep selection, cancelled hash navigation retaining reason, and approve→directory refresh; no real approve/reject performed. Fresh check0/0 and UI60/843 pass; nine-route browser matrix and combined5browser scenarios passed before final two guard fixes; targeted team regression passed after fixes.
 
 Code commits:4f8805c admin workspace,3b813e8 dictionaries; approved-team/avatar follow-up is the immediately preceding code commit. Final follow-up production build and architecture/contrast checks passed. Local review only; no production release or current production SHA verification.
+
+Owner modal follow-up completed in7555cab: pending team Open request uses native showModal dialog, approved team details remain separate; all available request fields displayed (name/description/status/Telegram/review note/ID/slug). Native focus containment, close/Escape busy+dirty guards, return focus to trigger or pending tab, long mobile content scroll. Backend IDs/payloads unchanged. Regression first failed on missing dialog, then passed after implementation and focus-return fix. Fresh check0errors/0warnings,UI60/843,combined5browser scenarios,build,boundaries,contrast passed. Browser regression covers native :modal, fields,320/360/1280 dark/light bounds, long content, focus,close/Escape discard cancellation, busy rejection Escape,failed reject retaining reason/exact target,hash guard and approved directory refresh. Independent targeted review: no actionable findings. Test application remains pending; real admin decisions not performed. Opened separate local preview tab and captured screenshot under tmp/task120. No push/deploy.
 <!-- SECTION:NOTES:END -->
 
 ## Final Summary
 
 <!-- SECTION:FINAL_SUMMARY:BEGIN -->
 Локально готовы студия и админка по HTML/Figma. Код:a35ed6c,aa3cc39,4f8805c,3b813e8,8b5b1a9. Проверки:check0/0,UI60/843,build,architecture,contrast;responsive/browser5 сценариев и отдельная регрессия последующих team-guard исправлений прошли. Независимый review завершён без оставшихся actionable замечаний. В браузере открыта локальная тестовая заявка, Vite dev/HMR работает. Ожидается приёмка владельцем. Публичный avatar endpoint скрывает изображения неодобренных команд; для заявки отображается fallback. Push/deploy не выполнялись.
+
+7555cab: заявки команд открываются модальным окном с дополнительными доступными полями; проверено локально и независимо reviewed, ожидается приёмка владельцем.
 <!-- SECTION:FINAL_SUMMARY:END -->
