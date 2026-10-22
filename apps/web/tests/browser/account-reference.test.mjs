@@ -1,0 +1,31 @@
+import {chromium} from 'playwright';
+import {test} from 'node:test';import {readFile} from 'node:fs/promises';import assert from 'node:assert/strict';
+const f=JSON.parse(await readFile(process.env.QMANGA_FIXTURE_FILE,'utf8'));assert.ok(['localhost','127.0.0.1'].includes(new URL(f.app_url).hostname));
+test('account references preserve auth, drafts, private profiles, follows and reader choices',{timeout:90000},async()=>{
+const b=await chromium.launch({headless:true,...(process.env.QMANGA_BROWSER_EXECUTABLE?{executablePath:process.env.QMANGA_BROWSER_EXECUTABLE}:{})});
+const contexts=[];let owner,headers,original,id;
+async function login(role){const c=await b.newContext({baseURL:f.app_url,viewport:{width:360,height:807}});contexts.push(c);c.setDefaultTimeout(8000);await c.addCookies([{name:'qmanga_locale',value:'ru',url:f.app_url}]);const r=await c.request.post('/api/v1/auth/login',{headers:{Origin:f.app_url},data:{email:f[role+'_email'],password:f[role+'_password']}});assert.equal(r.status(),200);const user=(await r.json()).user;const csrf=(await(await c.request.get('/api/v1/auth/csrf')).json()).csrf_token;return{c,user,h:{Origin:f.app_url,'X-CSRF-Token':csrf,'X-Qmanga-Account':user.id}};}
+async function save(c,h,prefs){const r=await c.request.put('/api/v1/account/preferences',{headers:h,data:prefs});assert.equal(r.status(),200);return await r.json();}
+try{
+ const guest=await b.newContext({baseURL:f.app_url,viewport:{width:320,height:807}});contexts.push(guest);guest.setDefaultTimeout(8000);await guest.addCookies([{name:'qmanga_locale',value:'ru',url:f.app_url}]);const p=await guest.newPage();
+ await p.goto('/login?returnTo=%2Flibrary');await p.waitForLoadState('networkidle');await p.locator('#auth-password').fill('Test secret 123');await p.getByRole('button',{name:'Показать пароль',exact:true}).click();assert.equal(await p.locator('#auth-password').getAttribute('type'),'text');assert.equal(await p.locator('#auth-password').inputValue(),'Test secret 123');assert.ok((await p.locator('.auth-tabs a').last().getAttribute('href')).includes('returnTo=%2Flibrary'));
+ assert.ok(await p.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+ const o=await login('owner');owner=o.c;headers=o.h;id=o.user.id;original=await(await owner.request.get('/api/v1/account/preferences',{headers})).json();
+ assert.ok('version' in original);let prefs=await save(owner,headers,{...original,bio:'Сынақ био — профиль интерфейсін тексеру.',public_profile:true,show_library:true,show_activity:true,allow_follow:true,notify_followers:true});
+ const page=await owner.newPage();const errors=[];page.on('pageerror',e=>errors.push(e.message));await page.goto('/settings?section=account');await page.locator('#account-bio').waitFor();await page.locator('#account-bio').fill('Unsaved bio regression');await page.getByRole('button',{name:'Сохранить имя',exact:true}).click();await page.getByText('Имя сохранено',{exact:true}).waitFor();assert.equal(await page.locator('#account-bio').inputValue(),'Unsaved bio regression');
+ await page.goto('/settings?section=appearance');await page.waitForLoadState('networkidle');await page.getByRole('switch',{name:/^Уменьшить движение/}).check();assert.equal(await page.evaluate(()=>document.documentElement.dataset.motion),'reduce');assert.equal(await page.evaluate(()=>localStorage.getItem('qmanga.motion-reduced')),'true');await page.reload();await page.waitForFunction(()=>document.documentElement.dataset.motion==='reduce');await page.getByRole('switch',{name:/^Уменьшить движение/}).waitFor();assert.equal(await page.getByRole('switch',{name:/^Уменьшить движение/}).isChecked(),true);
+ await page.goto('/settings?section=reading');await page.waitForLoadState('networkidle');await page.getByRole('switch',{name:/^Сохранять прогресс/}).uncheck();await page.getByRole('switch',{name:/^Загружать следующую главу заранее/}).uncheck();const reading=await page.evaluate(()=>JSON.parse(localStorage.getItem('qmanga:reader:preferences:v1')));assert.equal(reading.saveProgress,false);assert.equal(reading.prefetchNext,false);
+ const progressWrites=[];page.on('request',request=>{if(request.method()==='POST'&&new URL(request.url()).pathname.startsWith('/api/v1/progress/'))progressWrites.push(request.url());});await page.goto('/read/'+f.release_id);await page.locator('.reader').waitFor();await page.waitForLoadState('networkidle');await page.evaluate(()=>scrollTo(0,document.body.scrollHeight));await page.goto('/users/'+id);assert.deepEqual(progressWrites,[],'disabled progress must not write reading history');
+ await page.goto('/users/'+id);await page.locator('.profile h1').waitFor();assert.ok((await page.locator('.bio').first().innerText()).includes('Сынақ био'));
+ await p.goto('/users/'+id);await p.locator('.profile h1').waitFor();const link=p.getByRole('link',{name:'Подписаться',exact:true});await link.waitFor();assert.equal(await link.count(),1);assert.equal(await link.getAttribute('href'),'/login?returnTo='+encodeURIComponent('/users/'+id));
+ const admin=await login('admin');const ap=await admin.c.newPage();await ap.goto('/users/'+id);await ap.getByRole('button',{name:'Подписаться',exact:true}).click();await ap.getByRole('button',{name:'Отписаться',exact:true}).waitFor();
+ prefs=await save(owner,headers,{...prefs,allow_follow:false});await ap.reload();await ap.getByRole('button',{name:'Отписаться',exact:true}).click();await ap.getByRole('button',{name:'Отписаться',exact:true}).waitFor({state:'hidden'});
+ prefs=await save(owner,headers,{...prefs,public_profile:false});assert.equal((await guest.request.get('/api/v1/profiles/'+id)).status(),404);
+ await page.goto('/notifications');await page.waitForLoadState('networkidle');await page.getByRole('button',{name:'Главы',exact:true}).click();await page.getByRole('button',{name:'Ответы',exact:true}).click();assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1));
+assert.deepEqual(errors,[]);
+}finally{
+ if(owner&&original){try{const current=await(await owner.request.get('/api/v1/account/preferences',{headers})).json();await save(owner,headers,{...original,version:current.version});}catch{console.log('Fixture preference cleanup failed');}}
+ for(const c of contexts)await c.close();await b.close();
+}
+
+});
