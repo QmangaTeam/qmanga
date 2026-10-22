@@ -1,4 +1,5 @@
 <script lang="ts">
+ import {onDestroy,untrack} from 'svelte';
  import type {AccountProfilesGateway,PublicProfile} from '../application/account-profiles';
  import type {Account} from '$lib/features/identity/domain/account';
  import {useLocale,text} from '$lib/shared/presentation/locale';
@@ -11,9 +12,11 @@
  let request=0;
  let profile=$state<PublicProfile|null>(null),error=$state(''),busy=$state(false),shared=$state(false);
  let tab=$derived(page.url.searchParams.get('tab')||'library');
- async function load(){const sequence=++request;profile=null;error='';try{const loaded=await gateway.profile(id);if(sequence===request)profile=loaded;}catch(e){if(sequence!==request)return;error=e instanceof ApiFailure&&e.status===404?text($locale,'Профиль табылмады немесе жеке.','Профиль не найден или закрыт.'):text($locale,'Профиль жүктелмеді.','Не удалось загрузить профиль.');}}
- $effect(()=>{id;void load();});
- async function follow(){if(!user||!profile||busy)return;busy=true;error='';try{await gateway.follow(user.id,id,!profile.is_following);profile=await gateway.profile(id);}catch{error=text($locale,'Жазылу өзгермеді. Қайта көріңіз.','Не удалось изменить подписку. Повторите.');}finally{busy=false;}}
+ function current(sequence:number,target:string,actor:string|undefined){return sequence===request&&id===target&&user?.id===actor;}
+ async function load(){const sequence=++request,target=id,actor=user?.id;profile=null;error='';busy=false;shared=false;try{const loaded=await gateway.profile(target);if(current(sequence,target,actor))profile=loaded;}catch(e){if(!current(sequence,target,actor))return;error=e instanceof ApiFailure&&e.status===404?text($locale,'Профиль табылмады немесе жеке.','Профиль не найден или закрыт.'):text($locale,'Профиль жүктелмеді.','Не удалось загрузить профиль.');}}
+ $effect(()=>{id;user?.id;untrack(()=>void load());});
+ onDestroy(()=>{request++;});
+ async function follow(){if(!user||!profile||busy)return;const sequence=request,target=id,actor=user.id,following=!profile.is_following;busy=true;error='';try{await gateway.follow(actor,target,following);if(!current(sequence,target,actor))return;const loaded=await gateway.profile(target);if(current(sequence,target,actor))profile=loaded;}catch{if(current(sequence,target,actor))error=text($locale,'Жазылу өзгермеді. Қайта көріңіз.','Не удалось изменить подписку. Повторите.');}finally{if(current(sequence,target,actor))busy=false;}}
  async function share(){try{await navigator.clipboard.writeText(window.location.origin+'/users/'+encodeURIComponent(id));shared=true;}catch{error=text($locale,'Сілтемені мекенжай жолағынан көшіріңіз.','Скопируйте ссылку из адресной строки.');}}
 </script>
 <svelte:head><title>{profile?.display_name||text($locale,'Профиль','Профиль')} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>

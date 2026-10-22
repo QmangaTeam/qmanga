@@ -6,7 +6,7 @@
  import type {GoogleLinkGateway} from '$lib/features/identity/application/google-link';
  import AvatarEditor from '$lib/features/identity/presentation/AvatarEditor.svelte';
  import type {AvatarGateway} from '$lib/features/identity/application/avatars';
- import {onMount} from 'svelte';
+ import {onMount,onDestroy,untrack} from 'svelte';
  import {goto,invalidateAll} from '$app/navigation';
  import type {AuthGateway,AuthResult} from '$lib/features/identity/application/auth';
  import type {Account} from '$lib/features/identity/domain/account';
@@ -25,16 +25,21 @@
  const tabs=[['appearance','Көрініс','Вид'],['account','Аккаунт','Аккаунт'],['privacy','Құпиялық','Приватность'],['notifications','Хабарлар','Уведомления'],['reading','Оқу','Чтение']];
  let section=$derived(page.url.searchParams.get('section')||'appearance');
  let accountPrefs=$state<AccountPreferences|null>(null),prefsError=$state(''),prefsSaved=$state(false),prefsBusy=$state(false),readerPrefs=$state<ReaderPreferences|null>(null);
- async function loadPreferences(){if(!user)return;try{accountPrefs=await accountProfiles.preferences(user.id);}catch{prefsError=text($locale,'Баптаулар жүктелмеді. Қайта көріңіз.','Не удалось загрузить настройки. Повторите.');}}
- async function savePreferences(){if(!user||!accountPrefs||prefsBusy)return;prefsBusy=true;prefsSaved=false;prefsError='';try{accountPrefs=await accountProfiles.save(user.id,accountPrefs);prefsSaved=true;}catch(error){prefsError=text($locale,'Сақталмады. Нұсқалар қайшылығында бетті қайта ашпас бұрын мәтініңізді көшіріп алыңыз.','Не сохранено. При конфликте версий скопируйте текст перед перезагрузкой страницы.');}finally{prefsBusy=false;}}
+ let generation=0;
+ function current(accountId:string,sequence:number){return sequence===generation&&user?.id===accountId;}
+ async function loadPreferences(){if(!user)return;const accountId=user.id,sequence=generation;prefsError='';try{const loaded=await accountProfiles.preferences(accountId);if(current(accountId,sequence))accountPrefs=loaded;}catch{if(current(accountId,sequence))prefsError=text($locale,'Баптаулар жүктелмеді. Қайта көріңіз.','Не удалось загрузить настройки. Повторите.');}}
+ async function savePreferences(){if(!user||!accountPrefs||prefsBusy)return;const accountId=user.id,sequence=generation,draft={...accountPrefs};prefsBusy=true;prefsSaved=false;prefsError='';try{const saved=await accountProfiles.save(accountId,draft);if(current(accountId,sequence)){accountPrefs=saved;prefsSaved=true;}}catch{if(current(accountId,sequence))prefsError=text($locale,'Сақталмады. Нұсқалар қайшылығында бетті қайта ашпас бұрын мәтініңізді көшіріп алыңыз.','Не сохранено. При конфликте версий скопируйте текст перед перезагрузкой страницы.');}finally{if(current(accountId,sequence))prefsBusy=false;}}
  function saveReader(){if(reading&&readerPrefs)reading.savePreferences(readerPrefs);}
  let motion=$state(false);
  let theme=$state<Theme>('system'),busy=$state(false),result=$state<AuthResult|null>(null);
  let displayName=$state(''),profileResult=$state<AuthResult|null>(null);
- onMount(()=>{theme=initializeTheme(preferences);motion=preferences.readMotion?.()||false;displayName=user?.displayName||'';void loadPreferences();if(reading)readerPrefs=reading.preferences('manga');});
- async function saveProfile(){if(!user||busy)return;busy=true;try{profileResult=await auth.updateProfile(user.id,displayName);if(profileResult.ok)await invalidateAll();}finally{busy=false;}}
- async function logout(){if(busy)return;busy=true;try{result=await auth.logout();if(result.ok){await invalidateAll();await goto('/');}}finally{busy=false;}}
- async function resend(){if(!user||busy)return;busy=true;try{result=await auth.resend(user.email);}finally{busy=false;}}
+ onMount(()=>{theme=initializeTheme(preferences);motion=preferences.readMotion?.()||false;if(reading)readerPrefs=reading.preferences('manga');});
+ $effect(()=>{const accountId=user?.id;untrack(()=>{generation++;accountPrefs=null;prefsError='';prefsSaved=false;prefsBusy=false;busy=false;result=null;profileResult=null;displayName=user?.displayName||'';if(accountId)void loadPreferences();});});
+ onDestroy(()=>{generation++;});
+ async function saveProfile(){if(!user||busy)return;const accountId=user.id,sequence=generation;busy=true;try{const saved=await auth.updateProfile(accountId,displayName);if(!current(accountId,sequence))return;profileResult=saved;if(saved.ok)await invalidateAll();}finally{if(current(accountId,sequence))busy=false;}}
+ async function logout(){if(!user||busy)return;const accountId=user.id,sequence=generation;busy=true;try{const saved=await auth.logout();if(!current(accountId,sequence))return;result=saved;if(saved.ok){await invalidateAll();await goto('/');}}finally{if(current(accountId,sequence))busy=false;}}
+ async function resend(){if(!user||busy)return;const accountId=user.id,sequence=generation,email=user.email;busy=true;try{const saved=await auth.resend(email);if(current(accountId,sequence))result=saved;}finally{if(current(accountId,sequence))busy=false;}}
+
 </script>
 <svelte:head><title>{text($locale,'Баптаулар','Настройки')} — Qmanga</title><meta name="robots" content="noindex"/></svelte:head>
 <SectionHeading level={1} title={text($locale,'Баптаулар','Настройки')}/>
