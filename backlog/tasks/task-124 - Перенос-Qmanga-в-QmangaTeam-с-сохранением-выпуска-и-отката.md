@@ -1,11 +1,11 @@
 ---
 id: TASK-124
 title: Перенос Qmanga в QmangaTeam с сохранением выпуска и отката
-status: Review
+status: Done
 assignee:
   - '@codex'
 created_date: '2026-10-22 19:46'
-updated_date: '2026-10-22 20:08'
+updated_date: '2026-10-22 20:28'
 labels: []
 dependencies: []
 ordinal: 66005
@@ -20,8 +20,8 @@ ordinal: 66005
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
 - [x] #1 Рабочий репозиторий перенесен в QmangaTeam/qmanga; maqsatto и Bauka07 имеют полный доступ; базовые права организации согласованы
-- [ ] #2 CI публикует валидные lowercase GHCR references после смены владельца; проверки и независимый review пройдены
-- [ ] #3 Локальный и серверный origin обновлены; текущие и предыдущие immutable images доступны для выпуска и отката; production SHA и health проверены
+- [x] #2 CI публикует валидные lowercase GHCR references после смены владельца; проверки и независимый review пройдены
+- [x] #3 Локальный и серверный origin обновлены; текущие и предыдущие immutable images доступны для выпуска и отката; production SHA и health проверены
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -33,11 +33,25 @@ ordinal: 66005
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-2026-10-23: slug QmangaTeam и display name Qmanga Team подтверждены через Chrome; старая приватная копия 0792a44 удалена после отдельного подтверждения. Рабочий репозиторий перенесен, maqsatto/Bauka07 Owner, базовая Read подтверждена после согласования. Local и VM origin обновлены на https://github.com/QmangaTeam/qmanga.git; VM ls-remote HEAD/main и refs/deploy-ready успешен. Staging/production active b7c5578403a7bf0bce27a4860bbc22accb68c773, предыдущий dfa6096f9a1cbd196885b9ac024ae3277365d327; внешний health PostgreSQL/S3 ok. Подготовлена lowercase-нормализация GHCR в обоих workflows и regression в общем CI. Red: 2 fail до правки, green: 2 pass/16 assertions после; component-alias regression pass; backlog doctor, bash -n deploy/*.sh и git diff --check pass. Независимый review не нашел ошибок diff, выявил bootstrap-риск нового package: live docker manifest inspect нового namespace вернул denied. Не ослаблять immutable-tag guard; требуется явная bootstrap-публикация новых packages, сохранение active/previous tags и проверка публичного pull. Deploy prefix пока старый намеренно. Push и переключение namespace еще не выполнены.
+Владелец разрешил перенос, полный GitHub-доступ maqsatto/Bauka07, базовую Read, удаление старой приватной копии 0792a44 после отдельного подтверждения, push TASK-124 и public для трех migrated packages с последующим возвратом запрета. Bauka нужен только GitHub; SSH/Oracle-права не расширялись.
 
-Коммиты 7a09cf1 (lowercase GHCR + regression) и 1722e83 (manual registry migration) опубликованы существующим SSH-доступом maqsatto. HTTPS OAuth push отклонен из-за отсутствия workflow scope; scopes/credentials не расширяли. Registry migration Actions 39843716253 success: active и previous image tags скопированы с проверкой raw manifest SHA256; старые packages сохранены. Новые packages private; изменение public заблокировано org package-creation policy. Подготовлено временное разрешение public с возвратом запрета после трех packages; ожидается отдельное browser confirmation владельца. Локальный второй пакет переключает default prefix lib/Compose/env на ghcr.io/qmangateam/qmanga и актуальные ссылки документов. bash -n, compose --images (новый default и явный старый override), diff --check, backlog doctor pass; независимый review без code blockers. Перед push обязательны anonymous pulls всех active/previous tags. Фактический systemd IMAGE_PREFIX override и DropInPaths отсутствуют; production healthy b7c5578. Первый staging tick может наследовать старый prefix из уже загруженного lib, поэтому final проверка включает фактические Config.Image.
+GitHub: Qmanga Team / QmangaTeam; рабочий репозиторий QmangaTeam/qmanga; maqsatto и Bauka07 Owner, Ygrik-CS Member, базовая Read. Три packages qmanga-api/web/gateway Public; org public package creation=false, private=true, internal=false, inherit_access=true после повторного открытия настройки.
 
-Владелец разрешил public для трех migrated packages с возвратом запрета. Через Chrome временно разрешено public package creation, qmanga-api/web/gateway переведены Public; запрет public creation сразу восстановлен и проверен повторным открытием Packages settings (public=false, private=true, internal=false, inherit_access=true). Anonymous manifest checks всех 5 active/previous tags успешны с пустым Docker config. На Oracle ARM64 VM реальные anonymous pulls всех 5 tags успешны; image ID каждого нового ref точно совпал со старым namespace. Второй пакет готов: default prefix lib/Compose/env новый, актуальные ссылки документов обновлены, legacy override работает. Повторно pass: 2 regression tests/16 assertions, bash -n, internal-staging-route, OCI backup hook fixture, immutable aliases fixture, compose config --quiet, diff --check. Независимый review второго пакета без блокеров при сохранении старых packages и проверке Config.Image после выпуска. Следующий шаг: опубликовать проверенный default-prefix commit, дождаться полного Verify и штатного poller release того же SHA; проверить actual SHA/health/Config.Image/rollback tag availability.
+Код: 7a09cf1 — lowercase GHCR references и regression в общем CI; 1722e83 — manual-only bootstrap/migration immutable images с уникальным bootstrap tag и сверкой raw manifest SHA256 без ослабления fail-closed guards; 90b6db03f59dfaf1a19daa40e1cb7ad0d4bf7c6b — новые default prefixes lib/Compose/env и актуальные адреса. Независимые review каждого существенного пакета и финальный review без блокеров.
 
-После подтверждения владельца завершена public-настройка трех packages, запрет создания public сразу восстановлен и проверен после reload. На VM выполнены реальные anonymous ARM64 pulls с пустым Docker config для всех 5 current/previous tags; каждый image ID совпадает с исходным. Config/staging.env и production.env атомарно обновлены только по IMAGE_PREFIX=ghcr.io/qmangateam/qmanga, mode0600 сохранен, значения секретов не выводились. Коммит 90b6db03f59dfaf1a19daa40e1cb7ad0d4bf7c6b опубликован через SSH. Локальный origin теперь git@github.com:QmangaTeam/qmanga.git, VM origin https://github.com/QmangaTeam/qmanga.git. Полные Verify39843706769/FastRelease39843706875 на1722e83 success; staging автоматически на1722e83, production на последней проверке b7c5578. Финальные Verify39844622844/FastRelease39844622864 на90b6db0 еще in progress: acceptance1 прошел, acceptance0 ждет загрузку шрифтов из Ubuntu apt mirror для Playwright. Кодовые проверки обеих CI-конфигураций и финальный независимый review без блокеров; финальная приемка требует выпуска90 на оба окружения и external SHA/health/actual Config.Image. Старые packages не удалять.
+Локальные проверки: red: 2 fail до исправления; green: 2 pass / 16 assertions после; bash -n, immutable aliases regression, internal staging route regression, OCI backup hook fixture, compose config и явный legacy override, backlog doctor, diff --check pass. Это fixture-проверка backup hook, не новый production restore drill.
+
+Remote: Registry migration 39843716253 success; полный Verify 39844622844 и Fast Release 39844622864 success на 90b6db0, включая обе acceptance-группы и все 3 ARM64 publications. refs/deploy-ready=90b6db0. Реальные anonymous ARM64 pulls всех 5 current/previous refs на VM с пустым Docker config pass; все новые image IDs равны исходным. Старые packages сохранены.
+
+Live acceptance 2026-10-23: staging и production active blue 90b6db03f59dfaf1a19daa40e1cb7ad0d4bf7c6b, previous green 1722e837c4d3ad9011cf9479e854c10cd45ba30c. Обе главные содержат exactSHA; health PostgreSQL/S3/status ok. Все4production Config.Image из нового namespace, actual image IDs совпадают с manifest-tag IDs. Staging 90 сохраняет старые ref names из уже загруженного lib первого тика; actual IDs всех 4 сервисов совпадают с новым namespace. Это проверенное переходное состояние до следующего обычного релиза, не необходимость ручного перезапуска. Previous manifest images доступны в обоих namespaces с одинаковыми IDs; реальный rollback не выполнялся. Host acceptance log: tmp/task-124/host-verification.log (ignored).
+
+Host: config/staging.env и production.env атомарно изменены только по IMAGE_PREFIX; mode 0600 сохранен, секреты не выводились. Фактических systemd prefix overrides нет, timer active, hold текущего SHA нет. Local origin git@github.com:QmangaTeam/qmanga.git работает существующим SSH-ключом maqsatto; VM origin https://github.com/QmangaTeam/qmanga.git и fetch работают. Старый HTTPS OAuth push не имел workflow scope; решено существующим SSH, scopes не расширялись. Обновлены текущие ссылки и реальный checkout path в OPERATIONS/RUNBOOK.
+
+Действий владельца для завершения TASK-124 не осталось. Сохранять старые packages и прежние immutable tags для переходного staging и отката.
 <!-- SECTION:NOTES:END -->
+
+## Final Summary
+
+<!-- SECTION:FINAL_SUMMARY:BEGIN -->
+Организация и рабочий репозиторий перенесены в QmangaTeam, maqsatto/Bauka07 имеют Owner, базовая Read. Мигрированы и проверены immutable ARM64 images и rollback refs; public-настройка трех packages завершена с возвратом запрета создания новых public packages. Новый CI и production используют новый registry; local/VM origins обновлены. Полный Verify и Fast Release 90b6db0 success, оба окружения автоматически выпущены на 90b6db03f59dfaf1a19daa40e1cb7ad0d4bf7c6b; внешние SHA/health и фактические image IDs проверены. Переходные staging ref names сохранены с доказанно идентичными IDs. Независимый review без блокеров; оставшихся действий пользователя нет.
+<!-- SECTION:FINAL_SUMMARY:END -->
