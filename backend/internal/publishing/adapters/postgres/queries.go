@@ -8,12 +8,12 @@ import (
 	"qmanga/internal/publishing/domain"
 )
 
-const studioColumns = `revision.id,publication.id,publication.project_id,chapter.id,title.id,title.name_kk,chapter.label,team.name,revision.status,revision.moderation_note,revision.version,revision.source_note,revision.credits,revision.rights_confirmed,coalesce(revision.rights_confirmed_by,''),publication.status,revision.preparation_method,revision.human_reviewed,coalesce(title.cover_asset_id,''),coalesce((SELECT display_name FROM users WHERE id=revision.human_reviewed_by),''),revision.human_reviewed_at`
+const studioColumns = `revision.id,publication.id,publication.project_id,chapter.id,title.id,title.name_kk,chapter.label,team.name,revision.status,revision.moderation_note,revision.version,revision.source_note,revision.credits,revision.rights_confirmed,coalesce(revision.rights_confirmed_by,''),publication.status,revision.preparation_method,revision.human_reviewed,coalesce(title.cover_asset_id,''),coalesce((SELECT display_name FROM users WHERE id=revision.human_reviewed_by),''),revision.human_reviewed_at,coalesce(publication.current_revision_id,'')`
 const studioJoins = ` FROM revisions revision JOIN releases publication ON publication.id=revision.release_id JOIN chapters chapter ON chapter.id=publication.chapter_id JOIN titles title ON title.id=chapter.title_id JOIN teams team ON team.id=publication.team_id `
 
 func scanStudio(row pgx.Row) (application.StudioRevision, error) {
 	item := application.StudioRevision{Pages: []application.Page{}}
-	failure := row.Scan(&item.ID, &item.ReleaseID, &item.ProjectID, &item.ChapterID, &item.TitleID, &item.TitleName, &item.ChapterLabel, &item.TeamName, &item.State, &item.Note, &item.Version, &item.Source, &item.Credits, &item.RightsConfirmed, &item.ConfirmedBy, &item.ReleaseStatus, &item.PreparationMethod, &item.HumanReviewed, &item.CoverID, &item.HumanReviewer, &item.HumanReviewedAt)
+	failure := row.Scan(&item.ID, &item.ReleaseID, &item.ProjectID, &item.ChapterID, &item.TitleID, &item.TitleName, &item.ChapterLabel, &item.TeamName, &item.State, &item.Note, &item.Version, &item.Source, &item.Credits, &item.RightsConfirmed, &item.ConfirmedBy, &item.ReleaseStatus, &item.PreparationMethod, &item.HumanReviewed, &item.CoverID, &item.HumanReviewer, &item.HumanReviewedAt, &item.CurrentRevisionID)
 	return item, failure
 }
 func (repository *Repository) Revision(ctx context.Context, actor, id string) (application.StudioRevision, error) {

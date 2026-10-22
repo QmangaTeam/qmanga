@@ -195,3 +195,13 @@ func (service *Service) DirectPublish(ctx context.Context, actor, tokenID, id st
 	}
 	return service.repository.DirectPublish(ctx, actor, tokenID, id, version)
 }
+
+func (service *Service) SelectCoverDirect(ctx context.Context, actor, tokenID, project, page string) error {
+	if actor == "" || tokenID == "" {
+		return domain.ErrForbidden
+	}
+	if page == "" {
+		return domain.ErrTransition
+	}
+	return service.repository.SelectCoverDirect(ctx, actor, tokenID, project, page)
+}

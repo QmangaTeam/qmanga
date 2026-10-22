@@ -36,3 +36,23 @@ func TestDirectPublishRejectsSessionAndUnprivilegedToken(t *testing.T) {
 		})
 	}
 }
+
+func TestDirectCoverRejectsSessionAndOrdinaryToken(t *testing.T) {
+	for _, token := range []*identity.APIToken{nil, {ID: "ordinary"}} {
+		router := gin.New()
+		handler := NewPublishingHandler(nil)
+		router.PUT("/cover", func(c *gin.Context) {
+			if token != nil {
+				c.Set("api_token", *token)
+			}
+			handler.selectCover(c)
+		})
+		response := httptest.NewRecorder()
+		request := httptest.NewRequest("PUT", "/cover", strings.NewReader(`{"page_id":"page"}`))
+		request.Header.Set("Content-Type", "application/json")
+		router.ServeHTTP(response, request)
+		if response.Code != 409 || !strings.Contains(response.Body.String(), "moderation_required") {
+			t.Fatalf("got %d %s", response.Code, response.Body.String())
+		}
+	}
+}

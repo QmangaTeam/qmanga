@@ -94,6 +94,37 @@ INSERT INTO api_tokens(id,user_id,name,prefix,token_hash,created_at,expires_at,d
 			}
 		})
 	}
+	// Only direct-publish bearer tokens may select an already processed page.
+	if err := repository.SelectCoverDirect(ctx, "owner", "missing", "project", "page"); !errors.Is(err, domain.ErrForbidden) {
+		t.Fatalf("cover missing token: %v", err)
+	}
+	run("UPDATE api_tokens SET direct_publish=false")
+	if err := repository.SelectCoverDirect(ctx, "owner", "token", "project", "page"); !errors.Is(err, domain.ErrForbidden) {
+		t.Fatalf("cover ordinary token: %v", err)
+	}
+	run("UPDATE api_tokens SET direct_publish=true")
+	if err := repository.SelectCoverDirect(ctx, "owner", "token", "project", ""); !errors.Is(err, domain.ErrTransition) {
+		t.Fatalf("cover empty page: %v", err)
+	}
+	if err := repository.SelectCoverDirect(ctx, "owner", "token", "project", "missing"); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("cover missing page: %v", err)
+	}
+	run("UPDATE pages SET status='failed'")
+	if err := repository.SelectCoverDirect(ctx, "owner", "token", "project", "page"); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("cover failed page: %v", err)
+	}
+	run("UPDATE pages SET status='ready'")
+	if err := repository.SelectCoverDirect(ctx, "owner", "token", "project", "page"); err != nil {
+		t.Fatal(err)
+	}
+	var cover string
+	if err := database.Pool().QueryRow(ctx, "SELECT cover_asset_id FROM titles WHERE id='title'").Scan(&cover); err != nil || cover == "" {
+		t.Fatalf("cover not selected: %v", err)
+	}
+	var coverToken string
+	if err := database.Pool().QueryRow(ctx, "SELECT metadata->>'api_token_id' FROM audit_logs WHERE action='direct_select_cover'").Scan(&coverToken); err != nil || coverToken != "token" {
+		t.Fatalf("cover audit: %v", err)
+	}
 	if err := repository.DirectPublish(ctx, "owner", "missing", "revision", 5); !errors.Is(err, domain.ErrForbidden) {
 		t.Fatalf("missing token: %v", err)
 	}
@@ -115,8 +146,29 @@ INSERT INTO api_tokens(id,user_id,name,prefix,token_hash,created_at,expires_at,d
 	if err := database.Pool().QueryRow(ctx, "SELECT metadata->>'api_token_id' FROM audit_logs WHERE action='direct_publish' AND user_id='owner'").Scan(&token); err != nil || token != "token" {
 		t.Fatalf("audit token=%s err=%v", token, err)
 	}
+	view, err := repository.Revision(ctx, "owner", "revision")
+	if err != nil || view.CurrentRevisionID != "revision" {
+		t.Fatalf("current revision read model: %q %v", view.CurrentRevisionID, err)
+	}
+	// Neither withdrawing nor superseding a publication may be undone by retry.
+	run("UPDATE releases SET status='withdrawn'")
+	if err := repository.DirectPublish(ctx, "owner", "token", "revision", 5); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("withdrawn retry: %v", err)
+	}
+	run("UPDATE releases SET status='published',current_revision_id=NULL")
+	if err := repository.DirectPublish(ctx, "owner", "token", "revision", 5); !errors.Is(err, domain.ErrConflict) {
+		t.Fatalf("superseded retry: %v", err)
+	}
+	view, err = repository.Revision(ctx, "owner", "revision")
+	if err != nil || view.CurrentRevisionID != "" {
+		t.Fatalf("superseded revision read model: %q %v", view.CurrentRevisionID, err)
+	}
+	run("UPDATE releases SET current_revision_id='revision'")
 	run("UPDATE api_tokens SET revoked_at=now()")
 	if err := repository.DirectPublish(ctx, "owner", "token", "revision", 5); !errors.Is(err, domain.ErrForbidden) {
 		t.Fatalf("revoked retry: %v", err)
+	}
+	if err := repository.SelectCoverDirect(ctx, "owner", "token", "project", "page"); !errors.Is(err, domain.ErrForbidden) {
+		t.Fatalf("cover revoked token: %v", err)
 	}
 }

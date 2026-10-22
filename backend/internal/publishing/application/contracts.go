@@ -16,7 +16,7 @@ type Page struct {
 type StudioRevision struct {
 	CoverID, HumanReviewer                                                                       string
 	HumanReviewedAt                                                                              *time.Time
-	ReleaseStatus, PreparationMethod                                                             string
+	CurrentRevisionID, ReleaseStatus, PreparationMethod                                          string
 	HumanReviewed                                                                                bool
 	Source, Credits, ConfirmedBy                                                                 string
 	RightsConfirmed                                                                              bool
@@ -110,6 +110,7 @@ type Repository interface {
 	Review(context.Context, string, string, string, string) error
 	Withdraw(context.Context, string, string, string) error
 	Restore(context.Context, string, string, string) error
+	SelectCoverDirect(context.Context, string, string, string, string) error
 	SelectCover(context.Context, string, string, string) error
 	CanUploadCover(context.Context, string, string) error
 	SaveCover(context.Context, string, string, CoverAsset) error

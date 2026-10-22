@@ -81,32 +81,7 @@ func cloneRevision(ctx context.Context, tx pgx.Tx, id, release string) error {
 
 func (repository *Repository) SelectCover(ctx context.Context, actor, project, page string) error {
 	return repository.withProject(ctx, actor, project, "submit", func(tx pgx.Tx) error {
-		var title, previous string
-		if err := tx.QueryRow(ctx, `SELECT title.id,coalesce(title.cover_asset_id,'') FROM titles title JOIN projects project ON project.title_id=title.id WHERE project.id=$1 FOR UPDATE OF title`, project).Scan(&title, &previous); err != nil {
-			return err
-		}
-		if page == "" {
-			if _, err := tx.Exec(ctx, `UPDATE titles SET cover_asset_id='',cover_managed=true,updated_at=now() WHERE id=$1`, title); err != nil {
-				return err
-			}
-			metadata, _ := json.Marshal(map[string]any{"before": map[string]string{"cover_asset_id": previous}, "after": map[string]string{"cover_asset_id": ""}})
-			_, err := tx.Exec(ctx, `INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,metadata) VALUES($1,$2,'remove_cover','title',$3,$4)`, uuid.NewString(), actor, title, metadata)
-			return err
-		}
-		id := uuid.NewString()
-		result, err := tx.Exec(ctx, `INSERT INTO title_cover_assets(id,title_id,object_key,mime,checksum,width,height,byte_size,selected_by) SELECT $1,$2,variant.object_key,variant.mime,variant.checksum,variant.width,variant.height,variant.byte_size,$3 FROM page_variants variant JOIN pages page ON page.id=variant.page_id JOIN revisions revision ON revision.id=page.revision_id JOIN releases publication ON publication.id=revision.release_id WHERE page.id=$4 AND publication.project_id=$5 AND page.status='ready' AND variant.tier='eco' ORDER BY variant.offset_y LIMIT 1`, id, title, actor, page, project)
-		if err != nil {
-			return err
-		}
-		if result.RowsAffected() != 1 {
-			return domain.ErrNotFound
-		}
-		if _, err = tx.Exec(ctx, `UPDATE titles SET cover_asset_id=$2,cover_managed=true,updated_at=now() WHERE id=$1`, title, id); err != nil {
-			return err
-		}
-		metadata, _ := json.Marshal(map[string]any{"before": map[string]string{"cover_asset_id": previous}, "after": map[string]string{"cover_asset_id": id}})
-		_, err = tx.Exec(ctx, `INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,metadata) VALUES($1,$2,'select_cover','title',$3,$4)`, uuid.NewString(), actor, title, metadata)
-		return err
+		return selectCover(ctx, tx, actor, project, page)
 	})
 }
 
@@ -199,5 +174,34 @@ func ensureDefaultCover(ctx context.Context, tx pgx.Tx, actor, chapter, revision
 		return domain.ErrTransition
 	}
 	_, err = tx.Exec(ctx, `UPDATE titles SET cover_asset_id=$2,updated_at=now() WHERE id=$1`, title, id)
+	return err
+}
+
+func selectCover(ctx context.Context, tx pgx.Tx, actor, project, page string) error {
+	var title, previous string
+	if err := tx.QueryRow(ctx, `SELECT title.id,coalesce(title.cover_asset_id,'') FROM titles title JOIN projects project ON project.title_id=title.id WHERE project.id=$1 FOR UPDATE OF title`, project).Scan(&title, &previous); err != nil {
+		return err
+	}
+	if page == "" {
+		if _, err := tx.Exec(ctx, `UPDATE titles SET cover_asset_id='',cover_managed=true,updated_at=now() WHERE id=$1`, title); err != nil {
+			return err
+		}
+		metadata, _ := json.Marshal(map[string]any{"before": map[string]string{"cover_asset_id": previous}, "after": map[string]string{"cover_asset_id": ""}})
+		_, err := tx.Exec(ctx, `INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,metadata) VALUES($1,$2,'remove_cover','title',$3,$4)`, uuid.NewString(), actor, title, metadata)
+		return err
+	}
+	id := uuid.NewString()
+	result, err := tx.Exec(ctx, `INSERT INTO title_cover_assets(id,title_id,object_key,mime,checksum,width,height,byte_size,selected_by) SELECT $1,$2,variant.object_key,variant.mime,variant.checksum,variant.width,variant.height,variant.byte_size,$3 FROM page_variants variant JOIN pages page ON page.id=variant.page_id JOIN revisions revision ON revision.id=page.revision_id JOIN releases publication ON publication.id=revision.release_id WHERE page.id=$4 AND publication.project_id=$5 AND page.status='ready' AND variant.tier='eco' ORDER BY variant.offset_y LIMIT 1`, id, title, actor, page, project)
+	if err != nil {
+		return err
+	}
+	if result.RowsAffected() != 1 {
+		return domain.ErrNotFound
+	}
+	if _, err = tx.Exec(ctx, `UPDATE titles SET cover_asset_id=$2,cover_managed=true,updated_at=now() WHERE id=$1`, title, id); err != nil {
+		return err
+	}
+	metadata, _ := json.Marshal(map[string]any{"before": map[string]string{"cover_asset_id": previous}, "after": map[string]string{"cover_asset_id": id}})
+	_, err = tx.Exec(ctx, `INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,metadata) VALUES($1,$2,'select_cover','title',$3,$4)`, uuid.NewString(), actor, title, metadata)
 	return err
 }

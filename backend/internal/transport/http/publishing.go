@@ -82,7 +82,7 @@ func revisionView(item application.StudioRevision) gin.H {
 	for _, page := range item.Pages {
 		pages = append(pages, gin.H{"id": page.ID, "position": page.Position, "width": page.Width, "height": page.Height, "bytes": page.Bytes, "status": page.Status, "failure": page.Failure, "upload_key": page.UploadKey, "original_name": page.OriginalName, "thumbnail_id": page.ThumbnailID})
 	}
-	return gin.H{"cover_id": item.CoverID, "release_status": item.ReleaseStatus, "preparation_method": item.PreparationMethod, "human_reviewed": item.HumanReviewed, "human_reviewer": item.HumanReviewer, "human_reviewed_at": item.HumanReviewedAt, "source_note": item.Source, "credits": item.Credits, "rights_confirmed": item.RightsConfirmed, "confirmed_by": item.ConfirmedBy, "id": item.ID, "release_id": item.ReleaseID, "project_id": item.ProjectID, "chapter_id": item.ChapterID, "title_id": item.TitleID, "title_name": item.TitleName, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "state": item.State, "note": item.Note, "version": item.Version, "pages": pages}
+	return gin.H{"cover_id": item.CoverID, "release_status": item.ReleaseStatus, "current_revision_id": item.CurrentRevisionID, "preparation_method": item.PreparationMethod, "human_reviewed": item.HumanReviewed, "human_reviewer": item.HumanReviewer, "human_reviewed_at": item.HumanReviewedAt, "source_note": item.Source, "credits": item.Credits, "rights_confirmed": item.RightsConfirmed, "confirmed_by": item.ConfirmedBy, "id": item.ID, "release_id": item.ReleaseID, "project_id": item.ProjectID, "chapter_id": item.ChapterID, "title_id": item.TitleID, "title_name": item.TitleName, "chapter_label": item.ChapterLabel, "team_name": item.TeamName, "state": item.State, "note": item.Note, "version": item.Version, "pages": pages}
 }
 func (handler *PublishingHandler) projectChapters(request *gin.Context) {
 	items, failure := handler.service.ProjectChapters(request.Request.Context(), handler.actor(request), request.Param("id"), requestOffset(request))
@@ -327,10 +327,27 @@ func (handler *PublishingHandler) restore(request *gin.Context) {
 	request.Status(204)
 }
 
-// Legacy manual artwork commands must not bypass the title-change review workflow.
+// Browser sessions and ordinary tokens retain the moderated artwork workflow.
+// Explicit direct-publish tokens may select an already processed project page.
 func (handler *PublishingHandler) selectCover(request *gin.Context) {
-	Error(request, 409, "moderation_required", "Мұқаба өзгерісін жоба деректері арқылы модерацияға жіберіңіз")
+	tokenID, allowed := DirectPublishToken(request)
+	if !allowed {
+		Error(request, 409, "moderation_required", "Мұқаба өзгерісін жоба деректері арқылы модерацияға жіберіңіз")
+		return
+	}
+	var input struct {
+		PageID string `json:"page_id"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	if err := handler.service.SelectCoverDirect(request.Request.Context(), handler.actor(request), tokenID, request.Param("id"), input.PageID); err != nil {
+		publicationError(request, err)
+		return
+	}
+	request.Status(204)
 }
+
 func (handler *PublishingHandler) uploadCover(request *gin.Context) {
 	Error(request, 409, "moderation_required", "Мұқаба өзгерісін жоба деректері арқылы модерацияға жіберіңіз")
 }
