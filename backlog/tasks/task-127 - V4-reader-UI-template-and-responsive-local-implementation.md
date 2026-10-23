@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 22:25'
-updated_date: '2026-10-23 00:18'
+updated_date: '2026-10-23 00:24'
 labels: []
 dependencies: []
 ordinal: 68005
@@ -60,4 +60,6 @@ Motion follow-up implemented LOCAL ONLY: viewport-triggered continuation/rating 
 Disclosure follow-up LOCAL ONLY: shared measured max-height260ms action animates description, genre/tag/collection groups and title details both ways; description clipping now uses measured3-line height instead of immediate line-clamp removal. TitleTags inert state explicitly updates on expansion.65UI tests870assertions,Svelte0errors0warnings,architecture,diffcheck,Dockerweb build/healthy startup pass. Independent review_disclosures approved. Runtime observed intermediate heights for all4groups, rapid double toggle stable, expanded description remeasured at320/834/1280 without overflow; OS and site reduced-motion both0s/final height, settings/viewport restored. Proof tmp/v4/smooth-disclosures.png. No backend/admin changes or push; owner local acceptance remains.
 
 HTML source inspected directly: exact dark/light theme tokens match current palette, no speculative orange replacement. file URL browser protocol blocked, no browser bypass attempted. Added library progress using real current chapter page/fraction, not fabricated whole-title chapter completion; thin4px accent over line track matches HTML. Visible-card lazy loading, max4manifest requests, dedupe/cache; no image downloads. Svelte0errors0warnings,65UI tests870assertions,3new application tests9assertions,architecture/contrast,diffcheck,Dockerwebhealthy pass. Local authenticated library card renders real chapter/page counts and percentage;320px no overflow; screenshot tmp/v4/library-progress.png. Independent review_library_release approved. Backend/admin/schema untouched. Owner now explicitly authorizes focused separate pushes; preparing baseUI/statistics, genres/tags, animations, disclosures, library groups. Release observation pending; nativeFigma AC remains open.
+
+Authorized five separate main pushes completed: baseUI/statistics through00e56f1; taxonomy/continuation through345be9a; generalmotion135f34a; disclosurese26f2d5; library/referencebars bff4acb9f211622cd339c4f47743b4b693ae2516. FastRelease39877382728 success and refs/deploy-ready equals bff4acb; pending intermediate workflows coalesced by GitHub. FullVerification39877382745 still pending at observation. Fresh external production homepage remains d312715dd55b8d59a17e120ebf2835bffa446999 with private,no-store and health200/ok; new UI NOT confirmed live. Documented deploy key andknown_hosts paths unavailable on this workspace, so VMpoller/hold cannot be inspected; no bypass or serverchanges. Next: observe production moving to bff4acb and publicsmoke, inspect normal VMpoller using authorized documented access if it remains old; retainReview/nativeFigma open. Additional local light1280library checked #a94406 and lineRGB222/210/201, nooverflow; dark #ff873d and lineRGB61/48/43. Local demo data/assets were not committed or pushed.
 <!-- SECTION:NOTES:END -->
