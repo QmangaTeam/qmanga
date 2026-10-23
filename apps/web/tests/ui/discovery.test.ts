@@ -111,3 +111,15 @@ test('home bounds a busy updates feed while retaining access to more releases',a
  expect(await elements(html,'a[href="/updates"]')).toHaveLength(1);
  expect(html).not.toContain('/read/release-6');
 });
+
+
+test('ranking switches preserve focus and scroll with enhanced navigation',async()=>{
+ const html=render(HomeDiscovery).body;
+ const switches=await elements(html,'.shelf-tabs a');
+ expect(switches).toHaveLength(4);
+ for(const link of switches){
+  expect(link['data-sveltekit-noscroll']).toBe('');
+  expect(link['data-sveltekit-keepfocus']).toBe('');
+  expect(link['data-sveltekit-preload-data']).toBe('hover');
+ }
+});
