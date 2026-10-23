@@ -1,6 +1,7 @@
 <script lang="ts">
  import TitleBanner from './TitleBanner.svelte';
  import TitleTags from './TitleTags.svelte';
+ import {disclosureHeight} from '$lib/shared/presentation/ui/disclosure-height';
  import {revealFill} from '$lib/shared/presentation/ui/reveal-fill';
  import OverflowDetails from '$lib/shared/presentation/ui/OverflowDetails.svelte';
  import AgeRating from './AgeRating.svelte';
@@ -94,7 +95,7 @@
      {#if nextURL}<Pager label={text($locale,'Тарау беттері','Страницы глав')} next={{label:text($locale,'Келесі тараулар','Следующие главы'),href:nextURL}}/>{/if}
     </section>
    {:else if active==='about'}
-    <section class="about"><h2>{text($locale,'Сипаттама','Описание')}</h2><p id="title-description" use:observeDescription={title.description} class:description-collapsed={!descriptionExpanded}>{title.description||text($locale,'Сипаттама әлі қосылмаған','Описание пока не добавлено')}</p>{#if descriptionCanExpand}<button class="description-toggle" type="button" aria-expanded={descriptionExpanded} aria-controls="title-description" onclick={()=>descriptionExpanded=!descriptionExpanded}>{descriptionExpanded?text($locale,'Жию','Свернуть'):text($locale,'Толығырақ','Подробнее')}<Icon name={descriptionExpanded?'up':'down'} size={16}/></button>{/if}</section>
+    <section class="about"><h2>{text($locale,'Сипаттама','Описание')}</h2><p id="title-description" use:observeDescription={title.description} use:disclosureHeight={{expanded:descriptionExpanded,lines:3}} class:description-collapsed={!descriptionExpanded}>{title.description||text($locale,'Сипаттама әлі қосылмаған','Описание пока не добавлено')}</p>{#if descriptionCanExpand}<button class="description-toggle" type="button" aria-expanded={descriptionExpanded} aria-controls="title-description" onclick={()=>descriptionExpanded=!descriptionExpanded}>{descriptionExpanded?text($locale,'Жию','Свернуть'):text($locale,'Толығырақ','Подробнее')}<Icon name={descriptionExpanded?'up':'down'} size={16}/></button>{/if}</section>
     {#if genreTags.length}<section class="about-taxonomy" aria-labelledby="title-genres-heading"><h2 id="title-genres-heading">{text($locale,'Жанрлар','Жанры')}</h2><TitleTags items={genreTags} id={'title-genres-'+title.id}/></section>{/if}
     {#if categoryTags.length}<section class="about-taxonomy" aria-labelledby="title-tags-heading"><h2 id="title-tags-heading">{text($locale,'Тегтер','Теги')}</h2><TitleTags items={categoryTags} id={'title-tags-'+title.id} tags/></section>{/if}
     {#if collectionTags.length}<section class="about-taxonomy" aria-labelledby="title-collections-heading"><h2 id="title-collections-heading">{text($locale,'Жинақтар','Подборки')}</h2><TitleTags items={collectionTags} id={'title-collections-'+title.id}/></section>{/if}
@@ -134,7 +135,7 @@
   .title-tabs :global(svg){display:none}
  }
 
- .about p.description-collapsed{display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:3;line-clamp:3;overflow:hidden}
+ .about p{overflow:hidden}.about p.description-collapsed{max-height:5.1em}
  .description-toggle{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:4px 0;border:0;background:none;color:var(--accent);font:inherit;font-weight:600;cursor:pointer}
  .description-toggle:hover{text-decoration:underline}.description-toggle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
  .title-tabs{position:relative;isolation:isolate;display:grid;grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible;gap:0}

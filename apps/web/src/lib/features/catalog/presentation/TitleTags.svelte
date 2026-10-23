@@ -1,21 +1,23 @@
 <script lang="ts">
  import {useLocale,text} from '$lib/shared/presentation/locale';
+ import {disclosureHeight} from '$lib/shared/presentation/ui/disclosure-height';
  import Icon from '$lib/shared/presentation/ui/Icon.svelte';
  let {items,id,tags=false}:{tags?:boolean;items:{key:string;href:string;label:string}[];id:string}=$props();
  const {locale}=useLocale();
  let expanded=$state(false),canExpand=$state(false);
  $effect(()=>{id;expanded=false;});
- function observe(node:HTMLDivElement){
+ function observe(node:HTMLDivElement,value:boolean){
+  let currentExpanded=value;
   let disposed=false;
-  const measure=()=>{if(disposed)return;const limit=parseFloat(getComputedStyle(node).getPropertyValue('--preview-height'));canExpand=node.scrollHeight>limit+1;if(!canExpand)expanded=false;for(const link of node.querySelectorAll('a'))link.toggleAttribute('inert',!expanded&&link.offsetTop+link.offsetHeight>limit+1);};
+  const measure=()=>{if(disposed)return;const limit=parseFloat(getComputedStyle(node).getPropertyValue('--preview-height'));canExpand=node.scrollHeight>limit+1;if(!canExpand)expanded=false;for(const link of node.querySelectorAll('a'))link.toggleAttribute('inert',!currentExpanded&&link.offsetTop+link.offsetHeight>limit+1);};
   const resize=new ResizeObserver(measure);resize.observe(node);
   const changes=new MutationObserver(measure);changes.observe(node,{childList:true,subtree:true,characterData:true});
   document.fonts.addEventListener('loadingdone',measure);void document.fonts.ready.then(measure);measure();
-  return {destroy(){disposed=true;resize.disconnect();changes.disconnect();document.fonts.removeEventListener('loadingdone',measure);}};
+  return {update(value:boolean){currentExpanded=value;measure();},destroy(){disposed=true;resize.disconnect();changes.disconnect();document.fonts.removeEventListener('loadingdone',measure);}};
  }
 </script>
 {#if items.length}<div class="title-taxonomy">
- <div {id} class="title-genres" class:expanded use:observe>{#each items as item (item.key)}<a class:tag={tags} href={item.href}>{#if tags}<span class="tag-mark" aria-hidden="true">#</span>{/if}{item.label}</a>{/each}</div>
+ <div {id} class="title-genres" class:expanded use:observe={expanded} use:disclosureHeight={{expanded}}>{#each items as item (item.key)}<a class:tag={tags} href={item.href}>{#if tags}<span class="tag-mark" aria-hidden="true">#</span>{/if}{item.label}</a>{/each}</div>
  {#if canExpand}<button class="tags-toggle" type="button" aria-expanded={expanded} aria-controls={id} onclick={()=>expanded=!expanded}>{expanded?text($locale,'Жию','Свернуть'):text($locale,'Толығырақ','Подробнее')}<Icon name={expanded?'up':'down'} size={16}/></button>{/if}
 </div>{/if}
 <style>

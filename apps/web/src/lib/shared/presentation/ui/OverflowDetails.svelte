@@ -1,6 +1,7 @@
 <script lang="ts">
  import type {Snippet} from 'svelte';
  import {useLocale,text} from '$lib/shared/presentation/locale';
+ import {disclosureHeight} from './disclosure-height';
  import Icon from './Icon.svelte';
  let {id,label,children,previewHeight=240}:{id:string;label:string;children:Snippet;previewHeight?:number}=$props();
  const {locale}=useLocale();
@@ -24,7 +25,7 @@
  }
 </script>
 <div class="overflow-details">
- <div class="preview" class:expanded style:--preview-height={previewHeight+'px'}><div {id} use:observe={{expanded,limit:previewHeight}}>{@render children()}</div></div>
+ <div class="preview" class:expanded style:--preview-height={previewHeight+'px'} use:disclosureHeight={{expanded}}><div {id} use:observe={{expanded,limit:previewHeight}}>{@render children()}</div></div>
  {#if overflow}<button type="button" aria-controls={id} aria-expanded={expanded} aria-label={(expanded?text($locale,'Жию','Свернуть'):text($locale,'Толығырақ','Подробнее'))+': '+label} onclick={()=>expanded=!expanded}>{expanded?text($locale,'Жию','Свернуть'):text($locale,'Толығырақ','Подробнее')}<Icon name={expanded?'up':'down'} size={16}/></button>{/if}
 </div>
 <style>

@@ -12,3 +12,5 @@
 /* Both the OS preference and Qmanga's own setting show the final value immediately. */
 @media(prefers-reduced-motion:reduce){.motion-track>.motion-fill{transform:none!important}.public-ui :where(button,.button,.continue-card,.translation-team):active{transform:none!important}}
 html[data-motion=reduce] .motion-track>.motion-fill,html[data-motion=reduce] .public-ui :where(button,.button,.continue-card,.translation-team):active{transform:none!important}
+
+.disclosure-motion{overflow:hidden;transition:max-height 260ms cubic-bezier(.2,.7,.2,1)}
