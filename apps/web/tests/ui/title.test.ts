@@ -63,7 +63,7 @@ test('description SSR keeps the preview without offering an unmeasured disclosur
 
 test('title tab links preserve scroll without a content fragment',async()=>{
  const html=render(Title,{props:{tab:'about'}}).body;
- for(const link of await elements(html,'.title-tabs a')){expect(link.href).not.toContain('#');expect(link['data-sveltekit-noscroll']).toBeDefined();}
+ for(const link of await elements(html,'.title-tabs a')){expect(link.href).not.toContain('#');expect(link['data-sveltekit-noscroll']).toBeDefined();expect(link['data-sveltekit-keepfocus']).toBeDefined();expect(link['data-sveltekit-preload-data']).toBe('hover');}
  expect(await elements(html,'.metadata .metadata-rail')).toHaveLength(1);
  expect(html).toContain('Издатель');
  expect(await elements(html,'.metadata .contributors')).toHaveLength(0);

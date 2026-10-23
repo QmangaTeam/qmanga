@@ -63,3 +63,5 @@ Local ranking motion follow-up23October: query links use SvelteKit enhanced navi
 Local Load more motion: only newly appended keyed update rows fade/translate6px over220ms. Initial rows and earlier batches remain steady; data and keyboard actions are available immediately. OS and site reduced-motion settings disable the entry animation.
 
 Local catalogue motion: filter/sort updates retain existing client-side goto navigation and animate only the canonical-filter-keyed results panel180ms opacity/4px. Controls remain mounted; reset preserves sort/query and focus. Clear-all scroll/focus attributes apply only to its control group, never title links. OS and site reduced motion disable animation.
+
+Title tabs retain query-backed enhanced navigation with noscroll/keepfocus and hover data preload. Existing160ms directional content entry and180ms indicator slide remain; both OS and site reduced-motion settings explicitly disable panel and indicator movement. Back/Forward restore the selected section without a document reload.

@@ -74,7 +74,7 @@
 
  </aside>
 
-  <nav class="title-tabs" style:--active-tab={tabs.findIndex(item=>item.id===active)} aria-label={text($locale,'Тайтл бөлімдері','Разделы тайтла')}>{#each tabs as item}<a data-sveltekit-noscroll href={base+'?tab='+item.id} onclick={()=>slideDirection=tabs.findIndex(value=>value.id===item.id)>=tabs.findIndex(value=>value.id===active)?1:-1} aria-current={active===item.id?'page':undefined}><Icon name={item.icon} size={18}/><span>{item.label}</span>{#if item.count!==undefined}<span class="tab-count">{item.count}</span>{/if}</a>{/each}</nav>
+  <nav class="title-tabs" style:--active-tab={tabs.findIndex(item=>item.id===active)} aria-label={text($locale,'Тайтл бөлімдері','Разделы тайтла')}>{#each tabs as item}<a data-sveltekit-noscroll data-sveltekit-keepfocus data-sveltekit-preload-data="hover" href={base+'?tab='+item.id} onclick={()=>slideDirection=tabs.findIndex(value=>value.id===item.id)>=tabs.findIndex(value=>value.id===active)?1:-1} aria-current={active===item.id?'page':undefined}><Icon name={item.icon} size={18}/><span>{item.label}</span>{#if item.count!==undefined}<span class="tab-count">{item.count}</span>{/if}</a>{/each}</nav>
  <div class="title-main">
   <dialog bind:this={statsDialog} class="stats-dialog" aria-labelledby="stats-title"><div class="stats-dialog-heading"><h2 id="stats-title">{text($locale,'Тайтл статистикасы','Статистика тайтла')}</h2><button class="button subtle" type="button" onclick={()=>statsDialog?.close()} aria-label={text($locale,'Жабу','Закрыть')}>×</button></div>{@render statistics()}</dialog>
 
@@ -144,6 +144,8 @@
  .tab-panel{animation:tab-enter 160ms ease-out}
  @keyframes tab-enter{from{opacity:.6;transform:translateX(var(--tab-shift))}to{opacity:1;transform:translateX(0)}}
  @media(prefers-reduced-motion:reduce){.title-tabs::before{transition:none}.tab-panel{animation:none}}
+ :global(html[data-motion=reduce]) .title-tabs::before{transition:none}
+ :global(html[data-motion=reduce]) .tab-panel{animation:none}
  @media(max-width:959px){.title-layout:not(.about-view) .title-main{grid-row:4}}
  /* One information panel: sidebar on desktop, below navigation on small screens. */
  .title-information{grid-column:1/-1;grid-row:4;min-width:0}
