@@ -4,6 +4,8 @@
  const {locale,change:changeLanguage}=useLocale();
  import LibrarySyncStatus from './LibrarySyncStatus.svelte';
  import type {LibrarySync} from '../application/library-sync';
+ import LibraryProgress from './LibraryProgress.svelte';
+ import type {LibraryProgressReader} from '../application/library-progress';
  import LibraryRow from './LibraryRow.svelte';
  import ProgressPosition from './ProgressPosition.svelte';
  import SectionHeading from '$lib/shared/presentation/ui/SectionHeading.svelte';
@@ -11,7 +13,7 @@
  import type {LibraryEntry,ProgressStorage,ReadingGateway,ReadingChanges} from '../application/progress';
  import {LibraryDirectory} from '../application/library-directory';
 
- let {readingGateway,progressStorage,librarySync,readingChanges}:{readingChanges?:ReadingChanges;readingGateway:ReadingGateway;progressStorage:ProgressStorage;librarySync?:LibrarySync}=$props();
+ let {readingGateway,progressStorage,librarySync,readingChanges,libraryProgress}:{libraryProgress?:LibraryProgressReader;readingChanges?:ReadingChanges;readingGateway:ReadingGateway;progressStorage:ProgressStorage;librarySync?:LibrarySync}=$props();
  let account=$state<string|null>(null),message=$state(''),filter=$state('all'),valid=true;
  let directoryVersion=$state(0);
  const directory=new LibraryDirectory(untrack(()=>readingGateway),()=>directoryVersion++);
@@ -112,7 +114,7 @@
 {#if account}
  <nav class="library-filters" aria-label={copy($locale,"Тізім")}>{#each [['all',copy($locale,"Барлығы")],['favorites',copy($locale,"Таңдаулы")],...Object.entries(statusNames)] as [value,label]}<button aria-pressed={filter===value} disabled={busy||!!savingTitle} onclick={()=>{filter=value;void handleFilterChange();}}>{label}</button>{/each}</nav>
  {#if partial}<p class="muted">{text($locale,'Жергілікті көшірме немесе синхрондалмаған өзгерістер. Толық сан әзірге белгісіз.','Локальная копия или несинхронизированные изменения. Полное число пока неизвестно.')}</p>{:else if total!==undefined}<p class="muted">{text($locale,'Табылды: ','Найдено: ')}{total}</p>{/if}
- <div class="library-grid">{#each entries as item (item.titleId)}<LibraryRow statusLabel={filter==='all'||filter==='favorites'?statusNames[item.status]:''} coverURL={item.coverURL} name={item.name} href={`/titles/${item.slug}`} detail={text($locale,'Оқылмаған тараулар:','Непрочитанных глав:')+' '+item.unseen} releaseId={item.progress.releaseId} continueLabel={copy($locale,"Жалғастыру")}>{#if item.progress.releaseId}<ProgressPosition progress={item.progress}/>{/if}<div class="entry-controls"><select aria-label={item.name+': '+text($locale,'мәртебесі','статус')} bind:value={item.status} disabled={busy||!!savingTitle} onchange={()=>update(item)}>{#each Object.entries(statusNames) as [value,label]}<option {value}>{label}</option>{/each}</select><label><input type="checkbox" bind:checked={item.favorite} disabled={busy||!!savingTitle} onchange={()=>update(item)}/>{copy($locale,"Таңдаулы")}</label><button class="button subtle" disabled={busy||!!savingTitle} onclick={()=>remove(item)}>{copy($locale,"Тізімнен алу")}</button>{#if savingTitle===item.titleId}<span class="muted">{noticeText($locale,"saving")}</span>{/if}</div></LibraryRow>{:else}{#if !busy&&!message&&!directoryError}<p class="empty-state">{copy($locale,"Бұл тізімде тайтл жоқ. Тайтл бетінде кітапханаға қосыңыз.")}</p>{/if}{/each}</div>
+ <div class="library-grid">{#each entries as item (item.titleId)}<LibraryRow statusLabel={filter==='all'||filter==='favorites'?statusNames[item.status]:''} coverURL={item.coverURL} name={item.name} href={`/titles/${item.slug}`} detail={text($locale,'Оқылмаған тараулар:','Непрочитанных глав:')+' '+item.unseen} releaseId={item.progress.releaseId} continueLabel={copy($locale,"Жалғастыру")}>{#snippet progress()}{#if libraryProgress}<LibraryProgress entry={item} reader={libraryProgress}/>{/if}{/snippet}{#if item.progress.releaseId}<ProgressPosition progress={item.progress}/>{/if}<div class="entry-controls"><select aria-label={item.name+': '+text($locale,'мәртебесі','статус')} bind:value={item.status} disabled={busy||!!savingTitle} onchange={()=>update(item)}>{#each Object.entries(statusNames) as [value,label]}<option {value}>{label}</option>{/each}</select><label><input type="checkbox" bind:checked={item.favorite} disabled={busy||!!savingTitle} onchange={()=>update(item)}/>{copy($locale,"Таңдаулы")}</label><button class="button subtle" disabled={busy||!!savingTitle} onclick={()=>remove(item)}>{copy($locale,"Тізімнен алу")}</button>{#if savingTitle===item.titleId}<span class="muted">{noticeText($locale,"saving")}</span>{/if}</div></LibraryRow>{:else}{#if !busy&&!message&&!directoryError}<p class="empty-state">{copy($locale,"Бұл тізімде тайтл жоқ. Тайтл бетінде кітапханаға қосыңыз.")}</p>{/if}{/each}</div>
  {#if hasMore}<button class="button" disabled={busy||!!savingTitle} onclick={()=>directory.more(account!)}>{copy($locale,"Тағы жүктеу")}</button>{/if}
 {:else if !busy}<p class="muted">{copy($locale,"Қонақтағы оқу орны осы құрылғыда сақталады. Құрылғылар арасында сақтау үшін ")}<a class="auth-link" href="/login?returnTo=%2Flibrary">{copy($locale,"кіріңіз")}</a>.</p>{/if}
 {#if busy}<p role="status">{copy($locale,"Жүктелуде…")}</p>{/if}

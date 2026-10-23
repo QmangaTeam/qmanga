@@ -71,3 +71,6 @@ import {HttpApiTokens} from '$lib/features/identity/infrastructure/http-api-toke
 export function createApiTokens(){return new HttpApiTokens(new ApiClient(globalThis.fetch.bind(globalThis)));}
 
 export function createContinuation(){return {...createReading(),readerGateway:new HttpReaderGateway(new ApiClient(globalThis.fetch.bind(globalThis)))};}
+
+import {LibraryProgressReader} from '$lib/features/reading/application/library-progress';
+export function createLibrary(){return {...createReading(),libraryProgress:new LibraryProgressReader(new HttpReaderGateway(new ApiClient(globalThis.fetch.bind(globalThis))))};}

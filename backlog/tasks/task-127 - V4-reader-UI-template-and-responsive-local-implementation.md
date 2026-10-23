@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 22:25'
-updated_date: '2026-10-23 00:07'
+updated_date: '2026-10-23 00:18'
 labels: []
 dependencies: []
 ordinal: 68005
@@ -23,6 +23,7 @@ Owner supplied V4 HTML/UX notes and drawer reference. UI only; no backend/databa
 - [x] #2 Local reader UI implements supplied V4 direction with real existing application contracts; backend/database and admin design untouched.
 - [x] #3 Responsive local browser verification and independent review completed; limitations and remaining acceptance recorded.
 - [x] #4 Owner follow-up: title genres, tags and collections are separate with measured expansion; continuation shows real chapter page progress; local checks/review recorded without backend/admin changes or push.
+- [x] #5 Library cards show real matching-revision chapter page progress with reference bar colors, lazy bounded loading and local verification.
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -35,6 +36,8 @@ Owner follow-up 23 Oct: audit AnimeTime/Qmanga discovery-title-reading flows and
 Owner motion follow-up: add scoped public UI button feedback and viewport-triggered progress/rating fill transitions (~120ms press, ~400ms fills), preserve immediate data/actions and reduced-motion overrides; verify live bars/controls at phone+desktop, independent review, rebuild local web only without push.
 
 Owner disclosure follow-up: animate measured max-height for description, genres/tags and title details in both directions; preserve overflow detection, hidden focus and reduced motion; test interruption/resize and rebuild local web, independent review, no push.
+
+Owner authorizes separate pushes after HTML comparison: exact palette tokens already match HTML dark/light; add missing library bar using real matching-revision page progress, lazy/bounded public manifest metadata; validate then independent review; push existing focused commit groups plus library separately, observe normal Fast Release without bypass.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -55,4 +58,6 @@ Follow-up implementation SHA484384c (local only). All recorded checks apply to t
 Motion follow-up implemented LOCAL ONLY: viewport-triggered continuation/rating fills420ms and width updates320ms; public button pressed feedback120ms/color160ms; dialog fade/6px entry160ms; rating star color/focus transitions. Actual values/actions remain immediate; native progress retained plus aria-hidden decorative fill. OS reduced-motion and app setting independently verified0s/no transform/final state; preference restored. Live dark phone/rating keyboard preview and light1280desktop inspected,320nooverflow.65UI tests870assertions,Svelte0errors0warnings,architecture/contrast,diffcheck,Dockerweb build andhealthy startup pass. Independent review_motion approved. Screens tmp/v4/motion-stats.png and motion-stats-light-desktop.png. Admin/Studio excluded from public-ui scope; no backend/schema changes or push. Owner local acceptance remains.
 
 Disclosure follow-up LOCAL ONLY: shared measured max-height260ms action animates description, genre/tag/collection groups and title details both ways; description clipping now uses measured3-line height instead of immediate line-clamp removal. TitleTags inert state explicitly updates on expansion.65UI tests870assertions,Svelte0errors0warnings,architecture,diffcheck,Dockerweb build/healthy startup pass. Independent review_disclosures approved. Runtime observed intermediate heights for all4groups, rapid double toggle stable, expanded description remeasured at320/834/1280 without overflow; OS and site reduced-motion both0s/final height, settings/viewport restored. Proof tmp/v4/smooth-disclosures.png. No backend/admin changes or push; owner local acceptance remains.
+
+HTML source inspected directly: exact dark/light theme tokens match current palette, no speculative orange replacement. file URL browser protocol blocked, no browser bypass attempted. Added library progress using real current chapter page/fraction, not fabricated whole-title chapter completion; thin4px accent over line track matches HTML. Visible-card lazy loading, max4manifest requests, dedupe/cache; no image downloads. Svelte0errors0warnings,65UI tests870assertions,3new application tests9assertions,architecture/contrast,diffcheck,Dockerwebhealthy pass. Local authenticated library card renders real chapter/page counts and percentage;320px no overflow; screenshot tmp/v4/library-progress.png. Independent review_library_release approved. Backend/admin/schema untouched. Owner now explicitly authorizes focused separate pushes; preparing baseUI/statistics, genres/tags, animations, disclosures, library groups. Release observation pending; nativeFigma AC remains open.
 <!-- SECTION:NOTES:END -->
