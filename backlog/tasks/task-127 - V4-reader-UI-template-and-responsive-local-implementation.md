@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 22:25'
-updated_date: '2026-10-23 00:45'
+updated_date: '2026-10-23 09:58'
 labels: []
 dependencies: []
 ordinal: 68005
@@ -40,6 +40,8 @@ Owner disclosure follow-up: animate measured max-height for description, genres/
 Owner authorizes separate pushes after HTML comparison: exact palette tokens already match HTML dark/light; add missing library bar using real matching-revision page progress, lazy/bounded public manifest metadata; validate then independent review; push existing focused commit groups plus library separately, observe normal Fast Release without bypass.
 
 Owner local-only follow-up: bound latest updates to six initially, reveal six at a time with Load more and retain All updates route; keep returning-reader continuation prominent and compact; refine update density and continuation card metadata; check responsive themes/locales, independent review, rebuild local web. No push/backend/admin/data changes.
+
+Owner approves one top-of-home ranking shelf with most-read and manga/manhwa/manhua switches, then continuation and bounded updates; align demo/status badges in same flex row. UI only, local checks/review/build, no push.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -66,4 +68,6 @@ HTML source inspected directly: exact dark/light theme tokens match current pale
 Authorized five separate main pushes completed: baseUI/statistics through00e56f1; taxonomy/continuation through345be9a; generalmotion135f34a; disclosurese26f2d5; library/referencebars bff4acb9f211622cd339c4f47743b4b693ae2516. FastRelease39877382728 success and refs/deploy-ready equals bff4acb; pending intermediate workflows coalesced by GitHub. FullVerification39877382745 still pending at observation. Fresh external production homepage remains d312715dd55b8d59a17e120ebf2835bffa446999 with private,no-store and health200/ok; new UI NOT confirmed live. Documented deploy key andknown_hosts paths unavailable on this workspace, so VMpoller/hold cannot be inspected; no bypass or serverchanges. Next: observe production moving to bff4acb and publicsmoke, inspect normal VMpoller using authorized documented access if it remains old; retainReview/nativeFigma open. Additional local light1280library checked #a94406 and lineRGB222/210/201, nooverflow; dark #ff873d and lineRGB61/48/43. Local demo data/assets were not committed or pushed.
 
 Local-only owner follow-up: homepage updates start at6 compact rows, Load more reveals6 at a time, loaded count and All updates retain access to full feed. Keyboard focus moves to first newly revealed chapter including final batch. Continuation remains first for returning readers, adds actual chapter percentage and truncates long metadata. No backend/data/admin changes. Validation:66 UI tests875assertions, Svelte0errors0warnings, architecture/contrast/diffcheck, Dockerwebbuild/start PASS; browser6→12→13 and focus href matches, reload resets6,320/360/1280 no overflow, dark phone/lightdesktop inspected. Independent review_home_density approved including focus correction. Screens tmp/v4/home-density-phone.png and home-density-desktop.png. No push; owner local acceptance pending. Production rollout blocker from TASK66 remains separate and unresolved.
+
+Owner-approved local combined rankings: single top shelf switches most-read/manga/manhwa/manhua via existing URL/API contracts, precedes continuation and bounded updates; duplicate lower shelf removed. Demo/status/age badges share nowrap top row, longer status ellipsis retains full accessible text.66 UI tests875assertions, Svelte0errors0warnings, architecture/contrast/diffcheck and Dockerbuild/start pass. Browser selected Manga renders1shelf above continuation;320/360/1280 nooverflow, dark phone/lightdesktop inspected; measured demo/paused and demo/completed/age identical top coordinates. Independent review_rank_badges approved after nowrap correction. Screenshot tmp/v4/rank-badges-preview.png. Local only; no push/backend/admin/data changes; owner acceptance pending.
 <!-- SECTION:NOTES:END -->

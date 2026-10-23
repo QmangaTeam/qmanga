@@ -3,23 +3,23 @@ import Discovery from './Discovery.fixture.svelte';
 import HomeDiscovery from './HomeDiscovery.fixture.svelte';
 import {render,elements} from './markup';
 
-test('home follows most-read, continuation, updates and type-top order',()=>{
+test('home combines rankings above continuation and updates',()=>{
  const html=render(HomeDiscovery,{props:{language:'ru'}}).body;
  expect(html).toContain('Самое читаемое');
  const mostRead=html.indexOf('id="browse-heading"');
  const continuation=html.indexOf('id="continue-heading"');
  const updates=html.indexOf('id="updates-heading"');
- const tops=html.indexOf('id="tops-heading"');
+ const tops=html.indexOf('id="tops"');
  expect(mostRead).toBeGreaterThan(-1);
  expect(continuation).toBeGreaterThan(mostRead);
  expect(updates).toBeGreaterThan(continuation);
- expect(tops).toBeGreaterThan(updates);
+ expect(tops).toBeLessThan(continuation);
 });
 
-test('below-fold type tops do not eagerly load images on weak connections',async()=>{
+test('selected top ranking owns the single eager shelf',async()=>{
  const html=render(HomeDiscovery,{props:{topFilled:true,topRequested:true}}).body;
- expect((await elements(html,'section[aria-labelledby="browse-heading"] img'))[0]).toMatchObject({loading:'eager',fetchpriority:'high'});
- expect((await elements(html,'#tops img'))[0]).toMatchObject({loading:'lazy',fetchpriority:'auto'});
+ expect(await elements(html,'.cover-shelf')).toHaveLength(1);
+ expect((await elements(html,'#tops img'))[0]).toMatchObject({loading:'eager',fetchpriority:'high'});
 });
 
 test('update thumbnail opens its title while chapter opens the real release',async()=>{
@@ -39,7 +39,7 @@ test('home retains a working release feed when most-read ranking fails',async()=
 });
 
 test('home shows image links first and real navigation rather than inert filter tabs',async()=>{
- const html=render(HomeDiscovery,{props:{topKind:'manhua',language:'ru'}}).body;
+ const html=render(HomeDiscovery,{props:{topKind:'manhua',language:'ru',topRequested:true,topFilled:true}}).body;
  expect(html.indexOf('class="cover-shelf')).toBeLessThan(html.indexOf('class="updates'));
  expect((await elements(html,'.shelf-tabs a[aria-current]'))[0]).toMatchObject({href:'/?top=manhua#tops','aria-current':'page'});
  expect(await elements(html,'.cover-shelf a[href="/titles/example"] img')).toHaveLength(1);
@@ -80,16 +80,16 @@ test('cover classification keeps native links and never labels unclassified cont
 });
 
 
-test('returning readers reach continuation first without removing discovery',()=>{
+test('returning readers see rankings then continuation',()=>{
  const html=render(HomeDiscovery,{props:{hasContinuation:true}}).body;
- expect(html.indexOf('id="continue-heading"')).toBeLessThan(html.indexOf('id="browse-heading"'));
+ expect(html.indexOf('id="continue-heading"')).toBeGreaterThan(html.indexOf('id="browse-heading"'));
  expect(html).toContain('id="updates-heading"');
 });
 
-test('default repeated type rankings collapse while explicit type requests retain results',async()=>{
+test('ranking switches replace one shelf instead of repeating titles',async()=>{
  const defaultPage=render(HomeDiscovery,{props:{topFilled:true}}).body;
- expect(await elements(defaultPage,'#tops .cover-card')).toHaveLength(0);
- expect(await elements(defaultPage,'.shelf-tabs a')).toHaveLength(3);
+ expect(await elements(defaultPage,'#tops .cover-card')).toHaveLength(1);
+ expect(await elements(defaultPage,'.shelf-tabs a')).toHaveLength(4);
  const explicit=render(HomeDiscovery,{props:{topFilled:true,topRequested:true}}).body;
  expect(await elements(explicit,'#tops .cover-card')).toHaveLength(1);
 });
@@ -98,7 +98,7 @@ test('default repeated type rankings collapse while explicit type requests retai
 test('populated home retains unique discoveries and eager image budget',async()=>{
  const html=render(HomeDiscovery,{props:{size:8,topFilled:true,distinctTop:true}}).body;
  expect(await elements(html,'section[aria-labelledby="browse-heading"] .cover-card')).toHaveLength(8);
- expect(await elements(html,'#tops .cover-card')).toHaveLength(1);
+ expect(await elements(html,'.cover-shelf')).toHaveLength(1);
  expect(await elements(html,'img[fetchpriority="high"]')).toHaveLength(3);
 });
 
