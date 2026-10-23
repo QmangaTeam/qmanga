@@ -1,0 +1,14 @@
+/* Scoped to public reading surfaces; workspaces retain their existing design. */
+.public-ui :where(button,.button,.continue-card,.translation-team){transition:background-color 160ms ease,color 160ms ease,border-color 160ms ease,box-shadow 160ms ease,transform 120ms ease,filter 160ms ease}
+.public-ui :where(button,.button,.continue-card,.translation-team):not(:disabled):active{transform:translateY(1px)}
+@media(hover:hover){.public-ui .button.primary:hover{filter:brightness(1.05)}}
+.public-ui dialog[open]{animation:public-dialog-enter 160ms ease-out}
+.public-ui dialog[open]::backdrop{animation:public-backdrop-enter 160ms ease-out}
+@keyframes public-dialog-enter{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+@keyframes public-backdrop-enter{from{opacity:0}to{opacity:1}}
+.motion-fill{transform-origin:left center;transition:width 320ms ease,transform 420ms cubic-bezier(.2,.7,.2,1)}
+.motion-track[data-reveal=pending]>.motion-fill{transform:scaleX(0)}
+.motion-track[data-reveal=shown]>.motion-fill{transform:scaleX(1)}
+/* Both the OS preference and Qmanga's own setting show the final value immediately. */
+@media(prefers-reduced-motion:reduce){.motion-track>.motion-fill{transform:none!important}.public-ui :where(button,.button,.continue-card,.translation-team):active{transform:none!important}}
+html[data-motion=reduce] .motion-track>.motion-fill,html[data-motion=reduce] .public-ui :where(button,.button,.continue-card,.translation-team):active{transform:none!important}

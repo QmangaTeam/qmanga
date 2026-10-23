@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 22:25'
-updated_date: '2026-10-22 23:53'
+updated_date: '2026-10-23 00:03'
 labels: []
 dependencies: []
 ordinal: 68005
@@ -31,6 +31,8 @@ Owner supplied V4 HTML/UX notes and drawer reference. UI only; no backend/databa
 Inspect supplied reference and current public views; create Figma foundation/screens; implement public navigation and V4 reader layouts; validate themes/locales/responsive interactions; independent review and rebuild local web.
 
 Owner follow-up 23 Oct: audit AnimeTime/Qmanga discovery-title-reading flows and research accessible MangaLib primary material; separate genres/tags/collections with independent measured disclosure; retain measured description toggle; add real continuation page totals/progress using existing frontend gateways only; validate themes/locales/widths and independent review; rebuild local web only, no push.
+
+Owner motion follow-up: add scoped public UI button feedback and viewport-triggered progress/rating fill transitions (~120ms press, ~400ms fills), preserve immediate data/actions and reduced-motion overrides; verify live bars/controls at phone+desktop, independent review, rebuild local web only without push.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -47,4 +49,6 @@ Final refreshed artifact count after tablet recapture:208SVGboards,7090editablet
 Owner follow-up implemented locally: separate genre/tag/collection groups and measured independent toggles; measured metadata disclosure without nested vertical scrolling; existing 3-line description preserved; continuation uses matching public manifest for page total and native progress, at most4 metadata requests and no image downloads. Runtime reading page2 of3 returned home as2/3 with bar. Verified20 width/locale/theme states(320/390/834/1280/1440 x kk/ru x dark/light), no overflow; disclosure toggles/hidden-focus/inert states checked.65UI tests870assertions,5continuation tests23assertions,Svelte0errors0warnings,architecture/contrast,diffcheck,Dockerwebbuild/start pass. Independent review_title_progress approved. Live AnimeTime desktop/390px + Qmanga audit; MangaLib browser safety block, app-listing research only, Chrome not accessed. Full comparison/screens tmp/v4/comparison/review.md. No backend/schema/admin code changes or push; user local acceptance and nativeFigma remain pending.
 
 Follow-up implementation SHA484384c (local only). All recorded checks apply to this code; no production release attempted or productionSHA re-observed. Next step: owner tests the local About groups/details and home continuation; nativeFigma acceptance still blocked by prior quota.
+
+Motion follow-up implemented LOCAL ONLY: viewport-triggered continuation/rating fills420ms and width updates320ms; public button pressed feedback120ms/color160ms; dialog fade/6px entry160ms; rating star color/focus transitions. Actual values/actions remain immediate; native progress retained plus aria-hidden decorative fill. OS reduced-motion and app setting independently verified0s/no transform/final state; preference restored. Live dark phone/rating keyboard preview and light1280desktop inspected,320nooverflow.65UI tests870assertions,Svelte0errors0warnings,architecture/contrast,diffcheck,Dockerweb build andhealthy startup pass. Independent review_motion approved. Screens tmp/v4/motion-stats.png and motion-stats-light-desktop.png. Admin/Studio excluded from public-ui scope; no backend/schema changes or push. Owner local acceptance remains.
 <!-- SECTION:NOTES:END -->

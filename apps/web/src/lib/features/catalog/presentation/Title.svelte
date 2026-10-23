@@ -1,6 +1,7 @@
 <script lang="ts">
  import TitleBanner from './TitleBanner.svelte';
  import TitleTags from './TitleTags.svelte';
+ import {revealFill} from '$lib/shared/presentation/ui/reveal-fill';
  import OverflowDetails from '$lib/shared/presentation/ui/OverflowDetails.svelte';
  import AgeRating from './AgeRating.svelte';
  import type {Snippet} from 'svelte';
@@ -50,7 +51,7 @@
   catch(error){if(!(error instanceof Error&&error.name==='AbortError'))shareNotice=text($locale,'Көшіру мүмкін болмады. Браузердегі сілтемені көшір.','Не удалось скопировать. Скопируй адрес из браузера.');}
  }
 </script>
-{#snippet statistics()}<dl class="stats-summary"><div><dt>{text($locale,'Бағалар','Оценки')}</dt><dd>{title.ratingCount}</dd></div><div><dt>{text($locale,'Тараулар','Главы')}</dt><dd>{title.chapterCount??'—'}</dd></div><div><dt>{text($locale,'Оқырмандар','Читатели')}</dt><dd>{title.readerCount??'—'}</dd></div></dl><h3>{text($locale,'Бағалардың таралуы','Распределение оценок')}</h3>{#if title.ratingCount>0}<div class="rating-bars">{#each [10,9,8,7,6,5,4,3,2,1] as value}<div class="rating-bar"><span>{value}</span><span class="rating-bar-track"><span style:width={(100*(title.ratingDistribution?.[value-1]||0)/maxRating)+'%'}></span></span><span>{title.ratingDistribution?.[value-1]||0}</span></div>{/each}</div>{:else}<p class="muted">{text($locale,'Әзірге баға жоқ','Оценок пока нет')}</p>{/if}<p class="muted stats-explainer">{text($locale,'Оқырмандар — оқу орны сақталған аккаунттар. Қонақтағы оқу мен қаралымдар есепке кірмейді.','Читатели — аккаунты с сохранённым прогрессом. Гостевое чтение и просмотры сюда не входят.')}</p>{/snippet}
+{#snippet statistics()}<dl class="stats-summary"><div><dt>{text($locale,'Бағалар','Оценки')}</dt><dd>{title.ratingCount}</dd></div><div><dt>{text($locale,'Тараулар','Главы')}</dt><dd>{title.chapterCount??'—'}</dd></div><div><dt>{text($locale,'Оқырмандар','Читатели')}</dt><dd>{title.readerCount??'—'}</dd></div></dl><h3>{text($locale,'Бағалардың таралуы','Распределение оценок')}</h3>{#if title.ratingCount>0}<div class="rating-bars">{#each [10,9,8,7,6,5,4,3,2,1] as value}<div class="rating-bar"><span>{value}</span><span class="rating-bar-track motion-track" use:revealFill><span class="motion-fill" style:width={(100*(title.ratingDistribution?.[value-1]||0)/maxRating)+'%'}></span></span><span>{title.ratingDistribution?.[value-1]||0}</span></div>{/each}</div>{:else}<p class="muted">{text($locale,'Әзірге баға жоқ','Оценок пока нет')}</p>{/if}<p class="muted stats-explainer">{text($locale,'Оқырмандар — оқу орны сақталған аккаунттар. Қонақтағы оқу мен қаралымдар есепке кірмейді.','Читатели — аккаунты с сохранённым прогрессом. Гостевое чтение и просмотры сюда не входят.')}</p>{/snippet}
 <svelte:head><title>{title.name} — Qmanga</title><meta name="description" content={title.description.slice(0,160)}/></svelte:head>
 <a class="back" href="/catalog"><Icon name="left" size={16}/>{text($locale,'Каталог','Каталог')}</a>
 <TitleBanner bannerURL={title.bannerURL||''} coverURL={title.coverURL}/>

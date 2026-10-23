@@ -67,7 +67,7 @@
   {#if accountRefreshFailed}<button onclick={()=>void refreshAccount()}>{text($locale,'Қайталау','Повторить')}</button>{/if}
  </main>
 {:else if $page.url.pathname.startsWith('/read/') || $page.url.pathname==='/offline-reader'}
- <main id="content">{@render content()}</main>
+ <main id="content" class="public-ui">{@render content()}</main>
 {:else}
  {#if managementArea||studioArea}
  <WorkspaceShell management={managementArea} userName={data.user?.displayName||''} {unreadCount} {unreadBadge} items={workspaceItems} currentPath={$page.url.pathname} compact={studioArea&&/^\/studio\/projects\/[^/]+$/.test($page.url.pathname)&&$page.url.searchParams.has('revision')} label={managementArea?text($locale,'Басқару','Управление'):text($locale,'Жұмыс кеңістігі','Рабочее пространство')}>
@@ -76,7 +76,7 @@
  </WorkspaceShell>
  {:else}
  <AppHeader {unreadBadge} {unreadCount} items={navigation.slice(0,4)} currentPath={$page.url.pathname} accountHref={data.user?'/menu':'/login?returnTo='+encodeURIComponent(loginReturn)} accountLabel={data.user?'Аккаунт':text($locale,'Кіру','Войти')} homeLabel={text($locale,'Qmanga басты бет','Qmanga — главная')} navigationLabel={text($locale,'Негізгі','Основная навигация')}>{#snippet theme()}<ThemeToggle preferences={createPreferences()}/>{/snippet}{#snippet account()}{#if data.user}<AccountMenu preferences={createPreferences()} version={avatarVersion} user={data.user} {auth} {teams} onlogout={loggedOut}/>{:else}<a class="guest-login" href={'/login?returnTo='+encodeURIComponent(loginReturn)}>{text($locale,'Кіру','Войти')}</a>{/if}{/snippet}</AppHeader>
- <main id="content" class="page-container">{@render content()}</main>
+ <main id="content" class="page-container public-ui">{@render content()}</main>
  {#if !/^\/(login|register|forgot-password|reset-password|verify-email|settings|notifications|users)(\/|$)/.test($page.url.pathname)}<SiteFooter version={data.buildVersion}/>{/if}
  <MobileNavigation {unreadBadge} {unreadCount} items={navigation} currentPath={$page.url.pathname} label={text($locale,'Мобильді навигация','Мобильная навигация')}/>
  {/if}
