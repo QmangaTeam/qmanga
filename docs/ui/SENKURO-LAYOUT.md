@@ -61,3 +61,5 @@ Cover badges share one nonwrapping top row: demo at the left, personal reading s
 Local ranking motion follow-up23October: query links use SvelteKit enhanced navigation with scroll/focus preservation and hover/touch data preloading. The selected shelf enters with180ms opacity/4px transition; URL and browser history remain real. OS reduced motion and site data-motion=reduce disable the shelf animation and switch color transitions. No document reload is required.
 
 Local Load more motion: only newly appended keyed update rows fade/translate6px over220ms. Initial rows and earlier batches remain steady; data and keyboard actions are available immediately. OS and site reduced-motion settings disable the entry animation.
+
+Local catalogue motion: filter/sort updates retain existing client-side goto navigation and animate only the canonical-filter-keyed results panel180ms opacity/4px. Controls remain mounted; reset preserves sort/query and focus. Clear-all scroll/focus attributes apply only to its control group, never title links. OS and site reduced motion disable animation.

@@ -103,7 +103,7 @@
 		openGroup = null;
 		filters = next;
 		const params = catalogParams(next);
-		goto(params.size ? '/catalog?' + params : '/catalog', { replaceState: true, noScroll: true });
+		goto(params.size ? '/catalog?' + params : '/catalog', { replaceState: true, noScroll: true, keepFocus: true });
 	}
 	function open() {
 		openGroup = null;

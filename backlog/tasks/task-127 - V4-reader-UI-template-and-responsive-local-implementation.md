@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 22:25'
-updated_date: '2026-10-23 10:32'
+updated_date: '2026-10-23 10:37'
 labels: []
 dependencies: []
 ordinal: 68005
@@ -46,6 +46,8 @@ Owner approves one top-of-home ranking shelf with most-read and manga/manhwa/man
 Owner asks local-only smooth ranking switches: retain SvelteKit client navigation, preserve scroll/focus, preload ranking data, keyed short shelf entry with reduced-motion overrides; browser verify unchanged document/navigation and Back/Forward, independent review/build, no push.
 
 Local-only Load more motion: animate newly appended updates220ms fade/6px, keep existing keyed rows steady, initial list immediate and both reduced-motion preferences respected; verify click batches/focus/runtime and independent review, rebuild without push.
+
+Local-only catalogue motion: keep existing goto client-side filter/sort navigation, animate keyed results only180ms fade/4px, preserve controls/focus/scroll including reset and clear links; reduced motion, runtime navigation checks, independent review/build, no push.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -78,4 +80,6 @@ Owner-approved local combined rankings: single top shelf switches most-read/mang
 Smooth ranking follow-up LOCAL ONLY: SvelteKit enhanced links preserve scroll/focus and preload route data; keyed selected shelf enters180ms opacity/4px, both reduced-motion preferences disable motion.67 UI tests888assertions, Svelte0errors0warnings,Dockerwebbuild/start,diffcheck pass. Runtime unchanged performance.timeOrigin1792751287089 before/after Manga click, scrollY0 retained, focus stays clicked tab, animation0.18s; Back restores Most read and Forward Manga; emulated OS reduce computed animation none, emulation reset. Independent review_smooth_ranking approved. Screenshot tmp/v4/smooth-ranking-preview.png. Existing loader may refresh discovery data, but browser document does not reload. No push/backend/admin changes; owner local acceptance pending.
 
 Load more motion implemented LOCAL ONLY: newly appended keyed rows enter220ms opacity/6px, initial rows immediate and existing rows do not replay; focus retained on first new chapter. Runtime initial0 animated,6→12 has6 new0.22s/6 old0s, final13 has1 new animated and correct focus; OS reduce computes animation none, emulation reset. Site reduce CSS override present.67 UI tests888assertions,Svelte0errors0warnings,Dockerbuild/start,diffcheck pass. Independent review_loadmore_motion approved. Screenshot tmp/v4/loadmore-animation-preview.png; temporary review tab closed, reader tab preserved. No push/backend/admin/data changes; owner local acceptance pending.
+
+Catalogue smooth filters/sorting LOCAL ONLY: existing goto client navigation retained, keyed results180ms opacity/4px; controls stay mounted, reset keeps focus/sort, clear-all enhanced link attrs scoped away from cover links. Both reduced-motion overrides.67 UI tests888assertions,Svelte0errors0warnings,Dockerwebbuild/start,diffcheck pass. Runtime same performance.timeOrigin1792751771354.9 through sort/filter, kind=manhwa returned1card, sort=name retained kind, reset left sort=name and focus resetbutton; results0.18s and OS reduce animation none, emulation reset. Final cover link has no noscroll ancestor. Independent review_catalog_motion approved after scoping correction. Screenshot tmp/v4/catalog-motion-preview.png; temporary tab closed. No push/backend/admin/data changes; owner local acceptance pending.
 <!-- SECTION:NOTES:END -->

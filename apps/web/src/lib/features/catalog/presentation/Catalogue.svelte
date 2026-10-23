@@ -40,6 +40,7 @@
 		goto('/catalog?' + catalogParams({ ...view.filter, sort }), { replaceState: true, noScroll: true, keepFocus: true });
 	}
  let listView=$state(false);
+ const resultKey=$derived(catalogParams(view.filter).toString());
 </script>
 {#snippet controls()}<label class="sort-control"><span>{text($locale, 'Реттеу', 'Сортировка')}</span><select value={view.filter.sort || 'updated'} onchange={(event) => changeSort(event.currentTarget.value)}><option value="updated">{text($locale, 'Соңғы жаңартулар', 'Недавно обновлённые')}</option><option value="new">{text($locale, 'Жаңа тайтлдар', 'Новые тайтлы')}</option><option value="name">{text($locale, 'Атауы бойынша', 'По названию')}</option></select></label><button class="view-toggle" type="button" aria-pressed={listView} aria-label={listView?text($locale,'Тор түрінде көрсету','Показать сеткой'):text($locale,'Тізім түрінде көрсету','Показать списком')} onclick={()=>listView=!listView}><Icon name={listView?'catalog':'menu'}/></button>{/snippet}
 <svelte:head><title>Каталог — Qmanga</title><meta name="description" content={text($locale, 'Қазақ тіліндегі манга, манхва және маньхуа.', 'Манга, манхва и маньхуа на казахском языке.')}/></svelte:head>
@@ -48,15 +49,23 @@
 <CatalogueFilters {controls} filter={view.filter} genres={view.genres} categories={view.categories} collections={view.collections}/>
 <section class="catalogue-results" aria-label={text($locale, 'Каталог нәтижелері', 'Результаты каталога')}>
 <div class="catalogue-toolbar">
-{#if active.length}<div class="active-filters" aria-label={text($locale, 'Қолданылған сүзгілер', 'Применённые фильтры')}>{#each active as label}<span>{label}</span>{/each}<ActionLink href="/catalog">{text($locale, 'Барлығын тазарту', 'Сбросить всё')}</ActionLink></div>{:else}<span class="toolbar-spacer"></span>{/if}
+{#if active.length}<div data-sveltekit-noscroll data-sveltekit-keepfocus class="active-filters" aria-label={text($locale, 'Қолданылған сүзгілер', 'Применённые фильтры')}>{#each active as label}<span>{label}</span>{/each}<ActionLink href="/catalog">{text($locale, 'Барлығын тазарту', 'Сбросить всё')}</ActionLink></div>{:else}<span class="toolbar-spacer"></span>{/if}
 <div class="desktop-controls">{@render controls()}</div>
 </div>
+{#key resultKey}
+<div class="results-panel">
 {#if !view.available}<StateMessage kind="error" title={text($locale, 'Каталог жүктелмеді', 'Каталог не загрузился')}>{#snippet actions()}<ActionLink data-sveltekit-reload href={view.retryURL || '/catalog?'+catalogParams(view.filter)}>{text($locale, 'Қайталау', 'Повторить')}</ActionLink>{/snippet}</StateMessage>
 {:else if !view.page.items.length}<StateMessage kind="empty" title={text($locale, 'Тайтл табылмады', 'Тайтлы не найдены')} description={text($locale, 'Басқа атаумен ізде немесе сүзгілерді тазарт.','Попробуй другое название или сбрось фильтры.')}/>
 {:else}<div class="cover-grid" class:list-view={listView}>{#each view.page.items as title,index}<CoverCard readingStatus={statuses[title.id]} ageRating={title.ageRating} href={'/titles/'+encodeURIComponent(title.slug)} name={title.name} coverURL={title.coverURL} metadata={names.kind[title.kind]} tag={title.demo?text($locale,'Үлгі','Пример'):''} score={title.score} ratingCount={title.ratingCount} fallback={text($locale,'Мұқаба жоқ','Нет обложки')} priority={index<2}/>{/each}</div>{/if}
 {#if view.nextURL}<Pager label={text($locale,'Каталог беттері','Страницы каталога')} next={{label:text($locale,'Келесі бет','Следующая страница'),href:view.nextURL}}/>{/if}
+</div>
+{/key}
 </section></div>
 <style>
+ .results-panel{min-width:0;animation:catalogue-results-enter 180ms ease-out}
+ @keyframes catalogue-results-enter{from{opacity:.35;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+ @media(prefers-reduced-motion:reduce){.results-panel{animation:none}}
+ :global(html[data-motion=reduce]) .results-panel{animation:none}
  .catalogue-layout{display:grid;grid-template-columns:minmax(0,1fr);gap:16px 12px;align-items:start}
  .catalogue-results{min-width:0;grid-column:1/-1;grid-row:2}
  .catalogue-toolbar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:0 0 20px}
