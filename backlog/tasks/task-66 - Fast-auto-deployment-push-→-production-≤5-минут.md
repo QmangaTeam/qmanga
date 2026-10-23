@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-20 01:19'
-updated_date: '2026-10-20 19:17'
+updated_date: '2026-10-23 11:00'
 labels:
   - CI
   - deployment
@@ -33,6 +33,8 @@ ordinal: 41026
 
 <!-- SECTION:PLAN:BEGIN -->
 Current release recovery: publish missing canonical component-input aliases from verified workflow images; preserve existing HEAD/alias tags with fail-closed registry checks and shared per-component publisher serialization. Keep VM selector/hold/locks/gates unchanged. Regression + independent review, push, observe full Verify then poller staging/production and external SHA.
+
+Owner requests stalled UI rollout repair: inspect existing VM poller/state/journal using original key owner via already-authorized local sudo; identify blocker, preserve deployment lock/hold/backup gates; implement minimal fix with checks and independent review if needed; release through existing outbound poller and confirm exact external SHA/UI.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -53,4 +55,6 @@ Canonical publisher fix ready: both workflows publish missing last-input-change 
 Observed release e2c9c8910d6dedbe74eddbafa028b8bb67180340: Verify39474894775 and FastRelease39474894489 SUCCESS;88 browsercases42+46, fullGo/PostgreSQL/codecs/frontend, all3ARM64published with canonicalaliases. Existing poller staging18:37:09UTC and production18:42:57UTC green sameSHA; running component image IDs verified, oldblue retained. Mandatory migration backups created: staging20261020T183640Z, production20261020T184220Z; production off-host upload/download/checksum verified before switch, restoregatepreserved. Externalhealth/homepage/genres/PDFlicense/font200, metadata unauth401, browserfooter exactSHA. StrictSSH restored. RemainsReview: old5mintimer, sudo password required toinstall20secunits; <=300s not proven (push18:27→prod18:42). No hold removal, paralleldeploy or security expansion beyond owner-approved single/32 replacement.
 
 Next verified automatic release: staging797c81019:09:57UTC → production797c81019:15:41UTC, exactpublicSHA/health confirmed. Verify39480229990/FastRelease39480229999SUCCESS,89browsercases0failures. Actualstageimport/source/role/focusjourneys accepted; temporaryfixtures fullyremoved. Existing5mintimer persists; no sudo/passwordless administrative installation available, so<=300s remainsunproven. Documented owneraction: install existing service/timer +daemon-reload/restart, thenmeasurethree releases. No permission changes/hold removal/alternate deployment path used.
+
+23Oct owner-authorized UI rollout: documented key exists under original maqsatto account; sudo-as-owner strict SSH attempted, port22 timed out before authentication. No permissions/firewall/VM changes. Earlier pending bff4acb release caught up autonomously; new5039821661afe5eb4b9711098a7bc653d3a63595 FastRelease39941710159 success and deploy-ready exactSHA. Public production switched sameSHA after roughly10min; health200/ok. Existing outbound poller demonstrated working despite unavailable SSH; no stalled-poller root cause established or bypass. ≤5min target still unconfirmed and fullVerify39941710199 browser shards failed. RetainReview; next inspect exact browser assertions via authorized CI logs and host timing when existing SSH reachable.
 <!-- SECTION:NOTES:END -->

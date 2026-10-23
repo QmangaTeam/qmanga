@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 22:25'
-updated_date: '2026-10-23 10:41'
+updated_date: '2026-10-23 11:00'
 labels: []
 dependencies: []
 ordinal: 68005
@@ -86,4 +86,6 @@ Load more motion implemented LOCAL ONLY: newly appended keyed rows enter220ms op
 Catalogue smooth filters/sorting LOCAL ONLY: existing goto client navigation retained, keyed results180ms opacity/4px; controls stay mounted, reset keeps focus/sort, clear-all enhanced link attrs scoped away from cover links. Both reduced-motion overrides.67 UI tests888assertions,Svelte0errors0warnings,Dockerwebbuild/start,diffcheck pass. Runtime same performance.timeOrigin1792751771354.9 through sort/filter, kind=manhwa returned1card, sort=name retained kind, reset left sort=name and focus resetbutton; results0.18s and OS reduce animation none, emulation reset. Final cover link has no noscroll ancestor. Independent review_catalog_motion approved after scoping correction. Screenshot tmp/v4/catalog-motion-preview.png; temporary tab closed. No push/backend/admin/data changes; owner local acceptance pending.
 
 Title tab follow-up LOCAL ONLY: existing160ms keyed content/180ms indicator retained; links now preload data and preserve focus alongside noscroll; explicit site reduced-motion overrides for content and indicator.67 UI tests894assertions,Svelte0errors0warnings,Dockerwebbuild/start,diffcheck pass. Runtime performance.timeOrigin1792752044632.8 identical chapters→About→Comments, clicked-tab focus retained, About→Comments scrollY249 unchanged, Back/Forward restored About/Comments; content0.16s, OS reduce animation none and emulation reset. Independent review_title_tabs_smooth approved (12focusedtests70assertions). Screenshot tmp/v4/title-tabs-smooth-preview.png, temporary tab closed and owner tab preserved. No push/backend/admin/data changes; owner local acceptance pending.
+
+Owner authorized deploy. Six local commits pushed through5039821661afe5eb4b9711098a7bc653d3a63595. Independent aggregate review_release_ui_batch approved; backlogdoctor/diffcheck pass. FastRelease39941710159 SUCCESS,deploy-ready exact5039821; normal poller externally observed production5039821 after about10minutes. Public health200 PostgreSQL/S3/status ok. Live read-only smoke:6→12 updates with6new0.22s animations, ranking Manga0.18s, catalogue sort=name0.18s,title Comments0.16s andclickedfocus retained. Screenshot tmp/v4/production-5039821.png. FullVerify39941710199 FAILED both browser-integration shards; assertions unavailable via current unauthenticated logs. Do not claim fullCI green. Authenticated production library journey not exercised; no production data writes or local fixtures deployed. NativeFigma criterion remains open; retainReview.
 <!-- SECTION:NOTES:END -->
