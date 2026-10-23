@@ -9,14 +9,16 @@
  let {mostRead,updates,top,topKind='manhwa',continuation,statuses={},hasContinuation=false,topRequested=false}:{hasContinuation?:boolean;topRequested?:boolean;statuses?:Record<string,string>;mostRead:{available:boolean;page:ResultPage<Summary>};updates:{available:boolean;page:ResultPage<ReleaseUpdate>};top:{available:boolean;page:ResultPage<Summary>};topKind?:string;continuation?:Snippet}=$props();
  const {locale}=useLocale();
  let updateLimit=$state(6);
+ let updateRevealFrom=$state(Infinity);
  let updateList=$state<HTMLDivElement>();
  async function showMoreUpdates(){
   const firstNew=updateLimit;
+  updateRevealFrom=firstNew;
   updateLimit+=6;
   await tick();
   updateList?.querySelectorAll<HTMLAnchorElement>('.chapter')[firstNew]?.focus({preventScroll:true});
  }
- $effect(()=>{updates.page;updateLimit=6;});
+ $effect(()=>{updates.page;updateLimit=6;updateRevealFrom=Infinity;});
  const tabs=$derived([{value:'manhwa',label:text($locale,'Топ манхва','Топ манхв')},{value:'manga',label:text($locale,'Топ манга','Топ манг')},{value:'manhua',label:text($locale,'Топ маньхуа','Топ маньхуа')}]);
  const ranking=$derived(topRequested?top:mostRead);
  const rankingLabel=$derived(topRequested?tabs.find(tab=>tab.value===topKind)?.label||tabs[0].label:text($locale,'Ең көп оқылатын','Самое читаемое'));
@@ -46,7 +48,7 @@
  {@render continueSection()}
  <section aria-labelledby="updates-heading">
   <div class="section-title"><h2 id="updates-heading">{text($locale,'Соңғы жаңартулар','Последние обновления')}</h2><a class="section-link" href="/updates" aria-label={text($locale,'Барлық жаңартулар','Все обновления')}><Icon name="right" size={18}/></a></div>
-  {#if updates.available}<div id="home-update-list" bind:this={updateList}><Updates items={updates.page.items.slice(0,updateLimit)} compact/></div>
+  {#if updates.available}<div id="home-update-list" bind:this={updateList}><Updates items={updates.page.items.slice(0,updateLimit)} revealFrom={updateRevealFrom} compact/></div>
    <div class="updates-footer">
     <span class="update-count" role="status">{text($locale,'Көрсетілді: ','Показано: ')}{Math.min(updateLimit,updates.page.items.length)} / {updates.page.items.length}{updates.page.nextCursor?'+':''}</span>
     {#if updateLimit<updates.page.items.length}<button class="button subtle" aria-controls="home-update-list" onclick={showMoreUpdates}>{text($locale,'Тағы жүктеу','Загрузить ещё')}<Icon name="down" size={16}/></button>
