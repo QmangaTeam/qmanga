@@ -101,3 +101,13 @@ test('populated home retains unique discoveries and eager image budget',async()=
  expect(await elements(html,'#tops .cover-card')).toHaveLength(1);
  expect(await elements(html,'img[fetchpriority="high"]')).toHaveLength(3);
 });
+
+
+test('home bounds a busy updates feed while retaining access to more releases',async()=>{
+ const html=render(HomeDiscovery,{props:{updateCount:18,language:'ru'}}).body;
+ expect(await elements(html,'.updates article')).toHaveLength(6);
+ expect(html).toContain('Загрузить ещё');
+ expect(html).toContain('Показано: ');
+ expect(await elements(html,'a[href="/updates"]')).toHaveLength(1);
+ expect(html).not.toContain('/read/release-6');
+});

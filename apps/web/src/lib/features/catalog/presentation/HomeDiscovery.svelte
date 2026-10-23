@@ -1,5 +1,5 @@
 <script lang="ts">
- import type {Snippet} from 'svelte';
+ import {tick,type Snippet} from 'svelte';
  import type {ResultPage,Summary,ReleaseUpdate} from '../application/catalog';
  import {useLocale,text} from '$lib/shared/presentation/locale';
  import StateMessage from '$lib/shared/presentation/ui/StateMessage.svelte';
@@ -8,6 +8,15 @@
  import Updates from './Updates.svelte';
  let {mostRead,updates,top,topKind='manhwa',continuation,statuses={},hasContinuation=false,topRequested=false}:{hasContinuation?:boolean;topRequested?:boolean;statuses?:Record<string,string>;mostRead:{available:boolean;page:ResultPage<Summary>};updates:{available:boolean;page:ResultPage<ReleaseUpdate>};top:{available:boolean;page:ResultPage<Summary>};topKind?:string;continuation?:Snippet}=$props();
  const {locale}=useLocale();
+ let updateLimit=$state(6);
+ let updateList=$state<HTMLDivElement>();
+ async function showMoreUpdates(){
+  const firstNew=updateLimit;
+  updateLimit+=6;
+  await tick();
+  updateList?.querySelectorAll<HTMLAnchorElement>('.chapter')[firstNew]?.focus({preventScroll:true});
+ }
+ $effect(()=>{updates.page;updateLimit=6;});
  const tabs=$derived([{value:'manhwa',label:text($locale,'Топ манхва','Топ манхв')},{value:'manga',label:text($locale,'Топ манга','Топ манг')},{value:'manhua',label:text($locale,'Топ маньхуа','Топ маньхуа')}]);
  const topItems=$derived(topRequested||!mostRead.available?top.page.items:top.page.items.filter(item=>!mostRead.page.items.some(ranked=>ranked.id===item.id)));
  const sparse=$derived(mostRead.available&&mostRead.page.items.length<4);
@@ -29,7 +38,12 @@
  {#if !hasContinuation}{@render continueSection()}{/if}
  <section aria-labelledby="updates-heading">
   <div class="section-title"><h2 id="updates-heading">{text($locale,'Соңғы жаңартулар','Последние обновления')}</h2><a class="section-link" href="/updates" aria-label={text($locale,'Барлық жаңартулар','Все обновления')}><Icon name="right" size={18}/></a></div>
-  {#if updates.available}<Updates items={updates.page.items.slice(0,12)} compact/>{:else}<StateMessage kind="error" title={text($locale,'Жаңартулар жүктелмеді','Не удалось загрузить обновления')}/>{/if}
+  {#if updates.available}<div id="home-update-list" bind:this={updateList}><Updates items={updates.page.items.slice(0,updateLimit)} compact/></div>
+   <div class="updates-footer">
+    <span class="update-count" role="status">{text($locale,'Көрсетілді: ','Показано: ')}{Math.min(updateLimit,updates.page.items.length)} / {updates.page.items.length}{updates.page.nextCursor?'+':''}</span>
+    {#if updateLimit<updates.page.items.length}<button class="button subtle" aria-controls="home-update-list" onclick={showMoreUpdates}>{text($locale,'Тағы жүктеу','Загрузить ещё')}<Icon name="down" size={16}/></button>
+    {:else if updates.page.nextCursor}<a class="button subtle" href="/updates">{text($locale,'Барлық жаңартулар','Все обновления')}<Icon name="right" size={16}/></a>{/if}
+   </div>{:else}<StateMessage kind="error" title={text($locale,'Жаңартулар жүктелмеді','Не удалось загрузить обновления')}/>{/if}
  </section>
  <section id="tops" aria-labelledby="tops-heading">
   <h2 id="tops-heading" class="sr-only">{text($locale,'Түрлері бойынша үздіктер','Топы по типам')}</h2>
@@ -40,5 +54,6 @@
  </section>
 </div>
 <style>
+ .updates-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:12px}.update-count{font-size:12px;color:var(--muted)}
  .discovery-home{display:grid;gap:28px;min-width:0}.discovery-home.sparse{gap:20px}.discovery-home>section{min-width:0}.section-title{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:8px}h1,h2{font-size:19px;font-weight:650;line-height:1.35;overflow-wrap:anywhere}.section-link{border:1px solid var(--line);border-radius:8px;background:var(--panel);padding:0 10px;display:flex;align-items:center;justify-content:center;min-height:44px;min-width:44px;color:var(--muted);flex-shrink:0}.section-link:hover{color:var(--text)}.shelf-tabs{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));max-width:100%;gap:2px;padding:3px;margin-bottom:12px;border:1px solid var(--line);border-radius:12px}.shelf-tabs a{min-height:44px;display:flex;align-items:center;justify-content:center;padding:0 4px;border-radius:8px;font-size:11px;font-weight:550;white-space:nowrap;color:var(--muted)}.shelf-tabs a[aria-current]{background:var(--raised);color:var(--text)}.shelf-tabs a:hover{color:var(--text)}.retry-link{min-height:44px;display:inline-flex;align-items:center;color:var(--accent)}#tops{scroll-margin-top:80px}@media(min-width:768px){.discovery-home{gap:36px}h1,h2{font-size:24px}.shelf-tabs{width:max-content}.shelf-tabs a{font-size:14px;padding-inline:12px}}
 </style>

@@ -5,7 +5,7 @@ status: Review
 assignee:
   - '@codex'
 created_date: '2026-10-22 22:25'
-updated_date: '2026-10-23 00:24'
+updated_date: '2026-10-23 00:45'
 labels: []
 dependencies: []
 ordinal: 68005
@@ -38,6 +38,8 @@ Owner motion follow-up: add scoped public UI button feedback and viewport-trigge
 Owner disclosure follow-up: animate measured max-height for description, genres/tags and title details in both directions; preserve overflow detection, hidden focus and reduced motion; test interruption/resize and rebuild local web, independent review, no push.
 
 Owner authorizes separate pushes after HTML comparison: exact palette tokens already match HTML dark/light; add missing library bar using real matching-revision page progress, lazy/bounded public manifest metadata; validate then independent review; push existing focused commit groups plus library separately, observe normal Fast Release without bypass.
+
+Owner local-only follow-up: bound latest updates to six initially, reveal six at a time with Load more and retain All updates route; keep returning-reader continuation prominent and compact; refine update density and continuation card metadata; check responsive themes/locales, independent review, rebuild local web. No push/backend/admin/data changes.
 <!-- SECTION:PLAN:END -->
 
 ## Implementation Notes
@@ -62,4 +64,6 @@ Disclosure follow-up LOCAL ONLY: shared measured max-height260ms action animates
 HTML source inspected directly: exact dark/light theme tokens match current palette, no speculative orange replacement. file URL browser protocol blocked, no browser bypass attempted. Added library progress using real current chapter page/fraction, not fabricated whole-title chapter completion; thin4px accent over line track matches HTML. Visible-card lazy loading, max4manifest requests, dedupe/cache; no image downloads. Svelte0errors0warnings,65UI tests870assertions,3new application tests9assertions,architecture/contrast,diffcheck,Dockerwebhealthy pass. Local authenticated library card renders real chapter/page counts and percentage;320px no overflow; screenshot tmp/v4/library-progress.png. Independent review_library_release approved. Backend/admin/schema untouched. Owner now explicitly authorizes focused separate pushes; preparing baseUI/statistics, genres/tags, animations, disclosures, library groups. Release observation pending; nativeFigma AC remains open.
 
 Authorized five separate main pushes completed: baseUI/statistics through00e56f1; taxonomy/continuation through345be9a; generalmotion135f34a; disclosurese26f2d5; library/referencebars bff4acb9f211622cd339c4f47743b4b693ae2516. FastRelease39877382728 success and refs/deploy-ready equals bff4acb; pending intermediate workflows coalesced by GitHub. FullVerification39877382745 still pending at observation. Fresh external production homepage remains d312715dd55b8d59a17e120ebf2835bffa446999 with private,no-store and health200/ok; new UI NOT confirmed live. Documented deploy key andknown_hosts paths unavailable on this workspace, so VMpoller/hold cannot be inspected; no bypass or serverchanges. Next: observe production moving to bff4acb and publicsmoke, inspect normal VMpoller using authorized documented access if it remains old; retainReview/nativeFigma open. Additional local light1280library checked #a94406 and lineRGB222/210/201, nooverflow; dark #ff873d and lineRGB61/48/43. Local demo data/assets were not committed or pushed.
+
+Local-only owner follow-up: homepage updates start at6 compact rows, Load more reveals6 at a time, loaded count and All updates retain access to full feed. Keyboard focus moves to first newly revealed chapter including final batch. Continuation remains first for returning readers, adds actual chapter percentage and truncates long metadata. No backend/data/admin changes. Validation:66 UI tests875assertions, Svelte0errors0warnings, architecture/contrast/diffcheck, Dockerwebbuild/start PASS; browser6→12→13 and focus href matches, reload resets6,320/360/1280 no overflow, dark phone/lightdesktop inspected. Independent review_home_density approved including focus correction. Screens tmp/v4/home-density-phone.png and home-density-desktop.png. No push; owner local acceptance pending. Production rollout blocker from TASK66 remains separate and unresolved.
 <!-- SECTION:NOTES:END -->
