@@ -3,7 +3,7 @@ import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-for (const [workflow, job] of [['release', 'build'], ['verify', 'publish-images']]) {
+for (const [workflow, job] of [['release', 'build']]) {
   test(`${workflow} publishes lowercase image references after an organization transfer`, () => {
     const config = Bun.YAML.parse(readFileSync(join(import.meta.dir, `../.github/workflows/${workflow}.yml`), 'utf8')) as any;
     const steps = config.jobs[job].steps;

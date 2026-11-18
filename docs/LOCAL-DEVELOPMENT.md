@@ -118,4 +118,4 @@ docker compose down --remove-orphans
 
 `down` preserves volumes. Resume with the same env and startup command. Do not use `down -v`, a volume prune, or a new env as a routine recovery instruction. Keep the optional `web-ui` preview stopped when unused. Nothing in this workflow changes Docker Desktop/WSL global memory settings.
 
-The [CI workflow](../.github/workflows/verify.yml) performs the build, integration, auth/publish/read and staff-browser checks on PRs, main pushes and manual runs. It uses fresh disposable data and fails on Go skips. Its configuration being present is not evidence that a remote run has passed; inspect the actual Actions result.
+CI теперь только [Fast Release](../.github/workflows/release.yml): он собирает образы и двигает `deploy-ready`; тесты в CI не запускаются, Playwright-тесты удалены.

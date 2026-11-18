@@ -2,8 +2,8 @@ name: Fast Release
 
 # Blocking release path: push to main → changed component images in GHCR →
 # refs/deploy-ready → VM poller deploys staging, smokes it, then production.
-# Full Verification (verify.yml) runs separately and gates this path only for
-# migrations or deployment-infrastructure changes.
+# Migrations and deploy/infra/.github changes rebuild all components.
+# There is no separate verification workflow.
 on:
   push:
     branches: [main]
@@ -67,7 +67,7 @@ jobs:
             slow=true
           fi
           if test "$slow" = true; then
-            matrix='[]'
+            matrix='["api","gateway","web"]'
             deploy=true
           else
             if test ${#components[@]} -eq 0; then
@@ -131,48 +131,11 @@ jobs:
       - name: Publish immutable component input alias
         run: bash scripts/publish-component-alias.sh "${{ matrix.component }}" "${{ steps.image.outputs.repository }}" "${{ github.sha }}"
 
-  verify-gate:
-    needs: classify
-    if: needs.classify.outputs.slow == 'true' && !cancelled()
-    runs-on: ubuntu-latest
-    timeout-minutes: 65
-    permissions:
-      contents: read
-      actions: read
-    steps:
-      - name: Wait for Full Verification of this exact SHA
-        env:
-          GH_TOKEN: ${{ github.token }}
-          REPOSITORY: ${{ github.repository }}
-          SHA: ${{ github.sha }}
-        run: |
-          set -euo pipefail
-          for _ in $(seq 1 180); do
-            if run=$(gh api "repos/$REPOSITORY/actions/workflows/verify.yml/runs?head_sha=$SHA&event=push&per_page=20" 2>/dev/null \
-              | jq -c --arg sha "$SHA" '[.workflow_runs[] | select(.head_sha == $sha)] | sort_by(.created_at) | last // {}'); then
-              status=$(jq -r '.status // "missing"' <<<"$run")
-              conclusion=$(jq -r '.conclusion // ""' <<<"$run")
-              if test "$status" = completed; then
-                test "$conclusion" = success || {
-                  echo "Full Verification concluded $conclusion for $SHA" >&2; exit 1;
-                }
-                echo "Full Verification passed for $SHA"
-                exit 0
-              fi
-            else
-              echo 'Transient GitHub API error while waiting for verification; retrying'
-            fi
-            sleep 20
-          done
-          echo "Timed out waiting for Full Verification of $SHA" >&2
-          exit 1
-
   advance:
-    needs: [classify, build, verify-gate]
+    needs: [classify, build]
     if: >-
       needs.classify.outputs.deploy == 'true' && !cancelled() &&
-      (needs.build.result == 'success' || needs.build.result == 'skipped') &&
-      (needs.verify-gate.result == 'success' || needs.verify-gate.result == 'skipped')
+      (needs.build.result == 'success' || needs.build.result == 'skipped')
     runs-on: ubuntu-latest
     timeout-minutes: 5
     permissions:

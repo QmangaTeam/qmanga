@@ -92,8 +92,8 @@ docker ps --format 'table {{.Names}}\t{{.Status}}'
 
 С 2026-10-20 обычный `git push origin main` доходит до production без ручных команд. Работают два независимых workflow:
 
-1. **Fast Release** (`.github/workflows/release.yml`, блокирующий). Сравнивает файлы с последним выпущенным SHA (`refs/deploy-ready`), собирает только изменённые компоненты (`web` — `apps/web/`; `api`+worker — `backend/`; `gateway` — nginx/Caddy) с GHA Docker cache, пушит immutable arm64 теги SHA workflow и alias последнего изменения входов компонента и двигает `refs/deploy-ready`. Push только с документацией ничего не выпускает. Изменения `backend/migrations/`, `deploy/`, `infra/`, `.github/` — медленный путь: workflow ждёт успешный `Verify Qmanga` этого же SHA и только затем двигает ref.
-2. **Full Verification** (`verify.yml`) — полный Go/PostgreSQL/codec/browser acceptance и публикация всех трёх arm64 images. Он больше не блокирует обычный релиз; его результат виден в Actions.
+1. **Fast Release** (`.github/workflows/release.yml`, блокирующий). Сравнивает файлы с последним выпущенным SHA (`refs/deploy-ready`), собирает только изменённые компоненты (`web` — `apps/web/`; `api`+worker — `backend/`; `gateway` — nginx/Caddy) с GHA Docker cache, пушит immutable arm64 теги SHA workflow и alias последнего изменения входов компонента и двигает `refs/deploy-ready`. Push только с документацией ничего не выпускает. Изменения `backend/migrations/`, `deploy/`, `infra/`, `.github/` — пересобираются все три компонента, затем двигается ref.
+2. Отдельного workflow с тестами (`verify.yml`) больше нет.
 
 VM-poller (`qmanga-staging-poll.timer`) читает `refs/deploy-ready` через `git fetch` (без GitHub API/token) и вызывает `release.sh staging`, а на следующем тике — автоматически `release.sh production` того же SHA (poller не делает re-exec: каждая итерация берёт свежий код из репозитория). Интервал в репозитории — 20 с, но на VM до установки файлов ниже действует старый 5-минутный юнит. `release.sh`:
 

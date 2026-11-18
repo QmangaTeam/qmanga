@@ -3,7 +3,7 @@ set -euo pipefail
 script=$(cd "$(dirname "$0")" && pwd)/publish-component-alias.sh
 repo=$(cd "$(dirname "$script")/.." && pwd)
 # Both workflows must serialize the complete HEAD + alias publication job.
-for workflow in release verify; do
+for workflow in release; do
  grep -Fq 'group: component-image-${{ github.repository }}-${{ matrix.component }}' "$repo/.github/workflows/$workflow.yml"
 done
 fixture=$(mktemp -d)
