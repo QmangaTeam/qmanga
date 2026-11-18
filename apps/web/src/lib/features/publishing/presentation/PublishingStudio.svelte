@@ -106,6 +106,8 @@
  async function acceptImport(){if(!active||!importPreview.length||importOwner!==user?.id||importRevision!==active.id){importPreview=[];return;}pendingSources=importPreview;importPreview=[];await resumeUpload();}
 
  const processing=$derived(processingSummary(active?.pages||[]));
+ // Autosave complete details so the translator does not need a separate save step.
+ $effect(()=>{if(!active||!attributionDirty||busy||uploading||!editor||!canEdit(active.state))return;if([...source.trim()].length<8||[...credits.trim()].length<2||!confirmed)return;const timer=setTimeout(()=>{void run(saveAttribution);},1200);return()=>clearTimeout(timer);});
  const obstacles=$derived(active?submissionObstacles(active,{editor:!!editor,uploading,pending:pendingSources.length>0||importing||importPreview.length>0,orderDirty:order!==null,detailsDirty:attributionDirty}):[]);
  function obstacleLabel(reason:SubmissionObstacle){const labels:Record<SubmissionObstacle,[string,string]>={permission:['Редактор не иесі жібере алады','Отправить может редактор или владелец'],transfer:['Файлдарды жүктеуді аяқта','Заверши передачу файлов'],pages:['Беттерді қос','Добавь страницы'],failed:['Қате беттерді түзет','Исправь страницы с ошибками'],processing:['Беттердің өңделуін күт немесе күйін жаңарт','Дождись обработки страниц или обнови состояние'],order:['Беттердің ретін сақта','Сохрани порядок страниц'],details:['Дереккөзді, кредиттерді және құқықтарды тексеріп, сақта','Проверь и сохрани источник, кредиты и подтверждение прав']};return text($locale,...labels[reason]);}
  async function focusPage(id:string){selectedPageId=id;await showStep('draft-pages');await tick();const row=document.getElementById('studio-page-'+id);row?.focus({preventScroll:true});row?.scrollIntoView({block:'center'});}

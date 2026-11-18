@@ -17,7 +17,11 @@ func cloneRevision(ctx context.Context, tx pgx.Tx, id, release string) error {
 	var source string
 	err := tx.QueryRow(ctx, `SELECT id FROM revisions WHERE release_id=$1 AND id<>$2 AND status IN ('published','changes_requested') ORDER BY revision_num DESC LIMIT 1`, release, id).Scan(&source)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return nil
+		// First revision of this release: reuse the project's most recent confirmed
+		// source, credits and rights so the translator does not retype them per chapter.
+		// Human-review stays a per-chapter declaration and is not copied.
+		_, err = tx.Exec(ctx, `UPDATE revisions destination SET source_note=source.source_note,credits=source.credits,rights_confirmed=true,rights_confirmed_by=source.rights_confirmed_by,preparation_method=source.preparation_method FROM (SELECT revision.source_note,revision.credits,revision.rights_confirmed_by,revision.preparation_method FROM revisions revision JOIN releases rel ON rel.id=revision.release_id WHERE rel.project_id=(SELECT project_id FROM releases WHERE id=$2) AND revision.rights_confirmed AND revision.id<>$1 ORDER BY revision.updated_at DESC LIMIT 1) source WHERE destination.id=$1`, id, release)
+		return err
 	}
 	if err != nil {
 		return err
