@@ -308,6 +308,17 @@ func (repository *Repository) Submit(ctx context.Context, actor, id string, vers
 		if failure := revision.Submit(); failure != nil {
 			return failure
 		}
+		// Trusted teams skip the moderation queue; moderators can still withdraw later.
+		var trusted bool
+		if failure := transaction.QueryRow(ctx, "SELECT team.trusted FROM teams team JOIN releases rel ON rel.team_id=team.id WHERE rel.id=$1", revision.ReleaseID()).Scan(&trusted); failure != nil {
+			return failure
+		}
+		if trusted {
+			if failure := publishRevision(ctx, transaction, actor, revision, "Trusted team publication"); failure != nil {
+				return failure
+			}
+			return audit(ctx, transaction, actor, "trusted_publish", revision.ReleaseID(), "")
+		}
 		return persist(ctx, transaction, revision)
 	})
 }

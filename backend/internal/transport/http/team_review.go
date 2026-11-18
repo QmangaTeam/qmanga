@@ -33,3 +33,18 @@ func (handler *TeamHandler) update(request *gin.Context) {
 	}
 	request.Status(204)
 }
+
+func (handler *TeamHandler) setTrusted(request *gin.Context) {
+	var input struct {
+		Trusted bool `json:"trusted"`
+	}
+	if !decode(request, &input) {
+		return
+	}
+	account, _ := CurrentAccount(request)
+	if failure := handler.service.SetTrusted(request.Request.Context(), account.ID, request.Param("id"), input.Trusted); failure != nil {
+		teamError(request, failure)
+		return
+	}
+	request.Status(204)
+}

@@ -34,6 +34,7 @@ type Repository interface {
 	Pending(context.Context, string, ...int) ([]domain.Team, error)
 	Approve(context.Context, string, string) error
 	Reject(context.Context, string, string, string) error
+	SetTrusted(context.Context, string, string, bool) error
 	Update(context.Context, string, domain.Team) error
 	SaveInvitation(context.Context, string, Invitation) error
 	Invitations(context.Context, string, string, ...int) ([]InvitationSummary, error)
@@ -130,6 +131,9 @@ func (service *Service) Remove(ctx context.Context, actorID, teamID, userID stri
 	return service.repository.RemoveMember(ctx, actorID, teamID, userID)
 }
 
+func (service *Service) SetTrusted(ctx context.Context, actor, id string, trusted bool) error {
+	return service.repository.SetTrusted(ctx, actor, id, trusted)
+}
 func (service *Service) Reject(ctx context.Context, actor, id, reason string) error {
 	reason = strings.TrimSpace(reason)
 	if utf8.RuneCountInString(reason) < 8 || utf8.RuneCountInString(reason) > 2000 {

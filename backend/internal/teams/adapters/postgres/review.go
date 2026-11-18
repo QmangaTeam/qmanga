@@ -26,3 +26,18 @@ func (repository *Repository) Update(ctx context.Context, actor string, team dom
 		return failure
 	})
 }
+
+// SetTrusted lets administrators allow a team to publish without moderation.
+func (repository *Repository) SetTrusted(ctx context.Context, actor, id string, trusted bool) error {
+	return repository.withAccess(ctx, actor, id, domain.Approve, func(transaction pgx.Tx) error {
+		result, failure := transaction.Exec(ctx, "UPDATE teams SET trusted=$2 WHERE id=$1 AND is_approved", id, trusted)
+		if failure != nil {
+			return failure
+		}
+		if result.RowsAffected() != 1 {
+			return domain.ErrConflict
+		}
+		_, failure = transaction.Exec(ctx, "INSERT INTO audit_logs(id,user_id,action,entity_type,entity_id,metadata)VALUES($1,$2,'set_trusted','team',$3,jsonb_build_object('trusted',$4::boolean))", uuid.NewString(), actor, id, trusted)
+		return failure
+	})
+}

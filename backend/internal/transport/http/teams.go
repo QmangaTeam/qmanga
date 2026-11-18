@@ -43,6 +43,7 @@ func (handler *TeamHandler) Register(api *gin.RouterGroup, identity *IdentityHan
 	admin.GET("/teams/pending", handler.pending)
 	admin.POST("/teams/:id/approve", handler.approve)
 	admin.POST("/teams/:id/reject", handler.reject)
+	admin.PUT("/teams/:id/trusted", handler.setTrusted)
 }
 func (handler *TeamHandler) list(request *gin.Context) {
 	account, _ := CurrentAccount(request)
