@@ -81,7 +81,7 @@ docker ps --format 'table {{.Names}}\t{{.Status}}'
 
 ## Как добавлять изменения
 
-1. Прочитать root/web AGENTS и нужную карточку через `bun run backlog task view TASK-ID --plain`; менять задачи только CLI. Сохранять дословные формулировки владельца отдельно от пояснения агента.
+1. Прочитать root/web AGENTS; менять только нужное для задачи.
 2. Реализовать в локальном checkout, соблюдая Clean Architecture; миграции добавлять вперёд, совместимыми с предыдущим production API. Не использовать реальные данные владельца как fixtures. Не менять роли/почту/пароль повторно из-за исторической записи.
 3. Проверить затронутые границы по RUNBOOK: реальный PostgreSQL/codecs для persistence/media, браузерные взаимодействия для UI,320/360/desktop,kk/ru,темы. Для полного Go: `sudo docker compose --profile tools run --rm go-tests go test ./... -count=1`. Для web: `bun run --cwd apps/web check`, build и профильные тесты. Docker локально может требовать sudo.
 4. Полный fixture browser suite требует игнорируемый `QMANGA_FIXTURE_FILE`; не подставлять prod. CI запускает файлы последовательно группами по8 с recreate того же API между группами, чтобы не исчерпывать реальный auth limit30/min. Не ослаблять лимит продукта ради тестов; не перезапускать сервис во время активной группы.
